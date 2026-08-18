@@ -183,3 +183,64 @@ test("regression: legacy personal config (no org rows) is unaffected", async () 
   assert.equal(orgCount.c, 0);
   assert.equal(memberCount.c, 0);
 });
+
+// ───────────────────────── P2.02 — organization service ───────────────────────
+
+test("getOrganizationWithMembers returns the org plus its owner membership", async () => {
+  const ownerId = await makeOwner();
+  const org = await orgsDb.createOrganization({
+    name: "WithMembers",
+    slug: "with-members",
+    ownerUserId: ownerId,
+  });
+
+  const withMembers = await orgsDb.getOrganizationWithMembers(org.id);
+  assert.ok(withMembers);
+  assert.equal(withMembers!.id, org.id);
+  assert.equal(withMembers!.members.length, 1, "exactly one owner member");
+  assert.equal(withMembers!.members[0].userId, ownerId);
+  assert.equal(withMembers!.members[0].role, "owner");
+
+  assert.equal(await orgsDb.getOrganizationWithMembers("nope"), null);
+});
+
+test("cannot create an organization without a valid owner user id", async () => {
+  await assert.rejects(
+    () =>
+      orgsDb.createOrganization({
+        name: "Ghost",
+        slug: "ghost",
+        ownerUserId: "user-that-does-not-exist",
+      }),
+    (err: Error) => {
+      assert.ok(err instanceof orgsDb.OrganizationError);
+      assert.equal((err as orgsDb.OrganizationError).code, "OWNER_NOT_FOUND");
+      return true;
+    }
+  );
+
+  // No partial rows may be left behind when owner validation fails.
+  const db = core.getDbInstance();
+  const c = db.prepare(`SELECT COUNT(*) AS c FROM organizations`).get() as { c: number };
+  assert.equal(c.c, 0);
+});
+
+test("archived organization is excluded from the default active listing (negative contract)", async () => {
+  const ownerId = await makeOwner();
+  const active = await orgsDb.createOrganization({
+    name: "ActiveCo",
+    slug: "active-co",
+    ownerUserId: ownerId,
+  });
+  const archived = await orgsDb.createOrganization({
+    name: "ArchivedCo",
+    slug: "archived-co",
+    ownerUserId: ownerId,
+  });
+  await orgsDb.archiveOrganization(archived.id);
+
+  const listed = await orgsDb.listOrganizations(); // default: active only
+  const listedIds = listed.map((o) => o.id);
+  assert.ok(listedIds.includes(active.id), "active org listed");
+  assert.ok(!listedIds.includes(archived.id), "archived org NOT listed");
+});

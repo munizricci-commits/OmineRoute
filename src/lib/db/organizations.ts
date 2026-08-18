@@ -46,6 +46,37 @@ export interface UpdateOrganizationInput {
   slug?: string;
 }
 
+export interface MembershipRecord {
+  id: string;
+  organizationId: string;
+  userId: string;
+  role: OrgRole;
+  status: string; // active (default)
+  invitedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrganizationWithMembers extends OrganizationRecord {
+  members: MembershipRecord[];
+}
+
+/** Parse a raw `organization_members` row into the camelCase shape. */
+export function parseMemberRow(row: Record<string, unknown>): MembershipRecord {
+  const camel = rowToCamel(row) as Record<string, unknown>;
+  return {
+    id: String(camel.id),
+    organizationId: String(camel.organizationId),
+    userId: String(camel.userId),
+    role: clampRole(camel.role),
+    status: typeof camel.status === "string" ? camel.status : "active",
+    invitedBy:
+      camel.invitedBy === null || camel.invitedBy === undefined ? null : String(camel.invitedBy),
+    createdAt: String(camel.createdAt),
+    updatedAt: String(camel.updatedAt),
+  };
+}
+
 /**
  * Thrown by org operations when a precondition fails (bad owner, duplicate
  * slug, missing org). Callers (routes) translate this into a sanitized client
@@ -166,6 +197,31 @@ export async function getOrganizationBySlug(slug: string): Promise<OrganizationR
   const row = db.prepare(`SELECT * FROM organizations WHERE slug = ?`).get(normalized) as
     Record<string, unknown> | undefined;
   return row ? parseOrgRow(row) : null;
+}
+
+/**
+ * Read an organization together with its membership list (active members only,
+ * ordered by role precedence then creation time). Returns null when the org does
+ * not exist. Used by service-layer callers that need the full org picture.
+ */
+export async function getOrganizationWithMembers(
+  id: string
+): Promise<OrganizationWithMembers | null> {
+  const org = await getOrganizationById(id);
+  if (!org) return null;
+
+  const db = getDbInstance();
+  const rows = db
+    .prepare(
+      `SELECT * FROM organization_members
+       WHERE organization_id = ? AND status = 'active'
+       ORDER BY
+         CASE role WHEN 'owner' THEN 0 WHEN 'moderator' THEN 1 ELSE 2 END,
+         created_at ASC`
+    )
+    .all(id) as Record<string, unknown>[];
+
+  return { ...org, members: rows.map(parseMemberRow) };
 }
 
 /**

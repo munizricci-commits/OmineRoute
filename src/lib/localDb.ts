@@ -145,6 +145,7 @@ export {
   updateOrganization,
   archiveOrganization,
   deleteOrganization,
+  getOrganizationWithMembers,
   OrganizationError,
 } from "./db/organizations";
 export type {
