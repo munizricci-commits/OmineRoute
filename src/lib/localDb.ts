@@ -156,6 +156,18 @@ export type {
   OrgStatus,
 } from "./db/organizations";
 
+// Organizations feature (P2 — Organizations): membership service (P2.03).
+export {
+  addMember,
+  removeMember,
+  promoteMember,
+  demoteMember,
+  listMembers,
+  getMembership,
+  MembershipError,
+} from "./db/members";
+export type { MembershipRecord, AddMemberInput } from "./db/members";
+
 export {
   // Evals
   saveEvalRun,
