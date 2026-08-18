@@ -6,11 +6,22 @@ import { fetchOrganization } from "../apiClient";
 import type { OrgRole, OrganizationDetail } from "../types";
 import RoleBadge from "../components/RoleBadge";
 import MembersSection from "./MembersSection";
+import ConnectionsRoutingSection from "./ConnectionsRoutingSection";
+
+type TabKey = "members" | "connections" | "picker" | "catalog";
+
+const TABS: { key: TabKey; label: string }[] = [
+  { key: "members", label: "Members" },
+  { key: "connections", label: "Connections & Routing" },
+  { key: "picker", label: "Model picker" },
+  { key: "catalog", label: "Model catalog" },
+];
 
 export default function OrgDetailClient({ orgId }: { orgId: string }) {
   const [org, setOrg] = useState<OrganizationDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<TabKey>("members");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -60,7 +71,29 @@ export default function OrgDetailClient({ orgId }: { orgId: string }) {
       {loading ? (
         <div className="text-sm text-[var(--color-text-muted)]">Loading…</div>
       ) : org ? (
-        <MembersSection orgId={orgId} viewerRole={viewerRole} />
+        <>
+          <div className="flex flex-wrap gap-1 border-b border-[var(--color-border)]">
+            {TABS.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setTab(t.key)}
+                className={`-mb-px px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  tab === t.key
+                    ? "border-[var(--color-accent)] text-[var(--color-text-main)]"
+                    : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          <div>
+            {tab === "members" && <MembersSection orgId={orgId} viewerRole={viewerRole} />}
+            {tab === "connections" && <ConnectionsRoutingSection orgId={orgId} />}
+          </div>
+        </>
       ) : null}
     </div>
   );
