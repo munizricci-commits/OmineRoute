@@ -8,6 +8,7 @@ import RoleBadge from "../components/RoleBadge";
 import MembersSection from "./MembersSection";
 import ConnectionsRoutingSection from "./ConnectionsRoutingSection";
 import OrgModelPicker from "./OrgModelPicker";
+import OrgModelCatalog from "./OrgModelCatalog";
 
 type TabKey = "members" | "connections" | "picker" | "catalog";
 
@@ -94,6 +95,7 @@ export default function OrgDetailClient({ orgId }: { orgId: string }) {
             {tab === "members" && <MembersSection orgId={orgId} viewerRole={viewerRole} />}
             {tab === "connections" && <ConnectionsRoutingSection orgId={orgId} />}
             {tab === "picker" && <OrgModelPicker orgId={orgId} orgSlug={org?.slug} />}
+            {tab === "catalog" && <OrgModelCatalog orgId={orgId} />}
           </div>
         </>
       ) : null}
