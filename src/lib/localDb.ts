@@ -168,6 +168,17 @@ export {
 } from "./db/members";
 export type { MembershipRecord, AddMemberInput } from "./db/members";
 
+// Organizations feature (P2 — Organizations): invitation lifecycle (P2.04).
+export {
+  createInvitation,
+  acceptInvitation,
+  revokeInvitation,
+  listInvitations,
+  getInvitationByToken,
+  InvitationError,
+} from "./db/invitations";
+export type { InvitationRecord, CreateInvitationInput, InvitationStatus } from "./db/invitations";
+
 export {
   // Evals
   saveEvalRun,
