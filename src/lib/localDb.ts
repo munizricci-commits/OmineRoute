@@ -89,6 +89,17 @@ export {
   reorderCombos,
   deleteCombo,
 } from "./db/combos";
+// Organizations feature (P5 — Combos): org-scoped combo CRUD + scope resolution.
+export {
+  createOrganizationCombo,
+  getOrganizationCombos,
+  getOrganizationComboById,
+  getOrganizationComboByName,
+  updateOrganizationCombo,
+  deleteOrganizationCombo,
+  OrgComboError,
+} from "./db/orgCombos";
+export type { ComboScopeError } from "./lib/org/comboScope";
 export * from "./db/ccrBlocks";
 export * from "./db/compressionCacheStats";
 export * from "./db/compressionCombos";
