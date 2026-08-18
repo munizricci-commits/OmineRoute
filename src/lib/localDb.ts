@@ -113,7 +113,28 @@ export {
   clearApiKeyCaches,
   resetApiKeyState,
   ApiKeyPolicyInvariantError,
+  setApiKeyUserId,
+  getApiKeyUserId,
+  getApiKeyUser,
 } from "./db/apiKeys";
+
+// Organizations feature (P1 — Identity): durable users entity.
+export {
+  createUser,
+  getUserById,
+  getUserByEmail,
+  updateUser,
+  setUserRole,
+  listUsers,
+  deleteUser,
+} from "./db/users";
+export type {
+  UserRecord,
+  UserRole,
+  UserStatus,
+  CreateUserInput,
+  UpdateUserInput,
+} from "./db/users";
 
 export {
   // Evals
