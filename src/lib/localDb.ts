@@ -206,6 +206,12 @@ export type {
 export { requireOrganizationAccess, resolveOrgAccess, OrgAccessDeniedError } from "./org/apiAuth";
 export type { OrgAccessCapability } from "./org/apiAuth";
 
+// Organizations feature (P1 — Identity): dashboard session principal resolver.
+export { resolveDashboardUserPrincipal } from "./org/principal";
+
+// Organizations feature (P4 — Connections): org-scoped connection primitives.
+export { getOrganizationConnections, createOrganizationConnection } from "./db/orgConnections";
+
 // Organizations feature (P6 — Qualified Routes): parse + resolve org-scoped routes.
 export {
   parseQualifiedModel,
