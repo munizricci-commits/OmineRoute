@@ -166,7 +166,11 @@ export {
   canManageMembership,
   canArchiveOrganization,
   canDeleteOrganization,
+  resolveConnectionVisibility,
+  redactConnectionCredentials,
+  CREDENTIAL_FIELDS,
 } from "./org/authorization";
+export type { ConnectionRef } from "./org/authorization";
 export type {
   ResourceScope,
   OrganizationContext,

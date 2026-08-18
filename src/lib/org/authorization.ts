@@ -17,7 +17,12 @@
 import { getMembership } from "@/lib/db/members";
 import { getOrganizationById } from "@/lib/db/organizations";
 import type { UserPrincipal } from "./principal";
-import type { OrganizationContext } from "./types";
+import type {
+  OrganizationContext,
+  ResourceScope,
+  ConnectionVisibility,
+  ConnectionCredentialFields,
+} from "./types";
 
 /**
  * Resolve the caller's organization context from their active membership.
@@ -100,4 +105,70 @@ export function canArchiveOrganization(ctx: OrganizationContext | null): boolean
 /** Only owners (or platform_admin override) may delete the organization. */
 export function canDeleteOrganization(ctx: OrganizationContext | null): boolean {
   return isOwnerLike(ctx);
+}
+
+/**
+ * Credential field names stripped from a connection unless visibility is `full`.
+ * Mirrors the (future) `src/lib/db/providerConnections.ts` credential columns;
+ * `redactConnectionCredentials` operates on any object carrying these fields.
+ */
+export const CREDENTIAL_FIELDS = ["apiKey", "apiSecret", "password", "bearerToken"] as const;
+
+/** Minimal shape of a provider connection needed for the secret boundary. */
+export interface ConnectionRef {
+  scope: ResourceScope;
+  /** Owner user id — authoritative for `personal` connections. */
+  ownerUserId?: string | null;
+  /** Owning org id — authoritative for `organization` connections. */
+  organizationId?: string | null;
+}
+
+/**
+ * Resolve whether a viewer may see a connection's credential material.
+ *
+ * Contract:
+ *  - `full`  — the viewer may read `apiKey`/`apiSecret`/`password`/`bearerToken`.
+ *  - `usable`— the viewer may route through the connection but MUST NOT receive
+ *              credential fields.
+ *
+ * Rules (fail-closed → `usable`):
+ *  - a `personal` connection is `full` only for its own owner;
+ *  - an `organization` connection is `full` for an owner/moderator of the owning
+ *    org (or a `platformAdminOverride` context), `usable` for ordinary members;
+ *  - any non-member / missing context is `usable` (never `full`).
+ */
+export function resolveConnectionVisibility(
+  ctx: OrganizationContext | null,
+  viewerUserId: string,
+  connection: ConnectionRef
+): ConnectionVisibility {
+  if (connection.scope === "personal") {
+    return connection.ownerUserId === viewerUserId ? "full" : "usable";
+  }
+
+  // organization-scoped connection: must belong to the SAME org the context is
+  // resolved for (prevents cross-org credential disclosure).
+  if (!ctx || ctx.organizationId !== connection.organizationId) return "usable";
+  if (ctx.role === "owner" || ctx.role === "moderator" || ctx.platformAdminOverride === true) {
+    return "full";
+  }
+  return "usable";
+}
+
+/**
+ * Return a copy of `conn` with credential fields removed unless `visibility` is
+ * `full`. The original is never mutated. Field stripping is the *mechanism*; the
+ * *policy* lives in `resolveConnectionVisibility` (P4 performs the actual
+ * field removal when serializing connections).
+ */
+export function redactConnectionCredentials<T extends ConnectionCredentialFields>(
+  conn: T,
+  visibility: ConnectionVisibility
+): T {
+  if (visibility === "full") return { ...conn };
+  const copy = { ...(conn as Record<string, unknown>) };
+  for (const field of CREDENTIAL_FIELDS) {
+    delete copy[field];
+  }
+  return copy as T;
 }
