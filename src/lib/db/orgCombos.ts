@@ -144,6 +144,48 @@ export async function getOrganizationComboById(
   return readScoped(orgId, id);
 }
 
+/** Fetch a single personal (NULL-org) combo by name. Returns null otherwise. */
+export async function getPersonalComboByName(name: string): Promise<ComboRecord | null> {
+  const row = db()
+    .prepare("SELECT id FROM combos WHERE name = ? AND organization_id IS NULL")
+    .get(name) as { id: string } | undefined;
+  if (!row) return null;
+  const combo = await getComboById(row.id);
+  if (!combo) return null;
+  return combo;
+}
+
+export interface ComboScope {
+  /** When set, the name is qualified and resolves within this organization. */
+  organizationId?: string | null;
+  name: string;
+}
+
+/**
+ * Resolve a combo name within the caller's scope (P5.04).
+ *
+ *  - bare name (`organizationId` unset) → a personal combo
+ *    (organization_id IS NULL). Legacy behavior, unchanged.
+ *  - qualified scope (`organizationId` set) → that org's combo, but ONLY when
+ *    `ctx` is a member of that organization. Fail-closed: a null context or a
+ *    context for a *different* org yields `null` (no existence reveal).
+ *
+ * Note: an org combo is never returned for a bare name, even by the org's own
+ * members — bare names are personal-only (Invariant #1).
+ */
+export async function resolveComboInScope(
+  scope: ComboScope,
+  ctx: import("@/lib/org/types").OrganizationContext | null
+): Promise<ComboRecord | null> {
+  if (scope.organizationId) {
+    // Fail-closed: the caller must be an active member of the requested org.
+    if (!ctx || ctx.organizationId !== scope.organizationId) return null;
+    return getOrganizationComboByName(scope.organizationId, scope.name);
+  }
+  // Bare name → personal combo only.
+  return getPersonalComboByName(scope.name);
+}
+
 /** Fetch a single organization combo by name, scoped to `orgId`. */
 export async function getOrganizationComboByName(
   orgId: string,

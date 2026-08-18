@@ -97,6 +97,7 @@ export {
   getOrganizationComboByName,
   updateOrganizationCombo,
   deleteOrganizationCombo,
+  resolveComboInScope,
   OrgComboError,
 } from "./db/orgCombos";
 export type { ComboScopeError } from "./lib/org/comboScope";
