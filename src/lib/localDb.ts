@@ -176,6 +176,10 @@ export type {
   ConnectionCredentialFields,
 } from "./org/types";
 
+// Organizations feature (P3 — Authorization): request-handler gate (P3.03).
+export { requireOrganizationAccess, resolveOrgAccess, OrgAccessDeniedError } from "./org/apiAuth";
+export type { OrgAccessCapability } from "./org/apiAuth";
+
 // Organizations feature (P2 — Organizations): membership service (P2.03).
 export {
   addMember,
