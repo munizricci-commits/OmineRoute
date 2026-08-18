@@ -169,6 +169,15 @@ export type {
   OrgStatus,
 } from "./db/organizations";
 
+// Organizations feature (P9 — Quota): organization-wide quota configuration (P9.02).
+export {
+  getOrganizationQuota,
+  setOrganizationQuota,
+  deleteOrganizationQuota,
+  OrgQuotaError,
+} from "./db/orgQuotas";
+export type { OrganizationQuotaConfig, SetOrganizationQuotaInput } from "./db/orgQuotas";
+
 // Organizations feature (P3 — Authorization): org-scoped authz layer.
 export {
   resolveOrganizationContext,

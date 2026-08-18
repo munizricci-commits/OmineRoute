@@ -57,7 +57,14 @@ test.beforeEach(async () => {
 
 test.after(() => {
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  for (const f of ["storage.sqlite", "storage.sqlite-wal", "storage.sqlite-shm"]) {
+    try {
+      fs.rmSync(path.join(TEST_DATA_DIR, f), { force: true });
+    } catch {}
+  }
+  try {
+    fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  } catch {}
 });
 
 test("personal key issue-quota check passes when no provider/account limits are configured", () => {
