@@ -156,6 +156,17 @@ export type {
   OrgStatus,
 } from "./db/organizations";
 
+// Organizations feature (P3 — Authorization): org-scoped authz layer.
+export { resolveOrganizationContext } from "./org/authorization";
+export type {
+  ResourceScope,
+  OrganizationContext,
+  OrgPrincipal,
+  AnyPrincipal,
+  ConnectionVisibility,
+  ConnectionCredentialFields,
+} from "./org/types";
+
 // Organizations feature (P2 — Organizations): membership service (P2.03).
 export {
   addMember,
