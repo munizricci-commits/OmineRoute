@@ -517,6 +517,11 @@ function isSchemaAlreadyApplied(
           .prepare("SELECT 1 FROM provider_connections WHERE provider = 'freepik' LIMIT 1")
           .get() == null
       );
+    case "158":
+      // P4.01: organization scoping for provider connections. A DB that already
+      // carries the column must not re-run the ALTER (which would throw on the
+      // duplicate column) or re-track the version.
+      return hasColumn(db, "provider_connections", "organization_id");
     default:
       return false;
   }
