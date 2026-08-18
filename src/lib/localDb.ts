@@ -209,6 +209,20 @@ export type {
   ModelBody,
 } from "./org/qualifiedRoute";
 
+// Organizations feature (P7 — Auto Routing): personal/organization routing scope.
+export {
+  isAutoRoute,
+  resolveAutoRoutingScope,
+  scopedConnectionIdSet,
+  scopeAllowsConnection,
+} from "./org/autoScope";
+export type {
+  RoutingScope,
+  PersonalRoutingScope,
+  OrganizationRoutingScope,
+  DeniedRoutingScope,
+} from "./org/autoScope";
+
 // Organizations feature (P2 — Organizations): membership service (P2.03).
 export {
   addMember,
