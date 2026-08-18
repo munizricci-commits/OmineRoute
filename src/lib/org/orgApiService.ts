@@ -48,6 +48,7 @@ import {
 } from "@/lib/db/invitations";
 import { getOrganizationConnections } from "@/lib/db/orgConnections";
 import { getOrganizationCombos } from "@/lib/db/orgCombos";
+import { getOrganizationQuota, setOrganizationQuota, OrgQuotaError } from "@/lib/db/orgQuotas";
 import { resolveConnectionVisibility, redactConnectionCredentials } from "@/lib/org/authorization";
 
 // ── Response helpers (CORS + sanitized errors) ──────────────────────────────
@@ -126,6 +127,18 @@ function mapDbError(err: unknown): Response | null {
         return httpError(HTTP_STATUS.BAD_REQUEST, err.message);
       case "INVITATION_NOT_PENDING":
         return httpError(HTTP_STATUS.CONFLICT ?? 409, err.message);
+      default:
+        return httpError(HTTP_STATUS.BAD_REQUEST, err.message);
+    }
+  }
+  if (err instanceof OrgQuotaError) {
+    switch (err.code) {
+      case "ORG_NOT_FOUND":
+        return httpError(HTTP_STATUS.NOT_FOUND, err.message);
+      case "NOT_AUTHORIZED":
+        return httpError(HTTP_STATUS.FORBIDDEN, err.message);
+      case "INVALID_INPUT":
+        return httpError(HTTP_STATUS.BAD_REQUEST, err.message);
       default:
         return httpError(HTTP_STATUS.BAD_REQUEST, err.message);
     }
@@ -467,5 +480,45 @@ export async function listCombosHandler(request: Request, ctx: IdParams): Promis
       qualifier: org?.slug ?? id,
       data,
     });
+  });
+}
+
+// ── P9.04 — Organization quota (dashboard surface) ──────────────────────────
+
+const SetOrgQuotaSchema = z.object({
+  limit: z.number().int().nonnegative().nullable(),
+  window: z.enum(["5h", "hourly", "daily", "weekly", "monthly"]),
+  scope: z.enum(["percent", "requests", "tokens", "usd"]),
+});
+
+/** GET /[id]/quota — read the org quota config (any member; read-only). */
+export async function getOrganizationQuotaHandler(
+  request: Request,
+  ctx: IdParams
+): Promise<Response> {
+  return guard(async () => {
+    const { id } = await ctx.params;
+    await requireOrg(request, id, "read");
+    const quota = await getOrganizationQuota(id);
+    return json({ object: "organization_quota", data: quota ?? null });
+  });
+}
+
+/** POST /[id]/quota — set the org quota config (manager only, fail-closed). */
+export async function setOrganizationQuotaHandler(
+  request: Request,
+  ctx: IdParams
+): Promise<Response> {
+  return guard(async () => {
+    const { id } = await ctx.params;
+    const { ctx: orgCtx } = await requireOrg(request, id, "manageResource");
+
+    const body = await request.json().catch(() => null);
+    const parsed = SetOrgQuotaSchema.safeParse(body);
+    if (!parsed.success) {
+      return httpError(HTTP_STATUS.BAD_REQUEST, "Invalid quota payload");
+    }
+    const quota = await setOrganizationQuota(id, parsed.data, orgCtx);
+    return json({ object: "organization_quota", data: quota });
   });
 }
