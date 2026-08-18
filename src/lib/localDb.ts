@@ -157,7 +157,16 @@ export type {
 } from "./db/organizations";
 
 // Organizations feature (P3 — Authorization): org-scoped authz layer.
-export { resolveOrganizationContext } from "./org/authorization";
+export {
+  resolveOrganizationContext,
+  platformAdminOrganizationContext,
+  canReadOrganization,
+  canUseOrganizationResource,
+  canManageOrganizationResource,
+  canManageMembership,
+  canArchiveOrganization,
+  canDeleteOrganization,
+} from "./org/authorization";
 export type {
   ResourceScope,
   OrganizationContext,
