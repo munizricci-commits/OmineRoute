@@ -109,10 +109,14 @@ export function canDeleteOrganization(ctx: OrganizationContext | null): boolean 
 
 /**
  * Credential field names stripped from a connection unless visibility is `full`.
- * Mirrors the (future) `src/lib/db/providerConnections.ts` credential columns;
- * `redactConnectionCredentials` operates on any object carrying these fields.
+ *
+ * Source of truth: `CONNECTION_CREDENTIAL_FIELDS` in `src/lib/db/providers.ts`.
+ * Mirrored here (rather than imported) so this authorization module stays free
+ * of the heavy `providers.ts` graph and any import cycle. Keep the two arrays in
+ * lockstep — they list the real credential columns on a provider_connections row
+ * after `rowToCamel` (apiKey / accessToken / refreshToken / idToken).
  */
-export const CREDENTIAL_FIELDS = ["apiKey", "apiSecret", "password", "bearerToken"] as const;
+export const CREDENTIAL_FIELDS = ["apiKey", "accessToken", "refreshToken", "idToken"] as const;
 
 /** Minimal shape of a provider connection needed for the secret boundary. */
 export interface ConnectionRef {
@@ -127,7 +131,7 @@ export interface ConnectionRef {
  * Resolve whether a viewer may see a connection's credential material.
  *
  * Contract:
- *  - `full`  — the viewer may read `apiKey`/`apiSecret`/`password`/`bearerToken`.
+ *  - `full`  — the viewer may read `apiKey`/`accessToken`/`refreshToken`/`idToken`.
  *  - `usable`— the viewer may route through the connection but MUST NOT receive
  *              credential fields.
  *

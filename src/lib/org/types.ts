@@ -51,12 +51,13 @@ export type ConnectionVisibility = "usable" | "full";
 /**
  * Subset of provider-connection fields that constitute credentials. These are
  * stripped from API responses unless the viewer has `full` visibility (P3.04 /
- * P4). Field names mirror the (future) `src/lib/db/providerConnections.ts`
- * credential columns.
+ * P4). Field names match the real credential columns on a provider_connections
+ * row after `rowToCamel` (apiKey / accessToken / refreshToken / idToken) and
+ * are kept in lockstep with `CREDENTIAL_FIELDS` in `./authorization`.
  */
 export interface ConnectionCredentialFields {
   apiKey?: string | null;
-  apiSecret?: string | null;
-  password?: string | null;
-  bearerToken?: string | null;
+  accessToken?: string | null;
+  refreshToken?: string | null;
+  idToken?: string | null;
 }

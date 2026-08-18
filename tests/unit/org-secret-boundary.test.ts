@@ -70,18 +70,18 @@ test("redactConnectionCredentials strips credential fields when not full", () =>
     name: "My Key",
     provider: "openai",
     apiKey: "sk-secret",
-    apiSecret: "sec",
-    password: "pw",
-    bearerToken: "tok",
+    accessToken: "at-secret",
+    refreshToken: "rt-secret",
+    idToken: "idt-secret",
   };
   const redacted = authz.redactConnectionCredentials(conn, "usable");
   assert.equal(redacted.id, "c1");
   assert.equal(redacted.name, "My Key");
   assert.equal(redacted.provider, "openai");
   assert.equal("apiKey" in redacted, false, "apiKey stripped");
-  assert.equal("apiSecret" in redacted, false, "apiSecret stripped");
-  assert.equal("password" in redacted, false, "password stripped");
-  assert.equal("bearerToken" in redacted, false, "bearerToken stripped");
+  assert.equal("accessToken" in redacted, false, "accessToken stripped");
+  assert.equal("refreshToken" in redacted, false, "refreshToken stripped");
+  assert.equal("idToken" in redacted, false, "idToken stripped");
   // original is never mutated
   assert.equal(conn.apiKey, "sk-secret");
 });
@@ -92,15 +92,15 @@ test("redactConnectionCredentials leaves credential fields when full", () => {
     name: "My Key",
     provider: "openai",
     apiKey: "sk-secret",
-    apiSecret: "sec",
-    password: "pw",
-    bearerToken: "tok",
+    accessToken: "at-secret",
+    refreshToken: "rt-secret",
+    idToken: "idt-secret",
   };
   const full = authz.redactConnectionCredentials(conn, "full");
   assert.equal(full.apiKey, "sk-secret");
-  assert.equal(full.apiSecret, "sec");
-  assert.equal(full.password, "pw");
-  assert.equal(full.bearerToken, "tok");
+  assert.equal(full.accessToken, "at-secret");
+  assert.equal(full.refreshToken, "rt-secret");
+  assert.equal(full.idToken, "idt-secret");
 });
 
 test("redactConnectionCredentials strips a partial set of credential fields", () => {
@@ -115,4 +115,50 @@ test("ConnectionVisibility type is the usable|full union", () => {
   assert.equal(v, "usable");
   const w: types.ConnectionVisibility = "full";
   assert.equal(w, "full");
+});
+
+test("P4.04 regression: real provider_connections credential fields are stripped (usable)", () => {
+  // Mirrors a real row after rowToCamel: the credential columns are apiKey,
+  // accessToken, refreshToken, idToken — NOT the old placeholder names.
+  const conn = {
+    id: "c-real",
+    provider: "google",
+    authType: "oauth",
+    name: "Real OAuth",
+    email: "a@b.com",
+    apiKey: "sk-real",
+    accessToken: "at-real",
+    refreshToken: "rt-real",
+    idToken: "idt-real",
+    organizationId: "org-1",
+  };
+  const redacted = authz.redactConnectionCredentials(conn, "usable");
+  assert.equal(redacted.id, "c-real");
+  assert.equal(redacted.provider, "google");
+  assert.equal(redacted.email, "a@b.com");
+  assert.equal(redacted.organizationId, "org-1");
+  assert.equal("apiKey" in redacted, false, "apiKey stripped");
+  assert.equal("accessToken" in redacted, false, "accessToken stripped");
+  assert.equal("refreshToken" in redacted, false, "refreshToken stripped");
+  assert.equal("idToken" in redacted, false, "idToken stripped");
+  // None of the old placeholder names ever existed on a real connection.
+  assert.equal("apiSecret" in redacted, false);
+  assert.equal("password" in redacted, false);
+  assert.equal("bearerToken" in redacted, false);
+});
+
+test("P4.04 regression: real credential fields are preserved when full", () => {
+  const conn = {
+    id: "c-real",
+    provider: "openai",
+    apiKey: "sk-real",
+    accessToken: "at-real",
+    refreshToken: "rt-real",
+    idToken: "idt-real",
+  };
+  const full = authz.redactConnectionCredentials(conn, "full");
+  assert.equal(full.apiKey, "sk-real");
+  assert.equal(full.accessToken, "at-real");
+  assert.equal(full.refreshToken, "rt-real");
+  assert.equal(full.idToken, "idt-real");
 });
