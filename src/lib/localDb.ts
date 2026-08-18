@@ -154,6 +154,7 @@ export {
   getOrganizationById,
   getOrganizationBySlug,
   listOrganizations,
+  listUserOrganizations,
   updateOrganization,
   archiveOrganization,
   deleteOrganization,

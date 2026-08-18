@@ -245,6 +245,32 @@ export async function listOrganizations(
   return rows.map(parseOrgRow);
 }
 
+/**
+ * List organizations a given user is an active member of (active orgs only),
+ * each annotated with the member's role. Used by the dashboard surface (P8.02)
+ * and the `/api/organizations` list endpoint. Counting on the membership table
+ * keeps the query a single join instead of N+1 lookups.
+ */
+export async function listUserOrganizations(
+  userId: string
+): Promise<Array<OrganizationRecord & { role: OrgRole }>> {
+  if (!userId) return [];
+  const db = getDbInstance();
+  const rows = db
+    .prepare(
+      `SELECT o.*, m.role AS member_role
+       FROM organizations o
+       JOIN organization_members m ON m.organization_id = o.id
+       WHERE m.user_id = ? AND m.status = 'active' AND o.status = 'active'
+       ORDER BY o.created_at ASC`
+    )
+    .all(userId) as Record<string, unknown>[];
+  return rows.map((r) => {
+    const base = parseOrgRow(r);
+    return { ...base, role: clampRole(r.member_role) };
+  });
+}
+
 export async function updateOrganization(
   id: string,
   input: UpdateOrganizationInput
