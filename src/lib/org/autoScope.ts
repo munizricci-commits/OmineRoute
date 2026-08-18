@@ -145,3 +145,35 @@ export function scopeAllowsConnection(
   if (!connectionId) return false;
   return allowed.has(connectionId);
 }
+
+/**
+ * P7.03 — the cache/cooldown NAMESPACE for a routing scope, or `null` for
+ * personal (which must keep its existing un-namespaced keys so pre-P7 cache
+ * entries and behavior are untouched).
+ *
+ * A denied scope gets its own namespace so a fail-closed request can never read
+ * or poison a real organization's cached routing decisions.
+ */
+export function autoScopeKey(scope: RoutingScope | null | undefined): string | null {
+  if (!scope || scope.scope === "personal") return null;
+  if (scope.scope === "denied") return "org:denied";
+  return `org:${scope.organizationId}`;
+}
+
+/**
+ * P7.03 — build the virtual auto-combo id, namespaced by organization.
+ *
+ * The virtual combo id doubles as the cache / cooldown / routing-state key for
+ * the auto channel. Before P7 it was the bare route (e.g. `auto/best-coding`),
+ * which is IDENTICAL for every organization — two orgs requesting the same auto
+ * channel would therefore share cached results, cooldowns and model lockouts
+ * across a tenant boundary. Prefixing with the organization id removes that
+ * collision. Personal routes keep the bare id unchanged.
+ */
+export function buildScopedAutoComboId(
+  route: string,
+  scope: RoutingScope | null | undefined
+): string {
+  const namespace = autoScopeKey(scope);
+  return namespace ? `${namespace}:${route}` : route;
+}
