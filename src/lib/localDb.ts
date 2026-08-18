@@ -136,6 +136,25 @@ export type {
   UpdateUserInput,
 } from "./db/users";
 
+// Organizations feature (P2 — Organizations): organizations entity (P2.01).
+export {
+  createOrganization,
+  getOrganizationById,
+  getOrganizationBySlug,
+  listOrganizations,
+  updateOrganization,
+  archiveOrganization,
+  deleteOrganization,
+  OrganizationError,
+} from "./db/organizations";
+export type {
+  OrganizationRecord,
+  CreateOrganizationInput,
+  UpdateOrganizationInput,
+  OrgRole,
+  OrgStatus,
+} from "./db/organizations";
+
 export {
   // Evals
   saveEvalRun,
