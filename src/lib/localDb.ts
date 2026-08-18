@@ -196,6 +196,19 @@ export type {
 export { requireOrganizationAccess, resolveOrgAccess, OrgAccessDeniedError } from "./org/apiAuth";
 export type { OrgAccessCapability } from "./org/apiAuth";
 
+// Organizations feature (P6 — Qualified Routes): parse + resolve org-scoped routes.
+export {
+  parseQualifiedModel,
+  resolveQualifiedRoute,
+  buildOrgRoutingContext,
+} from "./org/qualifiedRoute";
+export type {
+  ParsedQualifiedModel,
+  ResolvedQualifiedRoute,
+  OrgRoutingContext,
+  ModelBody,
+} from "./org/qualifiedRoute";
+
 // Organizations feature (P2 — Organizations): membership service (P2.03).
 export {
   addMember,

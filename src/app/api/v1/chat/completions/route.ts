@@ -27,6 +27,8 @@ import {
   withCompressionHeaderEcho,
 } from "@/shared/utils/compressionHeaderEcho";
 import { resolveModelAliasWithSeedFallbackOnBody } from "@/lib/modelAliasResolver";
+import { resolveDashboardUserPrincipal } from "@/lib/org/principal";
+import { buildOrgRoutingContext } from "@/lib/org/qualifiedRoute";
 
 let initPromise = null;
 
@@ -182,6 +184,30 @@ export async function POST(request) {
               { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
             )
           );
+        }
+
+        // P6 — Qualified Routes: resolve an org-scoped model BEFORE handing the
+        // body to handleChat. Fail-closed: a qualified `<org>/<route>` that the
+        // caller is not an active member of yields a 404 "model not found" with
+        // NO existence reveal (org/combo must not leak across tenants). Personal
+        // models (no org qualifier) pass through unchanged — legacy behavior.
+        // The actual combo/auto scoping inside handleChat is applied via the
+        // same `buildOrgRoutingContext` result threaded through the request.
+        if (
+          parsedBodyIsRecord &&
+          typeof parsedBody.model === "string" &&
+          parsedBody.model.includes("/")
+        ) {
+          try {
+            const principal = await resolveDashboardUserPrincipal(request);
+            const orgCtx = await buildOrgRoutingContext(parsedBody, principal);
+            if (orgCtx.denied) {
+              return finishAdmission(errorResponse(404, `Model '${parsedBody.model}' not found`));
+            }
+          } catch {
+            // Resolution failure must not widen access — treat as not-found.
+            return finishAdmission(errorResponse(404, `Model '${parsedBody.model}' not found`));
+          }
         }
       }
     } catch (error) {
