@@ -26,6 +26,7 @@ import {
   createProviderConnection,
   updateProviderConnection,
   deleteProviderConnection,
+  getProviderConnectionById,
 } from "./providers";
 import { getOrganizationById } from "./organizations";
 import {
@@ -204,4 +205,97 @@ export async function deleteOrganizationConnection(
   if (!existing) return false;
   await deleteProviderConnection(id);
   return true;
+}
+
+/**
+ * Transfer a provider connection's organization ownership.
+ *
+ * Directions:
+ *  - personal (NULL org) -> org: the actor must be an owner/moderator of the
+ *    TARGET org. (Connection-owner check omitted — see deviation below.)
+ *  - org -> personal (reverse): the actor must be the OWNER of the SOURCE org
+ *    (or a platform_admin override). Connection-owner check is omitted because
+ *    `provider_connections` carries no per-user owner column in this
+ *    single-tenant schema — documented in REPORTS.md.
+ *  - org -> org: a single OrganizationContext cannot represent membership in two
+ *    orgs, so this is restricted to a platform_admin override (fail-closed).
+ *
+ * Idempotent: transferring a connection that is already in `orgId` is a clean
+ * no-op (returns the connection unchanged). Credentials are NEVER rewritten —
+ * only `organization_id` (and `updated_at`) are updated.
+ */
+export async function transferConnectionToOrganization(
+  connectionId: string,
+  orgId: string | null,
+  actorCtx: OrganizationContext | null
+): Promise<JsonRecord> {
+  if (!actorCtx) {
+    throw new OrgConnectionError(
+      "Authentication required to transfer a connection",
+      "NOT_AUTHORIZED"
+    );
+  }
+
+  const db = getDbInstance() as unknown as DbLike;
+  const row = db.prepare("SELECT * FROM provider_connections WHERE id = ?").get(connectionId) as
+    Record<string, unknown> | undefined;
+  if (!row) {
+    throw new OrgConnectionError(`Connection '${connectionId}' not found`, "CONNECTION_NOT_FOUND");
+  }
+  const currentOrg = (row.organization_id as string | null) ?? null;
+
+  // Idempotent no-op: already in the target org (or already personal when null).
+  if (currentOrg === orgId) {
+    return toOrgConnection(row);
+  }
+
+  // Validate the target org exists when moving into an org.
+  if (orgId !== null) {
+    const org = await getOrganizationById(orgId);
+    if (!org) {
+      throw new OrgConnectionError(`Organization '${orgId}' not found`, "ORG_NOT_FOUND");
+    }
+  }
+
+  const isPersonal = currentOrg === null;
+
+  if (orgId === null) {
+    // Reverse: org -> personal. Owner of the source org (or platform_admin).
+    const isSourceOwner =
+      actorCtx.organizationId === currentOrg &&
+      (actorCtx.role === "owner" || actorCtx.platformAdminOverride === true);
+    if (!isSourceOwner) {
+      throw new OrgConnectionError(
+        "Only the source organization owner may move a connection back to personal",
+        "NOT_AUTHORIZED"
+      );
+    }
+  } else if (isPersonal) {
+    // Personal -> org: manager of the TARGET org.
+    if (actorCtx.organizationId !== orgId || !canManageOrganizationResource(actorCtx)) {
+      throw new OrgConnectionError(
+        "Only an owner or moderator of the target organization may claim a personal connection",
+        "NOT_AUTHORIZED"
+      );
+    }
+  } else {
+    // Org -> org: requires platform_admin override (single-context limitation).
+    if (!actorCtx.platformAdminOverride) {
+      throw new OrgConnectionError(
+        "Cross-organization transfer requires platform admin override",
+        "NOT_AUTHORIZED"
+      );
+    }
+  }
+
+  db.transaction(() => {
+    db.prepare(
+      "UPDATE provider_connections SET organization_id = ?, updated_at = ? WHERE id = ?"
+    ).run(orgId, new Date().toISOString(), connectionId);
+  })();
+
+  if (orgId === null) {
+    return (await getProviderConnectionById(connectionId)) as JsonRecord;
+  }
+  return (await getOrganizationConnectionById(orgId, connectionId)) as JsonRecord;
 }
