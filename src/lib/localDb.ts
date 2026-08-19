@@ -135,10 +135,15 @@ export {
   createUser,
   getUserById,
   getUserByEmail,
+  getUserByLoginIdentifier,
+  resolveUserByIdentifierOrEmail,
   updateUser,
   setUserRole,
   listUsers,
   deleteUser,
+  backfillUserLoginIdentifiers,
+  normalizeLoginIdentifier,
+  validateLoginIdentifier,
 } from "./db/users";
 export type {
   UserRecord,
@@ -147,6 +152,14 @@ export type {
   CreateUserInput,
   UpdateUserInput,
 } from "./db/users";
+
+// Auth roadmap (Phase 02): instance-wide authentication settings.
+export { getInstanceAuthSettings, setInstanceAuthSettings } from "./db/instanceAuthSettings";
+export type {
+  InstanceAuthSettings,
+  RegistrationPolicy,
+  SetInstanceAuthSettingsInput,
+} from "./db/instanceAuthSettings";
 
 // Organizations feature (P2 — Organizations): organizations entity (P2.01).
 export {
