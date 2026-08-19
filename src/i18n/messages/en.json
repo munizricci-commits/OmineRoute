@@ -9777,7 +9777,10 @@
     "deleteAndRelaunch": "Delete",
     "settingsJson": "settings.json",
     "fromDataDir": "from the data directory",
-    "relaunchApp": "Relaunch the OmniRoute desktop app"
+    "relaunchApp": "Relaunch the OmniRoute desktop app",
+    "loginIdentifier": "Login",
+    "loginIdentifierPlaceholder": "Login name or email",
+    "loginIdentifierHint": "Optional: bind the session to your user. Leave blank to sign in with the admin password."
   },
   "landing": {
     "brandName": "OmniRoute",

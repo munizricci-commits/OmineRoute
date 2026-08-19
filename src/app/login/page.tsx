@@ -5,10 +5,12 @@ import { useTranslations } from "next-intl";
 import { useState, useEffect } from "react";
 import { Button, Input } from "@/shared/components";
 import { useRouter } from "next/navigation";
+import { buildLoginPayload } from "@/lib/auth/loginPayload";
 
 export default function LoginPage() {
   const t = useTranslations("auth");
   const [password, setPassword] = useState("");
+  const [login, setLogin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [hasPassword, setHasPassword] = useState<boolean | null>(null);
@@ -72,7 +74,7 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify(buildLoginPayload(password, login)),
       });
 
       if (res.ok) {
@@ -267,9 +269,23 @@ export default function LoginPage() {
               <>
                 <form onSubmit={handleLogin} className="space-y-5 w-full">
                   <div className="space-y-2">
+                    <label className="text-sm font-medium text-text-main">{t("loginIdentifier")}</label>
+                    <Input
+                      type="text"
+                      autoComplete="username"
+                      placeholder={t("loginIdentifierPlaceholder")}
+                      value={login}
+                      onChange={(e) => setLogin(e.target.value)}
+                      className="h-11"
+                    />
+                    <p className="text-xs text-text-muted/60 pt-0.5">{t("loginIdentifierHint")}</p>
+                  </div>
+
+                  <div className="space-y-2">
                     <label className="text-sm font-medium text-text-main">{t("password")}</label>
                     <Input
                       type="password"
+                      autoComplete="current-password"
                       placeholder={t("enterPassword")}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}

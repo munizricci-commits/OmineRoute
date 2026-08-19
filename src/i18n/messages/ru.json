@@ -9772,7 +9772,10 @@
     "deleteAndRelaunch": "Удалить",
     "settingsJson": "settings.json",
     "fromDataDir": "из каталога данных",
-    "relaunchApp": "Перезапустите настольное приложение OmniRoute"
+    "relaunchApp": "Перезапустите настольное приложение OmniRoute",
+    "loginIdentifier": "Логин",
+    "loginIdentifierPlaceholder": "Имя входа или email",
+    "loginIdentifierHint": "Необязательно: привяжите сессию к вашему пользователю. Оставьте пустым для входа по паролю администратора."
   },
   "landing": {
     "brandName": "ОмниРоут",
