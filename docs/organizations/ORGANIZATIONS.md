@@ -74,7 +74,7 @@ All organization tables/columns are **additive** and idempotent:
 
 | Migration                          | Adds                                                                 |
 | ---------------------------------- | -------------------------------------------------------------------- |
-| `155_organizations.sql`            | `organizations`, `organization_members`, `organization_invitations`  |
+| `157_organizations.sql`            | `organizations`, `organization_members`, `organization_invitations`  |
 | `158_organization_connections.sql` | `organization_id` column on `provider_connections`                   |
 | `159_organization_combos.sql`      | `organization_id` column on `combos`                                 |
 | `161_organization_quotas.sql`      | `organization_quotas` table (nullable columns; `quota_limit` column) |

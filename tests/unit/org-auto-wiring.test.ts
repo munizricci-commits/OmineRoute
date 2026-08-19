@@ -114,12 +114,12 @@ test("LIVE: the chat route resolves the org auto scope and threads it into handl
   assert.match(src, /resolveAndApplyOrgAutoScope/, "route.ts must call the wiring helper");
   assert.match(
     src,
-    /handleChat\(request, null, parsedBody, reqId, routingScope\)/,
+    /handleChat\(\s*request,\s*null,\s*parsedBody,\s*reqId,\s*routingScope\s*\)/,
     "streaming handleChat call must pass the routing scope"
   );
   assert.match(
     src,
-    /handleChat\(request, null, parsedBody, undefined, routingScope\)/,
+    /handleChat\(\s*request,\s*null,\s*parsedBody,\s*undefined,\s*routingScope\s*\)/,
     "non-streaming handleChat call must pass the routing scope"
   );
 });
@@ -129,7 +129,7 @@ test("LIVE: handleChat accepts a RoutingScope and passes it to createVirtualAuto
   assert.match(chat, /routingScope/, "handleChatImplementation must accept a routing scope");
   assert.match(
     chat,
-    /createVirtualAutoCombo\(autoRouting, combo, apiKeyInfo\?\.id, routingScope\)/,
+    /createVirtualAutoCombo\(\s*autoRouting,\s*combo,\s*apiKeyInfo\?\.id,\s*routingScope\s*\)/,
     "the virtual auto-combo must be created WITH the routing scope"
   );
   assert.match(
