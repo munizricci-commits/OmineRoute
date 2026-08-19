@@ -191,6 +191,23 @@ export async function getUserByLoginIdentifier(
 }
 
 /**
+ * Resolve a user principal by a login identifier or email (case-insensitive,
+ * trimmed). Used by the login flow (Task 04) to bind the session to a specific
+ * user when a `login` field is supplied. Returns null when nothing matches.
+ */
+export async function resolveUserByIdentifierOrEmail(
+  login: string | null | undefined
+): Promise<UserRecord | null> {
+  const normalized = normalizeLoginIdentifier(login);
+  if (!normalized) return null;
+  const byId = await getUserByLoginIdentifier(normalized);
+  if (byId) return byId;
+  // Emails are stored lower-cased on write; match the same way.
+  const byEmail = await getUserByEmail(normalized);
+  return byEmail;
+}
+
+/**
  * Backfill a deterministic `login_identifier` for every user that lacks one.
  *
  * Resolution order (deterministic, backward-compatible):
