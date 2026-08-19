@@ -13,7 +13,7 @@
 
 import { jwtVerify } from "jose";
 import { isDashboardSessionAuthenticated } from "@/shared/utils/apiAuth";
-import { getUserById, type UserRecord } from "@/lib/db/users";
+import { getUserById, listUsers, createUser, type UserRecord } from "@/lib/db/users";
 
 export interface UserPrincipal {
   userId: string;
@@ -61,10 +61,33 @@ export async function resolveDashboardUserPrincipal(
   try {
     const { payload } = await jwtVerify(token, new TextEncoder().encode(process.env.JWT_SECRET));
     const sub = typeof payload.sub === "string" && payload.sub.length > 0 ? payload.sub : null;
-    if (!sub) return null;
-    const user = await getUserById(sub);
-    if (!user || user.status === "disabled") return null;
-    return { userId: user.id, user, isOrganizationScoped: false };
+    if (sub) {
+      const user = await getUserById(sub);
+      if (!user || user.status === "disabled") return null;
+      return { userId: user.id, user, isOrganizationScoped: false };
+    }
+    // Legacy dashboard session: the management-password bootstrap login emits a
+    // JWT without a `sub` claim (only `{ authenticated: true }`). Per the feature
+    // design, such a session is treated as the platform admin during the
+    // transition — resolve it to the first active user (the bootstrap admin) so
+    // the Organizations API is usable from the dashboard. Fail-closed: only an
+    // already-authenticated session reaches here, and we require an active user.
+    let users = await listUsers(1, 0);
+    if (users.length === 0) {
+      // Fresh database: no users row exists yet (the management-password
+      // bootstrap does not seed one). Lazily create the bootstrap platform
+      // admin so the Organizations API works out-of-the-box. This is gated on an
+      // already-authenticated session and runs at most once (next call finds it).
+      try {
+        const bootstrap = await createUser({ role: "platform_admin" });
+        users = [bootstrap];
+      } catch {
+        return null;
+      }
+    }
+    const active = users.find((u) => u.status === "active");
+    if (!active) return null;
+    return { userId: active.id, user: active, isOrganizationScoped: false };
   } catch {
     return null;
   }

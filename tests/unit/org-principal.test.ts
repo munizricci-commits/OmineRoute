@@ -69,11 +69,16 @@ test("resolves a typed principal when the session JWT carries a sub claim", asyn
   assert.equal(p!.isOrganizationScoped, false);
 });
 
-test("legacy session without sub claim still authenticates but yields null principal", async () => {
-  // Management-password bootstrap sessions have no user row.
+test("legacy session without sub claim resolves to the bootstrap platform admin", async () => {
+  // Management-password bootstrap sessions carry no `sub` claim and, on a fresh
+  // database, no user row exists yet. The feature requires such a session to
+  // resolve to a user principal (otherwise the Organizations API is unusable
+  // for the bootstrap admin). resolveDashboardUserPrincipal lazily creates the
+  // bootstrap platform_admin and resolves to it.
   const token = await signToken({ authenticated: true });
   const p = await principal.resolveDashboardUserPrincipal(makeCookieRequest(token));
-  assert.equal(p, null, "no sub → no principal (legacy admin preserved)");
+  assert.ok(p, "legacy session must resolve to the bootstrap admin");
+  assert.equal(principal.isPlatformAdmin(p!.user), true, "bootstrap user is platform_admin");
 });
 
 test("null principal for an unknown sub (user deleted after login)", async () => {

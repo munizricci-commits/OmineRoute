@@ -1293,7 +1293,10 @@
       "open": "открыть",
       "close": "закрыть"
     },
-    "noResults": "Нет результатов"
+    "noResults": "Нет результатов",
+    "organizations": "Организации",
+    "organizationsSection": "Организации",
+    "organizationsSubtitle": "Мультиарендные команды, участники и общий роутинг"
   },
   "webhooks": {
     "title": "Вебхуки",
