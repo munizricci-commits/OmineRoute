@@ -131,6 +131,52 @@ export async function getUserByLoginIdentifier(
   return row ? parseUserRow(row) : null;
 }
 
+/**
+ * Backfill a deterministic `login_identifier` for every user that lacks one.
+ *
+ * Resolution order (deterministic, backward-compatible):
+ *  1. email local-part (before '@') when an email is present;
+ *  2. "admin" for a platform administrator without an email;
+ *  3. `user-<first8charsOfId>` for ordinary users without an email.
+ *
+ * Idempotent: users that already have a login_identifier are never overwritten,
+ * and a second call reports zero changes. The migration-password is untouched
+ * (it lives in the management-password env, not the users table).
+ *
+ * @returns the number of users that were updated.
+ */
+export async function backfillUserLoginIdentifiers(): Promise<number> {
+  const db = getDbInstance();
+  const rows = db.prepare(`SELECT * FROM users WHERE login_identifier IS NULL`).all() as Record<
+    string,
+    unknown
+  >[];
+  if (rows.length === 0) return 0;
+
+  const ts = nowIso();
+  let changed = 0;
+  const updateStmt = db.prepare(
+    `UPDATE users SET login_identifier = ?, updated_at = ? WHERE id = ?`
+  );
+  const tx = db.transaction(() => {
+    for (const row of rows) {
+      const rec = parseUserRow(row);
+      let identifier: string;
+      if (rec.email) {
+        identifier = String(rec.email).split("@")[0] || rec.email;
+      } else if (rec.role === "platform_admin") {
+        identifier = "admin";
+      } else {
+        identifier = `user-${String(rec.id).slice(0, 8)}`;
+      }
+      updateStmt.run(identifier, ts, rec.id);
+      changed += 1;
+    }
+  });
+  tx();
+  return changed;
+}
+
 export async function updateUser(id: string, input: UpdateUserInput): Promise<UserRecord | null> {
   const existing = await getUserById(id);
   if (!existing) return null;

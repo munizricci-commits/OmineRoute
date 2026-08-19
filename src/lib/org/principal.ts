@@ -13,7 +13,13 @@
 
 import { jwtVerify } from "jose";
 import { isDashboardSessionAuthenticated } from "@/shared/utils/apiAuth";
-import { getUserById, listUsers, createUser, type UserRecord } from "@/lib/db/users";
+import {
+  getUserById,
+  listUsers,
+  createUser,
+  backfillUserLoginIdentifiers,
+  type UserRecord,
+} from "@/lib/db/users";
 
 export interface UserPrincipal {
   userId: string;
@@ -79,11 +85,18 @@ export async function resolveDashboardUserPrincipal(
       // admin so the Organizations API works out-of-the-box. This is gated on an
       // already-authenticated session and runs at most once (next call finds it).
       try {
-        const bootstrap = await createUser({ role: "platform_admin" });
+        const bootstrap = await createUser({ role: "platform_admin", loginIdentifier: "admin" });
         users = [bootstrap];
       } catch {
         return null;
       }
+    }
+    // Backfill a deterministic login identifier for any pre-existing user that
+    // lacks one (Task 02). Idempotent; preserves the management-password.
+    try {
+      await backfillUserLoginIdentifiers();
+    } catch {
+      // best-effort; do not block principal resolution on a backfill failure.
     }
     const active = users.find((u) => u.status === "active");
     if (!active) return null;
