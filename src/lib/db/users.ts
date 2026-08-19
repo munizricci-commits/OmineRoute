@@ -23,6 +23,8 @@ export interface UserRecord {
   id: string;
   email: string | null;
   displayName: string | null;
+  /** Durable login identifier (login name / email used at the login form). Nullable until Task 03. */
+  loginIdentifier: string | null;
   role: UserRole;
   status: UserStatus;
   createdAt: string;
@@ -32,6 +34,7 @@ export interface UserRecord {
 export interface CreateUserInput {
   email?: string | null;
   displayName?: string | null;
+  loginIdentifier?: string | null;
   role?: UserRole;
   status?: UserStatus;
 }
@@ -39,6 +42,7 @@ export interface CreateUserInput {
 export interface UpdateUserInput {
   email?: string | null;
   displayName?: string | null;
+  loginIdentifier?: string | null;
   role?: UserRole;
   status?: UserStatus;
 }
@@ -64,6 +68,10 @@ function parseUserRow(row: Record<string, unknown>): UserRecord {
       camel.displayName === null || camel.displayName === undefined
         ? null
         : String(camel.displayName),
+    loginIdentifier:
+      camel.loginIdentifier === null || camel.loginIdentifier === undefined
+        ? null
+        : String(camel.loginIdentifier),
     role: clampRole(camel.role),
     status: clampStatus(camel.status),
     createdAt: String(camel.createdAt),
@@ -84,13 +92,14 @@ export async function createUser(input: CreateUserInput = {}): Promise<UserRecor
   const status = clampStatus(input.status);
   const email = input.email === undefined ? null : input.email;
   const displayName = input.displayName === undefined ? null : input.displayName;
+  const loginIdentifier = input.loginIdentifier === undefined ? null : input.loginIdentifier;
 
   await db
     .prepare(
-      `INSERT INTO users (id, email, display_name, role, status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO users (id, email, display_name, login_identifier, role, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     )
-    .run(id, email, displayName, role, status, ts, ts);
+    .run(id, email, displayName, loginIdentifier, role, status, ts, ts);
 
   return (await getUserById(id))!;
 }
@@ -111,6 +120,17 @@ export async function getUserByEmail(email: string): Promise<UserRecord | null> 
   return row ? parseUserRow(row) : null;
 }
 
+export async function getUserByLoginIdentifier(
+  loginIdentifier: string
+): Promise<UserRecord | null> {
+  if (!loginIdentifier) return null;
+  const db = getDbInstance();
+  const row = db
+    .prepare(`SELECT * FROM users WHERE login_identifier = ?`)
+    .get(String(loginIdentifier)) as Record<string, unknown> | undefined;
+  return row ? parseUserRow(row) : null;
+}
+
 export async function updateUser(id: string, input: UpdateUserInput): Promise<UserRecord | null> {
   const existing = await getUserById(id);
   if (!existing) return null;
@@ -124,16 +144,22 @@ export async function updateUser(id: string, input: UpdateUserInput): Promise<Us
       : input.displayName === null
         ? null
         : input.displayName;
+  const loginIdentifier =
+    input.loginIdentifier === undefined
+      ? existing.loginIdentifier
+      : input.loginIdentifier === null
+        ? null
+        : input.loginIdentifier;
   const role = input.role === undefined ? existing.role : clampRole(input.role);
   const status = input.status === undefined ? existing.status : clampStatus(input.status);
   const ts = nowIso();
 
   await db
     .prepare(
-      `UPDATE users SET email = ?, display_name = ?, role = ?, status = ?, updated_at = ?
+      `UPDATE users SET email = ?, display_name = ?, login_identifier = ?, role = ?, status = ?, updated_at = ?
        WHERE id = ?`
     )
-    .run(email, displayName, role, status, ts, id);
+    .run(email, displayName, loginIdentifier, role, status, ts, id);
 
   return (await getUserById(id))!;
 }
