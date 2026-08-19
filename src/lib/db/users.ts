@@ -59,6 +59,65 @@ function clampStatus(value: unknown): UserStatus {
   return value === "disabled" ? "disabled" : "active";
 }
 
+/** Allowed characters in a normalized login identifier (email-style or simple name). */
+const LOGIN_IDENTIFIER_PATTERN = /^[a-zA-Z0-9._@-]+$/;
+const LOGIN_IDENTIFIER_MAX = 128;
+
+/**
+ * Normalize a raw login identifier: trim whitespace and lower-case.
+ * Returns null for empty/undefined input.
+ */
+export function normalizeLoginIdentifier(raw: string | null | undefined): string | null {
+  if (raw === null || raw === undefined) return null;
+  const trimmed = String(raw).trim().toLowerCase();
+  return trimmed.length === 0 ? null : trimmed;
+}
+
+/**
+ * Validate a normalized login identifier against format rules.
+ * Returns `{ ok: true }` or `{ ok: false, error }`.
+ */
+export function validateLoginIdentifier(
+  raw: string | null | undefined
+): { ok: true } | { ok: false; error: string } {
+  const normalized = normalizeLoginIdentifier(raw);
+  if (normalized === null) {
+    return { ok: false, error: "login identifier must not be empty" };
+  }
+  if (normalized.length > LOGIN_IDENTIFIER_MAX) {
+    return { ok: false, error: "login identifier exceeds maximum length" };
+  }
+  if (!LOGIN_IDENTIFIER_PATTERN.test(normalized)) {
+    return {
+      ok: false,
+      error: "login identifier contains invalid characters",
+    };
+  }
+  return { ok: true };
+}
+
+/**
+ * Resolve and validate a login identifier for create/update, throwing a clear
+ * error on invalid input or a collision with another user (fail-closed, no
+ * partial state). Returns the normalized value (possibly null to clear).
+ */
+async function resolveLoginIdentifierForWrite(
+  raw: string | null | undefined,
+  selfId?: string
+): Promise<string | null> {
+  const normalized = normalizeLoginIdentifier(raw);
+  if (normalized === null) return null; // explicit clear
+  const validation = validateLoginIdentifier(normalized);
+  if (!validation.ok) {
+    throw new Error(`Invalid login identifier: ${validation.error}`);
+  }
+  const existing = await getUserByLoginIdentifier(normalized);
+  if (existing && existing.id !== selfId) {
+    throw new Error("Login identifier already in use");
+  }
+  return normalized;
+}
+
 function parseUserRow(row: Record<string, unknown>): UserRecord {
   const camel = rowToCamel(row) as Record<string, unknown>;
   return {
@@ -92,7 +151,7 @@ export async function createUser(input: CreateUserInput = {}): Promise<UserRecor
   const status = clampStatus(input.status);
   const email = input.email === undefined ? null : input.email;
   const displayName = input.displayName === undefined ? null : input.displayName;
-  const loginIdentifier = input.loginIdentifier === undefined ? null : input.loginIdentifier;
+  const loginIdentifier = await resolveLoginIdentifierForWrite(input.loginIdentifier);
 
   await db
     .prepare(
@@ -139,9 +198,10 @@ export async function getUserByLoginIdentifier(
  *  2. "admin" for a platform administrator without an email;
  *  3. `user-<first8charsOfId>` for ordinary users without an email.
  *
- * Idempotent: users that already have a login_identifier are never overwritten,
- * and a second call reports zero changes. The migration-password is untouched
- * (it lives in the management-password env, not the users table).
+ * Collisions within the same batch are disambiguated with a numeric suffix so
+ * the new UNIQUE index (Task 03) is never violated. Idempotent: users that
+ * already have a login_identifier are never overwritten, and a second call
+ * reports zero changes. The management-password is untouched.
  *
  * @returns the number of users that were updated.
  */
@@ -155,21 +215,35 @@ export async function backfillUserLoginIdentifiers(): Promise<number> {
 
   const ts = nowIso();
   let changed = 0;
+  const taken = new Set<string>();
+  const plan: Array<{ id: string; identifier: string }> = [];
+  for (const row of rows) {
+    const rec = parseUserRow(row);
+    let base: string;
+    if (rec.email) {
+      base = String(rec.email).split("@")[0] || rec.email;
+    } else if (rec.role === "platform_admin") {
+      base = "admin";
+    } else {
+      base = `user-${String(rec.id).slice(0, 8)}`;
+    }
+    // Disambiguate against already-claimed identifiers in this batch and the DB.
+    let candidate = normalizeLoginIdentifier(base) ?? base;
+    let suffix = 1;
+    while (taken.has(candidate) || (await getUserByLoginIdentifier(candidate))) {
+      candidate = `${base}-${suffix}`;
+      suffix += 1;
+    }
+    taken.add(candidate);
+    plan.push({ id: rec.id, identifier: candidate });
+  }
+
   const updateStmt = db.prepare(
     `UPDATE users SET login_identifier = ?, updated_at = ? WHERE id = ?`
   );
   const tx = db.transaction(() => {
-    for (const row of rows) {
-      const rec = parseUserRow(row);
-      let identifier: string;
-      if (rec.email) {
-        identifier = String(rec.email).split("@")[0] || rec.email;
-      } else if (rec.role === "platform_admin") {
-        identifier = "admin";
-      } else {
-        identifier = `user-${String(rec.id).slice(0, 8)}`;
-      }
-      updateStmt.run(identifier, ts, rec.id);
+    for (const { id, identifier } of plan) {
+      updateStmt.run(identifier, ts, id);
       changed += 1;
     }
   });
@@ -190,12 +264,7 @@ export async function updateUser(id: string, input: UpdateUserInput): Promise<Us
       : input.displayName === null
         ? null
         : input.displayName;
-  const loginIdentifier =
-    input.loginIdentifier === undefined
-      ? existing.loginIdentifier
-      : input.loginIdentifier === null
-        ? null
-        : input.loginIdentifier;
+  const loginIdentifier = await resolveLoginIdentifierForWrite(input.loginIdentifier, id);
   const role = input.role === undefined ? existing.role : clampRole(input.role);
   const status = input.status === undefined ? existing.status : clampStatus(input.status);
   const ts = nowIso();
