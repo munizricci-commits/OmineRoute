@@ -79,3 +79,14 @@ export async function consumePasswordResetToken(
   });
   return tx();
 }
+
+/** Count non-consumed, non-expired reset tokens for a user (used by tests/audit). */
+export async function countResetTokensForUser(userId: string): Promise<number> {
+  const db = getDbInstance();
+  const row = db
+    .prepare(
+      `SELECT COUNT(*) AS c FROM password_reset_tokens WHERE user_id = ? AND used = 0 AND expires_at > ?`
+    )
+    .get(userId, new Date().toISOString()) as { c: number };
+  return row.c;
+}
