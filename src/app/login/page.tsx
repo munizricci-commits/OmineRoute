@@ -20,6 +20,7 @@ export default function LoginPage() {
   const [oidcEnabled, setOidcEnabled] = useState<boolean | null>(null);
   const [oidcDisablePasswordLogin, setOidcDisablePasswordLogin] = useState<boolean | null>(null);
   const [recoverySupported, setRecoverySupported] = useState<boolean | null>(null);
+  const [githubOAuthEnabled, setGithubOAuthEnabled] = useState<boolean | null>(null);
   const [mounted, setMounted] = useState(false);
   const [nodeVersion, setNodeVersion] = useState(null);
   const [nodeCompatible, setNodeCompatible] = useState(true);
@@ -54,6 +55,7 @@ export default function LoginPage() {
           setOidcEnabled(!!data.oidcEnabled);
           setOidcDisablePasswordLogin(!!data.oidcDisablePasswordLogin);
           setRecoverySupported(!!data.passwordRecoverySupported);
+          setGithubOAuthEnabled(!!data.githubOAuthEnabled);
         } else {
           setHasPassword(true);
           setSetupComplete(true);
@@ -334,6 +336,19 @@ export default function LoginPage() {
                   </div>
                 )}
               </>
+            )}
+
+            {githubOAuthEnabled && (
+              <div className="mt-4">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full h-11 text-sm font-medium"
+                  onClick={() => (window.location.href = "/api/auth/github/authorize")}
+                >
+                  {t("continueWithGithub")}
+                </Button>
+              </div>
             )}
 
             {!oidcEnabled && (

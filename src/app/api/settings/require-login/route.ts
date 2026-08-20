@@ -12,6 +12,7 @@ import { getNodeRuntimeSupport } from "@/shared/utils/nodeRuntimeSupport.ts";
 import { updateRequireLoginSchema } from "@/shared/validation/schemas";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 import { isPasswordRecoverySupported } from "@/lib/auth/passwordRecoverySupport";
+import { isGithubOAuthEnabled } from "@/lib/db/githubOAuthConfig";
 
 function getJwtSecret(): Uint8Array | null {
   const secret = process.env.JWT_SECRET?.trim();
@@ -61,6 +62,7 @@ export async function GET() {
         process.env.OMNIROUTE_OIDC_DISABLE_PASSWORD_LOGIN === "true" ||
         process.env.OIDC_DISABLE_PASSWORD_LOGIN === "true");
     const passwordRecoverySupported = isPasswordRecoverySupported(settings);
+    const githubOAuthEnabled = await isGithubOAuthEnabled();
     return NextResponse.json({
       authenticated,
       requireLogin,
@@ -69,6 +71,7 @@ export async function GET() {
       oidcEnabled,
       oidcDisablePasswordLogin,
       passwordRecoverySupported,
+      githubOAuthEnabled,
       ...nodeInfo,
     });
   } catch (error) {
@@ -82,6 +85,7 @@ export async function GET() {
         oidcEnabled: false,
         oidcDisablePasswordLogin: false,
         passwordRecoverySupported: false,
+        githubOAuthEnabled: false,
         ...nodeInfo,
       },
       { status: 200 }

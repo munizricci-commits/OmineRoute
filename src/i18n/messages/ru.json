@@ -9709,6 +9709,7 @@
     "backToLogin": "Вернуться к входу",
     "forgotPassword": "Забыли пароль?",
     "continueWithOidc": "Продолжить с OIDC",
+    "continueWithGithub": "Продолжить с GitHub",
     "defaultPasswordHint": "Пароль по умолчанию: CHANGEME (если не задан INITIAL_PASSWORD)",
     "Authorization": "Авторизация",
     "Content-Disposition": "Содержание-Расположение",

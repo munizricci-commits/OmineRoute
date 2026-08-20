@@ -9714,6 +9714,7 @@
     "backToLogin": "Back to Login",
     "forgotPassword": "Forgot password?",
     "continueWithOidc": "Continue with OIDC",
+    "continueWithGithub": "Continue with GitHub",
     "defaultPasswordHint": "Default password: CHANGEME (unless INITIAL_PASSWORD was set)",
     "Authorization": "Authorization",
     "Content-Disposition": "Content-Disposition",
