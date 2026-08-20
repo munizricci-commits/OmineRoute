@@ -19,6 +19,7 @@ export default function LoginPage() {
   const [setupComplete, setSetupComplete] = useState<boolean | null>(null);
   const [oidcEnabled, setOidcEnabled] = useState<boolean | null>(null);
   const [oidcDisablePasswordLogin, setOidcDisablePasswordLogin] = useState<boolean | null>(null);
+  const [recoverySupported, setRecoverySupported] = useState<boolean | null>(null);
   const [mounted, setMounted] = useState(false);
   const [nodeVersion, setNodeVersion] = useState(null);
   const [nodeCompatible, setNodeCompatible] = useState(true);
@@ -52,18 +53,21 @@ export default function LoginPage() {
           setSetupComplete(!!data.setupComplete);
           setOidcEnabled(!!data.oidcEnabled);
           setOidcDisablePasswordLogin(!!data.oidcDisablePasswordLogin);
+          setRecoverySupported(!!data.passwordRecoverySupported);
         } else {
           setHasPassword(true);
           setSetupComplete(true);
           setOidcEnabled(false);
           setOidcDisablePasswordLogin(false);
+          setRecoverySupported(false);
         }
       } catch (err) {
         clearTimeout(timeoutId);
         setHasPassword(true);
         setSetupComplete(true);
         setOidcEnabled(false);
-        setOidcDisablePasswordLogin(false);
+          setOidcDisablePasswordLogin(false);
+          setRecoverySupported(false);
       }
     }
     checkAuth();
@@ -334,12 +338,14 @@ export default function LoginPage() {
 
             {!oidcEnabled && (
               <div className="mt-6 pt-6 border-t border-border">
-                <a
-                  href="/forgot-password"
-                  className="text-sm text-text-muted hover:text-primary transition-colors"
-                >
-                  {t("forgotPassword")}
-                </a>
+                {recoverySupported && (
+                  <a
+                    href="/forgot-password"
+                    className="text-sm text-text-muted hover:text-primary transition-colors"
+                  >
+                    {t("forgotPassword")}
+                  </a>
+                )}
                 {registerAllowed === true &&
                   (mode === "register" ? (
                     <RegistrationForm />

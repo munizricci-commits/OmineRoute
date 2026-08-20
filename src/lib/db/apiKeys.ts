@@ -680,9 +680,7 @@ export async function revokeUserApiKeys(userId: string): Promise<number> {
   if (!userId) return 0;
   const db = getDbInstance() as ApiKeysDbLike;
   const res = db
-    .prepare(
-      `UPDATE api_keys SET revoked_at = ? WHERE user_id = ? AND is_active = 1 AND revoked_at IS NULL`
-    )
+    .prepare(`UPDATE api_keys SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL`)
     .run(new Date().toISOString(), userId);
   return res.changes;
 }

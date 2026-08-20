@@ -11,6 +11,7 @@ import { isAuthenticated } from "@/shared/utils/apiAuth";
 import { getNodeRuntimeSupport } from "@/shared/utils/nodeRuntimeSupport.ts";
 import { updateRequireLoginSchema } from "@/shared/validation/schemas";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
+import { isPasswordRecoverySupported } from "@/lib/auth/passwordRecoverySupport";
 
 function getJwtSecret(): Uint8Array | null {
   const secret = process.env.JWT_SECRET?.trim();
@@ -59,6 +60,7 @@ export async function GET() {
         isFeatureFlagEnabled("OMNIROUTE_OIDC_DISABLE_PASSWORD_LOGIN") ||
         process.env.OMNIROUTE_OIDC_DISABLE_PASSWORD_LOGIN === "true" ||
         process.env.OIDC_DISABLE_PASSWORD_LOGIN === "true");
+    const passwordRecoverySupported = isPasswordRecoverySupported(settings);
     return NextResponse.json({
       authenticated,
       requireLogin,
@@ -66,6 +68,7 @@ export async function GET() {
       setupComplete,
       oidcEnabled,
       oidcDisablePasswordLogin,
+      passwordRecoverySupported,
       ...nodeInfo,
     });
   } catch (error) {
@@ -78,6 +81,7 @@ export async function GET() {
         setupComplete: true,
         oidcEnabled: false,
         oidcDisablePasswordLogin: false,
+        passwordRecoverySupported: false,
         ...nodeInfo,
       },
       { status: 200 }
