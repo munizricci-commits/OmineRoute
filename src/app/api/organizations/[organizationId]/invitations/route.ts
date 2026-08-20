@@ -11,6 +11,7 @@ import { z } from "zod";
 import { resolveDashboardUserPrincipal, isPlatformAdmin } from "@/lib/org/principal";
 import { getOrganizationById } from "@/lib/db/organizations";
 import { createInvitation } from "@/lib/db/invitations";
+import { sendInvitationEmail } from "@/lib/auth/invitationEmailService";
 import { buildErrorBody } from "@omniroute/open-sse/utils/error";
 
 const schema = z.object({
@@ -64,6 +65,20 @@ export async function POST(
     role: parsed.data.role,
     invitedBy: actor.id,
   });
+
+  // Best-effort email dispatch. If SMTP is unconfigured the transport is a noop
+  // and this is a silent success; delivery failures must NOT roll back the
+  // invitation (fail-closed: the invite still exists, admin can resend).
+  try {
+    await sendInvitationEmail({
+      organizationName: org.name,
+      email: invitation.email,
+      token: invitation.token,
+      invitedBy: actor.email,
+    });
+  } catch {
+    // Swallow — invitation creation succeeded; email is best-effort.
+  }
 
   return NextResponse.json(
     {
