@@ -68,5 +68,20 @@ export async function setUserAccountStatus(
   }
   const next = normalizeUserStatus(status);
   await updateUser(userId, { status: next });
+
+  // Auditable record of the administrative account-status change (OWASP A09 / SOC2 CC7.2).
+  try {
+    const { logAuditEvent } = await import("@/lib/compliance");
+    logAuditEvent({
+      action: "user.status.update",
+      actor: actor.id,
+      target: userId,
+      resourceType: "user",
+      status: next,
+      details: { from: target.status, to: next },
+    });
+  } catch {
+    // Audit logging must never break the primary mutation.
+  }
   return next;
 }

@@ -112,6 +112,29 @@ test("platform admin cannot change their own status (self-lockout)", async () =>
   assert.equal(still?.status, "active");
 });
 
+test("account status change is recorded in the audit log", async () => {
+  const admin = await usersDb.createUser({ role: "platform_admin" });
+  const user = await usersDb.createUser({ role: "user" });
+  const token = await makeToken(admin.id);
+  const res = await route.POST(req(token, { status: "blocked" }), {
+    params: Promise.resolve({ id: user.id }),
+  });
+  assert.equal(res.status, 200);
+  const db = (await import("../../src/lib/db/core.ts")).getDbInstance();
+  const rows = db
+    .prepare(
+      `SELECT * FROM audit_log WHERE action = 'user.status.update' AND target = ? ORDER BY timestamp DESC`
+    )
+    .all(user.id) as Array<Record<string, unknown>>;
+  assert.ok(rows.length >= 1, "expected at least one audit_log row");
+  const row = rows[0];
+  assert.equal(row.actor, admin.id);
+  assert.equal(row.resource_type, "user");
+  const details = JSON.parse(String(row.details ?? "{}"));
+  assert.equal(details.from, "active");
+  assert.equal(details.to, "blocked");
+});
+
 test("cannot disable the last platform administrator (last-admin protection)", async () => {
   const onlyAdmin = await usersDb.createUser({ role: "platform_admin" });
   // A second admin performs the action; the target is the sole active admin.
