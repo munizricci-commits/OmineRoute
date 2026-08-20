@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { userSummaryLabel, type UserSummaryInput } from "@/lib/auth/userRow";
+import { UserDetailPanel } from "./UserDetailPanel";
 
 interface UserRow extends UserSummaryInput {}
 
@@ -15,6 +16,7 @@ export function UsersTable() {
   const t = useTranslations("auth");
   const [users, setUsers] = useState<UserRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -60,7 +62,13 @@ export function UsersTable() {
             </thead>
             <tbody>
               {users.map((u) => (
-                <tr key={u.id} className="border-t border-border">
+                <tr
+                  key={u.id}
+                  onClick={() => setSelectedId(u.id)}
+                  className={`border-t border-border cursor-pointer hover:bg-[var(--color-bg-hover)] ${
+                    selectedId === u.id ? "bg-[var(--color-bg-hover)]" : ""
+                  }`}
+                >
                   <td className="px-2 py-1 text-[var(--color-text-main)]">{userSummaryLabel(u)}</td>
                   <td className="px-2 py-1 text-[var(--color-text-muted)]">{u.role}</td>
                   <td className="px-2 py-1 text-[var(--color-text-muted)]">{u.status}</td>
@@ -73,6 +81,7 @@ export function UsersTable() {
           </table>
         </div>
       )}
+      {selectedId && <UserDetailPanel userId={selectedId} onClose={() => setSelectedId(null)} />}
     </div>
   );
 }

@@ -9788,7 +9788,12 @@
     "status": "Status",
     "created": "Created",
     "loadError": "Failed to load",
-    "noUsers": "No users found"
+    "noUsers": "No users found",
+    "userDetails": "User details",
+    "close": "Close",
+    "userNotFound": "User not found",
+    "organizations": "Organizations",
+    "none": "none"
   },
   "landing": {
     "brandName": "OmniRoute",
