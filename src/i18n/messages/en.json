@@ -13861,5 +13861,12 @@
     "toolsMismatch": "Provider does not support tool calling",
     "structuredOutputMismatch": "Provider does not support structured output",
     "contextWindowMismatch": "Request exceeds provider context window"
+  },
+  "organizations": {
+    "multiUserMode": "Multi-user mode",
+    "multiUserModeDescription": "Allow multiple users to sign in with their own credentials.",
+    "multiUserModeHint": "Disabled by default — single admin password sign-in.",
+    "adminOnlySettings": "Platform administrator only.",
+    "loadingSettings": "Loading settings…"
   }
 }

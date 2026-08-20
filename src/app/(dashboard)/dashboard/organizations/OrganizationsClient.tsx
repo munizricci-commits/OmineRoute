@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { createOrganization, fetchOrganizations } from "./apiClient";
 import type { OrganizationSummary } from "./types";
+import MultiUserModeToggle from "./MultiUserModeToggle";
 
 /** Derive a kebab-case slug from a display name. */
 function slugify(value: string): string {
@@ -79,6 +80,8 @@ export default function OrganizationsClient() {
           Teams you belong to and their shared routing resources.
         </p>
       </div>
+
+      <MultiUserModeToggle />
 
       {error && (
         <div
