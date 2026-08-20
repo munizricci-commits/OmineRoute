@@ -12,20 +12,42 @@ import { consumeOAuthState } from "@/lib/db/githubOAuthState";
 import { normalizeExternalProfile } from "@/lib/auth/identityProvider";
 import { resolveOrProvisionGitHubUser } from "@/lib/auth/githubCallback";
 import { issueAuthSession } from "@/lib/auth/sessionIssuer";
+import { getAuditRequestContext, logAuditEvent } from "@/lib/compliance/index";
 import { buildErrorBody } from "@omniroute/open-sse/utils/error";
 
 export async function GET(request: Request) {
+  const auditContext = getAuditRequestContext(request);
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   const state = searchParams.get("state");
   const error = searchParams.get("error");
 
   if (error) {
+    logAuditEvent({
+      action: "auth.github.callback",
+      actor: "anonymous",
+      target: "dashboard-auth",
+      resourceType: "auth_session",
+      status: "failed",
+      ipAddress: auditContext.ipAddress || undefined,
+      requestId: auditContext.requestId,
+      metadata: { reason: "oauth_error", error },
+    });
     return NextResponse.redirect(
       new URL("/login?oauth_error=" + encodeURIComponent(error), request.url)
     );
   }
   if (!code || !state) {
+    logAuditEvent({
+      action: "auth.github.callback",
+      actor: "anonymous",
+      target: "dashboard-auth",
+      resourceType: "auth_session",
+      status: "failed",
+      ipAddress: auditContext.ipAddress || undefined,
+      requestId: auditContext.requestId,
+      metadata: { reason: "missing_code_or_state" },
+    });
     return NextResponse.json(buildErrorBody("bad_request", "Missing code or state"), {
       status: 400,
     });
@@ -34,6 +56,16 @@ export async function GET(request: Request) {
   // 1) State must be a previously issued, unexpired, single-use token.
   const stateRecord = await consumeOAuthState(state);
   if (!stateRecord) {
+    logAuditEvent({
+      action: "auth.github.callback",
+      actor: "anonymous",
+      target: "dashboard-auth",
+      resourceType: "auth_session",
+      status: "failed",
+      ipAddress: auditContext.ipAddress || undefined,
+      requestId: auditContext.requestId,
+      metadata: { reason: "invalid_or_expired_state" },
+    });
     return NextResponse.json(buildErrorBody("forbidden", "Invalid or expired OAuth state"), {
       status: 403,
     });
@@ -43,6 +75,16 @@ export async function GET(request: Request) {
   const cfg = await getGithubOAuthConfig();
   const secret = await getGithubOAuthSecret();
   if (!cfg.clientId || !secret) {
+    logAuditEvent({
+      action: "auth.github.callback",
+      actor: "anonymous",
+      target: "dashboard-auth",
+      resourceType: "auth_session",
+      status: "failed",
+      ipAddress: auditContext.ipAddress || undefined,
+      requestId: auditContext.requestId,
+      metadata: { reason: "oauth_not_configured" },
+    });
     return NextResponse.json(buildErrorBody("bad_request", "GitHub OAuth not configured"), {
       status: 400,
     });
@@ -57,6 +99,16 @@ export async function GET(request: Request) {
       code,
     });
   } catch {
+    logAuditEvent({
+      action: "auth.github.callback",
+      actor: "anonymous",
+      target: "dashboard-auth",
+      resourceType: "auth_session",
+      status: "failed",
+      ipAddress: auditContext.ipAddress || undefined,
+      requestId: auditContext.requestId,
+      metadata: { reason: "token_exchange_failed" },
+    });
     return NextResponse.json(buildErrorBody("bad_gateway", "GitHub token exchange failed"), {
       status: 502,
     });
@@ -67,6 +119,16 @@ export async function GET(request: Request) {
   try {
     profile = await fetchGithubProfile(accessToken);
   } catch {
+    logAuditEvent({
+      action: "auth.github.callback",
+      actor: "anonymous",
+      target: "dashboard-auth",
+      resourceType: "auth_session",
+      status: "failed",
+      ipAddress: auditContext.ipAddress || undefined,
+      requestId: auditContext.requestId,
+      metadata: { reason: "profile_fetch_failed" },
+    });
     return NextResponse.json(buildErrorBody("bad_gateway", "GitHub profile fetch failed"), {
       status: 502,
     });
@@ -82,6 +144,17 @@ export async function GET(request: Request) {
   // 4) Resolve / provision the local user (safe-link rules) + issue a session.
   const result = await resolveOrProvisionGitHubUser(normalized);
   const token = await issueAuthSession({ subject: result.userId });
+
+  logAuditEvent({
+    action: "auth.github.callback",
+    actor: result.userId,
+    target: "dashboard-auth",
+    resourceType: "auth_session",
+    status: "success",
+    ipAddress: auditContext.ipAddress || undefined,
+    requestId: auditContext.requestId,
+    metadata: { created: result.created, linked: result.linked },
+  });
 
   return NextResponse.redirect(new URL("/dashboard?oauth=success", request.url));
 }

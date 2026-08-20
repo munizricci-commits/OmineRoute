@@ -12,6 +12,7 @@ import { z } from "zod";
 import { getUserByEmail } from "@/lib/db/users";
 import { createPasswordResetToken } from "@/lib/db/passwordReset";
 import { sendPasswordResetEmail } from "@/lib/auth/passwordRecoveryService";
+import { getAuditRequestContext, logAuditEvent } from "@/lib/compliance/index";
 import { buildErrorBody } from "@omniroute/open-sse/utils/error";
 
 const schema = z.object({
@@ -19,6 +20,7 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
+  const auditContext = getAuditRequestContext(request);
   let raw: unknown;
   try {
     raw = await request.json();
@@ -33,13 +35,26 @@ export async function POST(request: Request) {
   const email = parsed.data.email.toLowerCase();
   // Look up the user; regardless of result we return the same generic success.
   const user = await getUserByEmail(email);
+  let requested = false;
   if (user) {
     // Create a reset token (stored hashed) and dispatch the reset email. Mail
     // failures are swallowed inside sendPasswordResetEmail so we never leak
     // transporter state; the generic 200 below is always returned.
     const token = await createPasswordResetToken(user.id);
     await sendPasswordResetEmail(user.id, email, token);
+    requested = true;
   }
+
+  logAuditEvent({
+    action: "auth.password.reset_requested",
+    actor: user ? user.id : "anonymous",
+    target: "dashboard-auth",
+    resourceType: "auth_session",
+    status: "success",
+    ipAddress: auditContext.ipAddress || undefined,
+    requestId: auditContext.requestId,
+    metadata: { requested },
+  });
 
   // Always generic. No field/account-existence disclosure.
   return NextResponse.json(
