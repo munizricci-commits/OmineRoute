@@ -10,6 +10,7 @@
 import { scryptSync, randomBytes, timingSafeEqual } from "node:crypto";
 import { getDbInstance } from "./core";
 import { registerDbStateResetter } from "./stateReset";
+import { evaluatePassword } from "@/lib/auth/passwordPolicy";
 
 const KEYLEN = 64;
 const SCRYPT_PARAMS = { N: 16384, r: 8, p: 1 } as const;
@@ -36,8 +37,12 @@ export async function setUserPassword(userId: string, plain: string): Promise<vo
 
 /** Synchronous variant for use inside DB transactions (no async boundary). */
 export function setUserPasswordSync(userId: string, plain: string): void {
-  if (!userId || typeof plain !== "string" || plain.length < 8) {
-    throw new Error("Password must be at least 8 characters");
+  if (!userId || typeof plain !== "string") {
+    throw new Error("Password must be a non-empty string");
+  }
+  const evaluation = evaluatePassword(plain);
+  if (!evaluation.valid) {
+    throw new Error(evaluation.errors.join("; "));
   }
   const ts = new Date().toISOString();
   const db = getDbInstance();

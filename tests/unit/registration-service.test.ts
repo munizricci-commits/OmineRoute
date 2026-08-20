@@ -47,3 +47,11 @@ test("invalid input (short password) rejected", async () => {
     (e) => e instanceof RegistrationError && e.code === "INVALID_INPUT"
   );
 });
+
+test("password from denylist rejected with WEAK_PASSWORD", async () => {
+  await setInstanceAuthSettings({ registrationPolicy: "invite-only" });
+  await assert.rejects(
+    () => acceptRegistration({ password: "password", inviteCode: "x" }),
+    (e) => e instanceof RegistrationError && e.code === "WEAK_PASSWORD"
+  );
+});

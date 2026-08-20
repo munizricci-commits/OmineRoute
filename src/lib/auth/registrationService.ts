@@ -13,6 +13,7 @@ import { getDbInstance } from "@/lib/db/core";
 import { createUserSync } from "@/lib/db/users";
 import { setUserPasswordSync } from "@/lib/db/userCredentials";
 import { getInstanceAuthSettings } from "@/lib/db/instanceAuthSettings";
+import { evaluatePassword, DEFAULT_PASSWORD_POLICY } from "@/lib/auth/passwordPolicy";
 
 export class RegistrationError extends Error {
   code: string;
@@ -32,7 +33,10 @@ const registrationInputSchema = z.object({
     .optional()
     .nullable(),
   email: z.string().trim().email().max(254).optional().nullable(),
-  password: z.string().min(8).max(200),
+  password: z
+    .string()
+    .min(DEFAULT_PASSWORD_POLICY.minLength)
+    .max(DEFAULT_PASSWORD_POLICY.maxLength),
   inviteCode: z.string().trim().min(1).max(256).optional().nullable(),
 });
 
@@ -63,6 +67,11 @@ export async function acceptRegistration(raw: unknown): Promise<AcceptedUser> {
   }
   if (settings.registrationPolicy === "invite-only" && !input.inviteCode) {
     throw new RegistrationError("Invite code required", "INVITE_REQUIRED");
+  }
+
+  const pwCheck = evaluatePassword(input.password);
+  if (!pwCheck.valid) {
+    throw new RegistrationError(pwCheck.errors.join("; "), "WEAK_PASSWORD");
   }
 
   const db = getDbInstance();
