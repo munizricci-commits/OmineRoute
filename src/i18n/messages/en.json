@@ -13916,5 +13916,17 @@
     "loadError": "Failed to load",
     "saveError": "Failed to save",
     "testError": "Test failed"
+  },
+  "invitation": {
+    "missingToken": "Invitation link is missing or invalid.",
+    "confirmJoin": "Accept the invitation to join this organization.",
+    "accept": "Accept invitation",
+    "accepting": "Accepting…",
+    "accepted": "You have joined the organization. You can now sign in.",
+    "alreadyUsed": "This invitation has already been used.",
+    "notFound": "Invitation not found.",
+    "genericError": "Could not accept the invitation.",
+    "networkError": "Network error. Try again.",
+    "goLogin": "Go to login"
   }
 }
