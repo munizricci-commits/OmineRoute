@@ -9794,7 +9794,11 @@
     "confirmAction": "Подтвердите: {{action}}?",
     "actionFailed": "Действие не выполнено",
     "cancel": "Отмена",
-    "protectedAccount": "Защищённая учётная запись"
+    "protectedAccount": "Защищённая учётная запись",
+    "registrationSuccess": "Регистрация успешна. Теперь вы можете войти.",
+    "registrationFailed": "Не удалось зарегистрироваться",
+    "register": "Зарегистрироваться",
+    "email": "Email"
   },
   "landing": {
     "brandName": "ОмниРоут",

@@ -7,6 +7,7 @@ import { Button, Input } from "@/shared/components";
 import { useRouter } from "next/navigation";
 import { buildLoginPayload } from "@/lib/auth/loginPayload";
 import { useRegistrationPolicy } from "@/lib/auth/useRegistrationPolicy";
+import { RegistrationForm } from "./RegistrationForm";
 
 export default function LoginPage() {
   const t = useTranslations("auth");
@@ -23,6 +24,7 @@ export default function LoginPage() {
   const [nodeCompatible, setNodeCompatible] = useState(true);
   const router = useRouter();
   const registerAllowed = useRegistrationPolicy();
+  const [mode, setMode] = useState<"login" | "register">("login");
 
   useEffect(() => {
     const raf = requestAnimationFrame(() => setMounted(true));
@@ -338,14 +340,21 @@ export default function LoginPage() {
                 >
                   {t("forgotPassword")}
                 </a>
-                {registerAllowed === true && (
-                  <a
-                    href="/register"
-                    className="block mt-3 text-sm text-primary hover:underline transition-colors"
-                  >
-                    {t("createAccount")}
-                  </a>
-                )}
+                {registerAllowed === true &&
+                  (mode === "register" ? (
+                    <RegistrationForm />
+                  ) : (
+                    <a
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setMode("register");
+                      }}
+                      className="block mt-3 text-sm text-primary hover:underline transition-colors"
+                    >
+                      {t("createAccount")}
+                    </a>
+                  ))}
               </div>
             )}
           </div>
