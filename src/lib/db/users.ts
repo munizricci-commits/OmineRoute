@@ -17,7 +17,7 @@ import { getDbInstance, rowToCamel, resetDbInstance } from "./core";
 import { registerDbStateResetter } from "./stateReset";
 
 export type UserRole = "user" | "platform_admin";
-export type UserStatus = "active" | "disabled";
+export type UserStatus = "active" | "blocked" | "disabled";
 
 export interface UserRecord {
   id: string;
@@ -56,7 +56,9 @@ function clampRole(value: unknown): UserRole {
 }
 
 function clampStatus(value: unknown): UserStatus {
-  return value === "disabled" ? "disabled" : "active";
+  if (value === "blocked") return "blocked";
+  if (value === "disabled") return "disabled";
+  return "active";
 }
 
 /** Allowed characters in a normalized login identifier (email-style or simple name). */
