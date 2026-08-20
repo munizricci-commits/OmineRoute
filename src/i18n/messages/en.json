@@ -13891,5 +13891,22 @@
     "multiUserModeHint": "Disabled by default — single admin password sign-in.",
     "adminOnlySettings": "Platform administrator only.",
     "loadingSettings": "Loading settings…"
+  },
+  "email": {
+    "smtpSettings": "SMTP settings",
+    "enabled": "Enabled",
+    "host": "Host",
+    "port": "Port",
+    "user": "User",
+    "password": "Password",
+    "from": "From",
+    "secure": "SSL/TLS",
+    "save": "Save",
+    "testConnection": "Test connection",
+    "saved": "Saved",
+    "adminRequired": "Admin privileges required",
+    "loadError": "Failed to load",
+    "saveError": "Failed to save",
+    "testError": "Test failed"
   }
 }

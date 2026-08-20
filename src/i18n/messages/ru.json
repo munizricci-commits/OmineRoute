@@ -13881,5 +13881,22 @@
     "multiUserModeHint": "По умолчанию выключено — вход только по паролю администратора.",
     "adminOnlySettings": "Только для платформенного администратора.",
     "loadingSettings": "Загрузка настроек…"
+  },
+  "email": {
+    "smtpSettings": "Настройки SMTP",
+    "enabled": "Включено",
+    "host": "Хост",
+    "port": "Порт",
+    "user": "Пользователь",
+    "password": "Пароль",
+    "from": "От (from)",
+    "secure": "SSL/TLS",
+    "save": "Сохранить",
+    "testConnection": "Проверить соединение",
+    "saved": "Сохранено",
+    "adminRequired": "Требуется права администратора",
+    "loadError": "Ошибка загрузки",
+    "saveError": "Ошибка сохранения",
+    "testError": "Ошибка проверки"
   }
 }
