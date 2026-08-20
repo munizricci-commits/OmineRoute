@@ -9780,7 +9780,8 @@
     "relaunchApp": "Relaunch the OmniRoute desktop app",
     "loginIdentifier": "Login",
     "loginIdentifierPlaceholder": "Login name or email",
-    "loginIdentifierHint": "Optional: bind the session to your user. Leave blank to sign in with the admin password."
+    "loginIdentifierHint": "Optional: bind the session to your user. Leave blank to sign in with the admin password.",
+    "createAccount": "Create account"
   },
   "landing": {
     "brandName": "OmniRoute",

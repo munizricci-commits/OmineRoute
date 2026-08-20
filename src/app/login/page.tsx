@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { Button, Input } from "@/shared/components";
 import { useRouter } from "next/navigation";
 import { buildLoginPayload } from "@/lib/auth/loginPayload";
+import { useRegistrationPolicy } from "@/lib/auth/useRegistrationPolicy";
 
 export default function LoginPage() {
   const t = useTranslations("auth");
@@ -21,6 +22,7 @@ export default function LoginPage() {
   const [nodeVersion, setNodeVersion] = useState(null);
   const [nodeCompatible, setNodeCompatible] = useState(true);
   const router = useRouter();
+  const registerAllowed = useRegistrationPolicy();
 
   useEffect(() => {
     const raf = requestAnimationFrame(() => setMounted(true));
@@ -336,6 +338,14 @@ export default function LoginPage() {
                 >
                   {t("forgotPassword")}
                 </a>
+                {registerAllowed === true && (
+                  <a
+                    href="/register"
+                    className="block mt-3 text-sm text-primary hover:underline transition-colors"
+                  >
+                    {t("createAccount")}
+                  </a>
+                )}
               </div>
             )}
           </div>
