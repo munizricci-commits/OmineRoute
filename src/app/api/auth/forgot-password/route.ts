@@ -11,6 +11,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getUserByEmail } from "@/lib/db/users";
 import { createPasswordResetToken } from "@/lib/db/passwordReset";
+import { sendPasswordResetEmail } from "@/lib/auth/passwordRecoveryService";
 import { buildErrorBody } from "@omniroute/open-sse/utils/error";
 
 const schema = z.object({
@@ -33,8 +34,11 @@ export async function POST(request: Request) {
   // Look up the user; regardless of result we return the same generic success.
   const user = await getUserByEmail(email);
   if (user) {
-    // Create a reset token (stored hashed) — the email send is wired in Task 03.
-    await createPasswordResetToken(user.id);
+    // Create a reset token (stored hashed) and dispatch the reset email. Mail
+    // failures are swallowed inside sendPasswordResetEmail so we never leak
+    // transporter state; the generic 200 below is always returned.
+    const token = await createPasswordResetToken(user.id);
+    await sendPasswordResetEmail(user.id, email, token);
   }
 
   // Always generic. No field/account-existence disclosure.
