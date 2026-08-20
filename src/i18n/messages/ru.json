@@ -9788,7 +9788,13 @@
     "close": "Закрыть",
     "userNotFound": "Пользователь не найден",
     "organizations": "Организации",
-    "none": "нет"
+    "none": "нет",
+    "block": "Заблокировать",
+    "unblock": "Разблокировать",
+    "confirmAction": "Подтвердите: {{action}}?",
+    "actionFailed": "Действие не выполнено",
+    "cancel": "Отмена",
+    "protectedAccount": "Защищённая учётная запись"
   },
   "landing": {
     "brandName": "ОмниРоут",

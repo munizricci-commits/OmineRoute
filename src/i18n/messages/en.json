@@ -9793,7 +9793,13 @@
     "close": "Close",
     "userNotFound": "User not found",
     "organizations": "Organizations",
-    "none": "none"
+    "none": "none",
+    "block": "Block",
+    "unblock": "Unblock",
+    "confirmAction": "Confirm: {{action}}?",
+    "actionFailed": "Action failed",
+    "cancel": "Cancel",
+    "protectedAccount": "Protected account"
   },
   "landing": {
     "brandName": "OmniRoute",
