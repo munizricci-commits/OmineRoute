@@ -47,6 +47,11 @@ export async function POST(request: Request, ctx: RouteContext) {
         status: 409,
       });
     }
+    if (err instanceof UserAdminError && (err.code === "SELF" || err.code === "LAST_ADMIN")) {
+      return NextResponse.json(buildErrorBody("conflict", err.message), {
+        status: 409,
+      });
+    }
     if (err instanceof UserAdminError && err.code === "USER_NOT_FOUND") {
       return NextResponse.json(buildErrorBody("not_found", "User not found"), { status: 404 });
     }

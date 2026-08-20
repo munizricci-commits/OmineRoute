@@ -11,7 +11,7 @@
  * @module lib/auth/userAdminService
  */
 
-import { getUserById, updateUser } from "@/lib/db/users";
+import { getUserById, updateUser, listUsers } from "@/lib/db/users";
 import { isPlatformAdmin, type UserRecord } from "@/lib/org/principal";
 import { normalizeUserStatus, type UserAccountStatus } from "@/lib/auth/userStatus";
 
@@ -34,7 +34,7 @@ export class UserAdminError extends Error {
 
 /**
  * Set a user's account status as a platform admin. Returns the updated status.
- * Throws UserAdminError on protected/unknown/forbidden.
+ * Throws UserAdminError on protected/unknown/forbidden/self-lockout/last-admin.
  */
 export async function setUserAccountStatus(
   actor: UserRecord,
@@ -44,12 +44,26 @@ export async function setUserAccountStatus(
   if (!isPlatformAdmin(actor)) {
     throw new UserAdminError("Platform administrator access required", "NOT_AUTHORIZED");
   }
+  // Self-lockout protection: an admin may never change their own account status.
+  if (actor.id === userId) {
+    throw new UserAdminError("You cannot change your own account status", "SELF");
+  }
   const target = await getUserById(userId);
   if (!target) {
     throw new UserAdminError(`User '${userId}' not found`, "USER_NOT_FOUND");
   }
   // Protected: platform admins cannot be blocked/unblocked by another admin.
   if (isPlatformAdmin(target)) {
+    // Last-admin protection: never leave the instance without a platform admin.
+    if (status !== "active") {
+      const admins = await listUsers(1000, 0);
+      const activeAdmins = admins.filter(
+        (u) => isPlatformAdmin(u) && u.status === "active" && u.id !== userId
+      );
+      if (activeAdmins.length === 0) {
+        throw new UserAdminError("Cannot disable the last platform administrator", "LAST_ADMIN");
+      }
+    }
     throw new UserAdminError("Protected account cannot be modified", "PROTECTED");
   }
   const next = normalizeUserStatus(status);

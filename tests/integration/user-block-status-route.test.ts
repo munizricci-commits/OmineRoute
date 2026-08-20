@@ -100,3 +100,27 @@ test("platform admin cannot block another platform admin (protected)", async () 
   const still = await usersDb.getUserById(otherAdmin.id);
   assert.equal(still?.status, "active");
 });
+
+test("platform admin cannot change their own status (self-lockout)", async () => {
+  const admin = await usersDb.createUser({ role: "platform_admin" });
+  const token = await makeToken(admin.id);
+  const res = await route.POST(req(token, { status: "blocked" }), {
+    params: Promise.resolve({ id: admin.id }),
+  });
+  assert.equal(res.status, 409);
+  const still = await usersDb.getUserById(admin.id);
+  assert.equal(still?.status, "active");
+});
+
+test("cannot disable the last platform administrator (last-admin protection)", async () => {
+  const onlyAdmin = await usersDb.createUser({ role: "platform_admin" });
+  // A second admin performs the action; the target is the sole active admin.
+  const actor = await usersDb.createUser({ role: "platform_admin" });
+  const token = await makeToken(actor.id);
+  const res = await route.POST(req(token, { status: "blocked" }), {
+    params: Promise.resolve({ id: onlyAdmin.id }),
+  });
+  assert.equal(res.status, 409);
+  const still = await usersDb.getUserById(onlyAdmin.id);
+  assert.equal(still?.status, "active");
+});
