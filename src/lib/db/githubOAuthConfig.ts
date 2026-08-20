@@ -99,3 +99,16 @@ export async function isGithubOAuthEnabled(): Promise<boolean> {
   const cfg = await getGithubOAuthConfig();
   return cfg.enabled && cfg.clientId.length > 0;
 }
+
+/**
+ * Internal: decrypt the client secret for the OAuth token exchange. NOT part of the
+ * public read path (getGithubOAuthConfig masks it). Callers must treat the result
+ * as sensitive and never return it in API responses or logs.
+ */
+export async function getGithubOAuthSecret(): Promise<string | null> {
+  const db = getDbInstance();
+  const row = db.prepare(`SELECT client_secret_enc FROM github_oauth_config WHERE id = 1`).get() as
+    { client_secret_enc: string } | undefined;
+  if (!row || !row.client_secret_enc) return null;
+  return decrypt(row.client_secret_enc) ?? null;
+}
