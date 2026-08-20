@@ -9671,7 +9671,7 @@
     "unifiedAiApiProxy": "Unified AI API Proxy",
     "unifiedAiApiProxyDesc": "Route requests to multiple AI providers through a single endpoint. Load balancing, failover, and usage tracking built in.",
     "passwordNotEnabled": "Password protection is not enabled",
-    "loading": "Loading...",
+    "loading": "Loading…",
     "invalidPassword": "Invalid password",
     "errorOccurredRetry": "An error occurred. Please try again.",
     "configureInstance": "Let's get your OmniRoute instance configured",
@@ -9699,7 +9699,7 @@
     "pleaseWait": "Please wait while we complete the authorization.",
     "authSuccess": "Authorization Successful!",
     "copyUrl": "Copy This URL",
-    "accessDenied": "Access Denied",
+    "accessDenied": "Access denied",
     "methodCliTitle": "Method 1: CLI Reset",
     "methodCliDescription": "Run the following command on the server where OmniRoute is running:",
     "methodCliHint": "This will prompt you to set a new password. The server must be stopped first.",
@@ -9781,7 +9781,14 @@
     "loginIdentifier": "Login",
     "loginIdentifierPlaceholder": "Login name or email",
     "loginIdentifierHint": "Optional: bind the session to your user. Leave blank to sign in with the admin password.",
-    "createAccount": "Create account"
+    "createAccount": "Create account",
+    "users": "Users",
+    "user": "User",
+    "role": "Role",
+    "status": "Status",
+    "created": "Created",
+    "loadError": "Failed to load",
+    "noUsers": "No users found"
   },
   "landing": {
     "brandName": "OmniRoute",

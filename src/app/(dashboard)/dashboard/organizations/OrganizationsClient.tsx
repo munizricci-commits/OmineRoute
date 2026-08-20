@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createOrganization, fetchOrganizations } from "./apiClient";
 import type { OrganizationSummary } from "./types";
 import MultiUserModeToggle from "./MultiUserModeToggle";
+import { UsersTable } from "./UsersTable";
 
 /** Derive a kebab-case slug from a display name. */
 function slugify(value: string): string {
@@ -82,6 +83,7 @@ export default function OrganizationsClient() {
       </div>
 
       <MultiUserModeToggle />
+      <UsersTable />
 
       {error && (
         <div
