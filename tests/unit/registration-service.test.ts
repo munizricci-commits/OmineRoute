@@ -92,3 +92,19 @@ test("duplicate email is rejected without revealing which field (DUPLICATE)", as
     (e) => e instanceof RegistrationError && e.code === "DUPLICATE"
   );
 });
+
+test("registered user exists without any organization membership", async () => {
+  await setInstanceAuthSettings({ registrationPolicy: "invite-only" });
+  const user = await acceptRegistration({
+    loginIdentifier: "Orgless.User",
+    email: "orgless@example.com",
+    password: "longenoughpw",
+    inviteCode: "x",
+  });
+  // The user was created.
+  assert.ok(user.id);
+  // But they are NOT auto-assigned to any organization (Task 06).
+  const { getUserMemberships } = await import("@/lib/db/members");
+  const memberships = await getUserMemberships(user.id);
+  assert.equal(memberships.length, 0);
+});
