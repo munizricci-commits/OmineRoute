@@ -115,6 +115,19 @@ export async function isInvitationConsumable(token: string): Promise<boolean> {
   return true;
 }
 
+/** List all invitations for an organization (pending + historical), newest first. */
+export async function getInvitationsByOrganization(
+  organizationId: string
+): Promise<InvitationRecord[]> {
+  const db = getDbInstance();
+  const rows = db
+    .prepare(
+      `SELECT * FROM organization_invitations WHERE organization_id = ? ORDER BY created_at DESC`
+    )
+    .all(organizationId) as Parameters<typeof parseInvitationRow>[0][];
+  return rows.map(parseInvitationRow);
+}
+
 export async function revokeInvitation(token: string): Promise<boolean> {
   const db = getDbInstance();
   const res = db
@@ -159,4 +172,19 @@ export async function consumeInvitation(token: string): Promise<InvitationRecord
   if (meta.status !== "pending") return null;
   if (meta.expiresAt <= nowMs()) return null;
   return meta;
+}
+
+export class InvitationError extends Error {
+  constructor(
+    message: string,
+    public readonly code: "NOT_FOUND" | "ALREADY_ACCEPTED" | "REVOKED" | "EXPIRED" | "FORBIDDEN"
+  ) {
+    super(message);
+    this.name = "InvitationError";
+  }
+}
+
+/** List all invitations for an organization (alias; see getInvitationsByOrganization). */
+export async function listInvitations(organizationId: string): Promise<InvitationRecord[]> {
+  return getInvitationsByOrganization(organizationId);
 }
