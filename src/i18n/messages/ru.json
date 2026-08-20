@@ -9798,7 +9798,15 @@
     "registrationSuccess": "Регистрация успешна. Теперь вы можете войти.",
     "registrationFailed": "Не удалось зарегистрироваться",
     "register": "Зарегистрироваться",
-    "email": "Email"
+    "email": "Email",
+    "newPassword": "Новый пароль",
+    "confirmPassword": "Подтвердите пароль",
+    "passwordTooShort": "Пароль слишком короткий",
+    "passwordMismatch": "Пароли не совпадают",
+    "resetting": "Сброс…",
+    "resetFailed": "Не удалось сбросить пароль",
+    "passwordResetSuccess": "Пароль успешно изменён.",
+    "invalidOrExpiredToken": "Недействительный или устаревший токен"
   },
   "landing": {
     "brandName": "ОмниРоут",

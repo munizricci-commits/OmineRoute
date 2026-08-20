@@ -9692,7 +9692,7 @@
     "featureLoadBalancingDesc": "Distribute requests intelligently",
     "featureUsageTrackingTitle": "Usage Tracking",
     "featureUsageTrackingDesc": "Monitor costs and tokens",
-    "resetPassword": "Reset Password",
+    "resetPassword": "Reset password",
     "resetDescription": "Choose a method to recover access to your dashboard",
     "stopServer": "Stop the OmniRoute server",
     "processing": "Processing...",
@@ -9803,7 +9803,15 @@
     "registrationSuccess": "Registration successful. You can now sign in.",
     "registrationFailed": "Registration failed",
     "register": "Register",
-    "email": "Email"
+    "email": "Email",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "passwordTooShort": "Password is too short",
+    "passwordMismatch": "Passwords do not match",
+    "resetting": "Resetting…",
+    "resetFailed": "Failed to reset password",
+    "passwordResetSuccess": "Your password has been reset.",
+    "invalidOrExpiredToken": "Invalid or expired token"
   },
   "landing": {
     "brandName": "OmniRoute",
