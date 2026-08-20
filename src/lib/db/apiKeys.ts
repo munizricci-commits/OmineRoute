@@ -675,6 +675,44 @@ export async function getApiKeyUserId(keyId: string): Promise<string | null> {
   return typeof row.user_id === "string" && row.user_id.length > 0 ? row.user_id : null;
 }
 
+/** Revoke all active, non-revoked API keys owned by a user (credential reset). */
+export async function revokeUserApiKeys(userId: string): Promise<number> {
+  if (!userId) return 0;
+  const db = getDbInstance() as ApiKeysDbLike;
+  const res = db
+    .prepare(
+      `UPDATE api_keys SET revoked_at = ? WHERE user_id = ? AND is_active = 1 AND revoked_at IS NULL`
+    )
+    .run(new Date().toISOString(), userId);
+  return res.changes;
+}
+
+/** List API keys owned by a user. */
+export async function getApiKeysByUser(userId: string): Promise<ApiKeyView[]> {
+  if (!userId) return [];
+  const db = getDbInstance() as ApiKeysDbLike;
+  const rows = db
+    .prepare(
+      `SELECT id, name, user_id, is_active, revoked_at, is_banned FROM api_keys WHERE user_id = ?`
+    )
+    .all(userId) as Array<{
+    id: string;
+    name: string;
+    user_id: string | null;
+    is_active: number;
+    revoked_at: string | null;
+    is_banned: number | null;
+  }>;
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    user: r.user_id ? { id: r.user_id } : null,
+    isActive: r.is_active === 1,
+    revokedAt: r.revoked_at,
+    isBanned: r.is_banned === 1,
+  })) as ApiKeyView[];
+}
+
 /** Resolve the user principal record for an API key, if linked. */
 export async function getApiKeyUser(keyId: string): Promise<ApiKeyView["user"] | null> {
   const userId = await getApiKeyUserId(keyId);

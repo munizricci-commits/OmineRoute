@@ -11,6 +11,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { consumePasswordResetToken } from "@/lib/db/passwordReset";
 import { setUserPasswordSync } from "@/lib/db/userCredentials";
+import { revokeUserApiKeys } from "@/lib/db/apiKeys";
 import { DEFAULT_PASSWORD_POLICY } from "@/lib/auth/passwordPolicy";
 import { buildErrorBody } from "@omniroute/open-sse/utils/error";
 
@@ -59,6 +60,9 @@ export async function POST(request: Request) {
       status: 400,
     });
   }
+
+  // Invalidate revocable credentials so a pre-reset key/session cannot be reused.
+  await revokeUserApiKeys(meta.userId);
 
   return NextResponse.json({ message: "Password has been reset." }, { status: 200 });
 }
