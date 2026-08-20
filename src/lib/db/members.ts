@@ -327,7 +327,20 @@ export async function getMembership(
   return row ? parseMemberRow(row) : null;
 }
 
-// ── internal helpers ─────────────────────────────────────────────────────────
+/**
+ * List all (active) organization memberships for a user across organizations.
+ * Used by the admin user-detail view (Task 03). Returns safe membership rows only.
+ */
+export async function getUserMemberships(userId: string): Promise<MembershipRecord[]> {
+  if (!userId) return [];
+  const db = getDbInstance();
+  const rows = db
+    .prepare(
+      `SELECT * FROM organization_members WHERE user_id = ? AND status = 'active' ORDER BY created_at DESC`
+    )
+    .all(userId) as Record<string, unknown>[];
+  return rows.map(parseMemberRow);
+}
 
 async function requireActorOwner(
   organizationId: string,
