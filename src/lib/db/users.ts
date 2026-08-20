@@ -176,7 +176,10 @@ export function createUserSync(input: CreateUserInput = {}): UserRecord {
   const ts = nowIso();
   const role = clampRole(input.role);
   const status = clampStatus(input.status);
-  const email = input.email === undefined ? null : input.email;
+  const email =
+    input.email === undefined || input.email === null
+      ? null
+      : String(input.email).trim().toLowerCase();
   const displayName = input.displayName === undefined ? null : input.displayName;
   const loginIdentifier = normalizeLoginIdentifier(input.loginIdentifier) ?? null;
 

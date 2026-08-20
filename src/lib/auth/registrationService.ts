@@ -10,10 +10,11 @@
 
 import { z } from "zod";
 import { getDbInstance } from "@/lib/db/core";
-import { createUserSync } from "@/lib/db/users";
+import { createUserSync, getUserByLoginIdentifier, getUserByEmail } from "@/lib/db/users";
 import { setUserPasswordSync } from "@/lib/db/userCredentials";
 import { getInstanceAuthSettings } from "@/lib/db/instanceAuthSettings";
 import { evaluatePassword, DEFAULT_PASSWORD_POLICY } from "@/lib/auth/passwordPolicy";
+import { normalizeLoginIdentifier } from "@/lib/db/users";
 
 export class RegistrationError extends Error {
   code: string;
@@ -41,6 +42,13 @@ const registrationInputSchema = z.object({
 });
 
 export type RegistrationInput = z.infer<typeof registrationInputSchema>;
+
+/** Detect a SQLite UNIQUE-constraint violation (covers both login and email). */
+function isUniqueConstraintError(err: unknown): boolean {
+  if (!err) return false;
+  const msg = err instanceof Error ? err.message : String(err);
+  return /unique constraint failed/i.test(msg) || /SQLITE_CONSTRAINT_UNIQUE/i.test(msg);
+}
 
 export interface AcceptedUser {
   id: string;
@@ -74,6 +82,21 @@ export async function acceptRegistration(raw: unknown): Promise<AcceptedUser> {
     throw new RegistrationError(pwCheck.errors.join("; "), "WEAK_PASSWORD");
   }
 
+  // Pre-check for duplicate login/email. The error is generic on purpose: it must
+  // NOT reveal which field (or even that an account exists) to avoid account
+  // enumeration. The DB unique indexes are the authoritative guard; this check is
+  // a friendly fast-path with the same generic message.
+  const normalizedLogin = input.loginIdentifier
+    ? normalizeLoginIdentifier(input.loginIdentifier)
+    : null;
+  const normalizedEmail = input.email ? String(input.email).trim().toLowerCase() : null;
+  if (normalizedLogin && (await getUserByLoginIdentifier(normalizedLogin))) {
+    throw new RegistrationError("Account already exists", "DUPLICATE");
+  }
+  if (normalizedEmail && (await getUserByEmail(normalizedEmail))) {
+    throw new RegistrationError("Account already exists", "DUPLICATE");
+  }
+
   const db = getDbInstance();
   const tx = db.transaction((data: RegistrationInput) => {
     const user = createUserSync({
@@ -85,13 +108,22 @@ export async function acceptRegistration(raw: unknown): Promise<AcceptedUser> {
     return user;
   });
 
-  const user = tx(input);
-
-  return {
-    id: user.id,
-    loginIdentifier: user.loginIdentifier ?? null,
-    email: user.email ?? null,
-    role: user.role,
-    status: user.status,
-  };
+  try {
+    const user = tx(input);
+    return {
+      id: user.id,
+      loginIdentifier: user.loginIdentifier ?? null,
+      email: user.email ?? null,
+      role: user.role,
+      status: user.status,
+    };
+  } catch (err) {
+    // Race: a concurrent registration slipped in between the pre-check and the
+    // insert. The unique indexes reject the duplicate; surface it as the same
+    // generic error so no account-existence information leaks.
+    if (isUniqueConstraintError(err)) {
+      throw new RegistrationError("Account already exists", "DUPLICATE");
+    }
+    throw err;
+  }
 }

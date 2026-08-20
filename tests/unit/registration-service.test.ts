@@ -55,3 +55,40 @@ test("password from denylist rejected with WEAK_PASSWORD", async () => {
     (e) => e instanceof RegistrationError && e.code === "WEAK_PASSWORD"
   );
 });
+
+test("duplicate loginIdentifier is rejected without revealing which field (DUPLICATE)", async () => {
+  await setInstanceAuthSettings({ registrationPolicy: "invite-only" });
+  const first = await acceptRegistration({
+    loginIdentifier: "Dup.User",
+    password: "longenoughpw",
+    inviteCode: "x",
+  });
+  assert.equal(first.loginIdentifier, "dup.user");
+  await assert.rejects(
+    () =>
+      acceptRegistration({
+        loginIdentifier: "dup.user", // case-insensitive collision
+        password: "anotherpw1",
+        inviteCode: "x",
+      }),
+    (e) => e instanceof RegistrationError && e.code === "DUPLICATE"
+  );
+});
+
+test("duplicate email is rejected without revealing which field (DUPLICATE)", async () => {
+  await setInstanceAuthSettings({ registrationPolicy: "invite-only" });
+  await acceptRegistration({
+    email: "dup@example.com",
+    password: "longenoughpw",
+    inviteCode: "x",
+  });
+  await assert.rejects(
+    () =>
+      acceptRegistration({
+        email: "DUP@example.com", // case-insensitive collision
+        password: "anotherpw1",
+        inviteCode: "x",
+      }),
+    (e) => e instanceof RegistrationError && e.code === "DUPLICATE"
+  );
+});
