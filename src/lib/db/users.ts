@@ -165,6 +165,38 @@ export async function createUser(input: CreateUserInput = {}): Promise<UserRecor
   return (await getUserById(id))!;
 }
 
+/**
+ * Synchronous variant of createUser for use inside DB transactions (no async boundary).
+ * Performs a minimal insert with sync normalization; uniqueness is enforced by the
+ * DB unique indexes (caller surfaces the error).
+ */
+export function createUserSync(input: CreateUserInput = {}): UserRecord {
+  const db = getDbInstance();
+  const id = uuidv4();
+  const ts = nowIso();
+  const role = clampRole(input.role);
+  const status = clampStatus(input.status);
+  const email = input.email === undefined ? null : input.email;
+  const displayName = input.displayName === undefined ? null : input.displayName;
+  const loginIdentifier = normalizeLoginIdentifier(input.loginIdentifier) ?? null;
+
+  db.prepare(
+    `INSERT INTO users (id, email, display_name, login_identifier, role, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(id, email, displayName, loginIdentifier, role, status, ts, ts);
+
+  return parseUserRow({
+    id,
+    email,
+    display_name: displayName,
+    login_identifier: loginIdentifier,
+    role,
+    status,
+    created_at: ts,
+    updated_at: ts,
+  });
+}
+
 export async function getUserById(id: string): Promise<UserRecord | null> {
   if (!id) return null;
   const db = getDbInstance();
