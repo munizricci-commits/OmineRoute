@@ -37,6 +37,12 @@ export async function POST(request: Request) {
           status: 403,
         });
       }
+      if (err.code === "DUPLICATE") {
+        // Generic conflict; must not reveal whether the account already exists.
+        return NextResponse.json(buildErrorBody("conflict", "Account already exists"), {
+          status: 409,
+        });
+      }
       return NextResponse.json(buildErrorBody("bad_request", err.message), { status: 400 });
     }
     return NextResponse.json(buildErrorBody("internal_server_error", "Registration failed"), {

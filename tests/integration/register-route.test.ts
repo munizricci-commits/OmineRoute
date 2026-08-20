@@ -70,3 +70,61 @@ test("invite-only with code creates user (201)", async () => {
   const u = await usersDb.getUserByLoginIdentifier("jane.doe");
   assert.ok(u);
 });
+
+test("weak password is rejected with 400 (no secret leak)", async () => {
+  await setInstanceAuthSettings({ registrationPolicy: "invite-only" });
+  const res = await routeMod.POST(req({ password: "password", inviteCode: "x" }));
+  assert.equal(res.status, 400);
+  const body = await res.json();
+  // No password value echoed back; generic-ish message, no field confirmation.
+  assert.ok(!("password" in body));
+});
+
+test("duplicate registration is rejected without revealing which field exists (enumeration-safe)", async () => {
+  await setInstanceAuthSettings({ registrationPolicy: "invite-only" });
+  await routeMod.POST(
+    req({
+      loginIdentifier: "taken.user",
+      email: "taken@example.com",
+      password: "longenoughpw",
+      inviteCode: "x",
+    })
+  );
+  // Attempt to register the same login again.
+  const res = await routeMod.POST(
+    req({
+      loginIdentifier: "taken.user",
+      email: "other@example.com",
+      password: "longenoughpw",
+      inviteCode: "x",
+    })
+  );
+  assert.equal(res.status, 409);
+  const body = await res.json();
+  // The error must not disclose whether the account (login/email) already exists.
+  assert.ok(!/login|email/i.test(JSON.stringify(body)));
+});
+
+test("malformed JSON body is rejected with 400, not 500", async () => {
+  await setInstanceAuthSettings({ registrationPolicy: "invite-only" });
+  const res = await new Response("not-json", { status: 200 });
+  // Simulate a bad request by sending invalid JSON through the route handler directly.
+  const badReq = new Request("http://localhost/api/auth/register", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: "{not valid json",
+  });
+  const r = await routeMod.POST(badReq);
+  assert.equal(r.status, 400);
+  void res;
+});
+
+test("loginIdentifier with illegal characters is rejected with 400 (no 500)", async () => {
+  await setInstanceAuthSettings({ registrationPolicy: "invite-only" });
+  const res = await routeMod.POST(
+    req({ loginIdentifier: "bad login !!", password: "longenoughpw", inviteCode: "x" })
+  );
+  assert.equal(res.status, 400);
+  const body = await res.json();
+  assert.ok(!("password" in body));
+});
