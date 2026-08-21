@@ -20,7 +20,7 @@ process.env.API_KEY_SECRET = "test-api-key-secret";
 
 const core = await import("../../src/lib/db/core.ts");
 
-const MIGRATION_FILE = path.resolve("src/lib/db/migrations/158_provider_connections_org.sql");
+const MIGRATION_FILE = path.resolve("src/lib/db/migrations/176_provider_connections_org.sql");
 
 function nowIso(): string {
   return new Date().toISOString();

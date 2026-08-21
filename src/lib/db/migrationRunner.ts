@@ -505,7 +505,7 @@ function isSchemaAlreadyApplied(
       // Retroactive guard for 143_radar_local_model_state -> 153. A database
       // that already created the table must not execute or track it twice.
       return hasTable(db, "radar_local_model_state");
-    case "159":
+    case "160":
       // Renumbered from 158 (collided with 158_call_logs_error_type on
       // release/v3.8.50). Idempotent freepik->magnific slug rewrite: skip
       // when provider_connections has no remaining freepik rows (already
@@ -513,15 +513,44 @@ function isSchemaAlreadyApplied(
       if (migration.name !== "rename_freepik_to_magnific") return false;
       if (!hasTable(db, "provider_connections")) return false;
       return (
-        db
-          .prepare("SELECT 1 FROM provider_connections WHERE provider = 'freepik' LIMIT 1")
-          .get() == null
+        db.prepare("SELECT 1 FROM provider_connections WHERE provider = 'freepik' LIMIT 1").get() ==
+        null
       );
-    case "158":
+    case "165":
+      // P1 — Identity: durable user entity. Idempotent via CREATE TABLE IF NOT EXISTS.
+      return hasTable(db, "users");
+    case "174":
+      // P1.04 — inference-key principal: link API keys to a durable user.
+      // ALTER ADD COLUMN is not idempotent in SQLite, so guard on the column.
+      return hasColumn(db, "api_keys", "user_id");
+    case "175":
+      // P2 — Organizations: organizations / members / invitations tables.
+      // Idempotent via CREATE TABLE IF NOT EXISTS.
+      return hasTable(db, "organizations");
+    case "176":
       // P4.01: organization scoping for provider connections. A DB that already
       // carries the column must not re-run the ALTER (which would throw on the
       // duplicate column) or re-track the version.
       return hasColumn(db, "provider_connections", "organization_id");
+    case "177":
+      // P5.01: organization_id column on combos. ALTER ADD COLUMN is not
+      // idempotent in SQLite, so guard on the column.
+      return hasColumn(db, "combos", "organization_id");
+    case "178":
+      // MiMoCode sunset cleanup: DELETEs are safe to re-run, so always apply.
+      return false;
+    case "179":
+      // 01-admin-identity / Task 02: login_identifier column on users.
+      // ALTER ADD COLUMN is not idempotent in SQLite, so guard on the column.
+      return hasColumn(db, "users", "login_identifier");
+    case "180":
+      // 01-admin-identity / Task 03: unique index on login_identifier.
+      // CREATE UNIQUE INDEX IF NOT EXISTS is idempotent; guard for clarity.
+      return hasColumn(db, "users", "login_identifier");
+    case "181":
+      // 04-registration / Task 05: unique index on email.
+      // CREATE UNIQUE INDEX IF NOT EXISTS is idempotent; guard for clarity.
+      return hasColumn(db, "users", "email");
     default:
       return false;
   }

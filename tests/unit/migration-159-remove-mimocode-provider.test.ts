@@ -18,10 +18,10 @@ test("migration 159 removes stale MiMoCode provider state and is idempotent", ()
   const db = core.getDbInstance();
 
   const applied = db
-    .prepare("SELECT version FROM _omniroute_migrations WHERE version = 159")
+    .prepare("SELECT version FROM _omniroute_migrations WHERE version = 178")
     .get() as { version: number } | undefined;
 
-  assert.ok(applied, "migration 159 must be recorded as applied");
+  assert.ok(applied, "migration 178 must be recorded as applied");
 
   for (const provider of ["mimocode", "mcode"]) {
     db.prepare(
@@ -91,7 +91,7 @@ test("migration 159 removes stale MiMoCode provider state and is idempotent", ()
   ).run();
 
   const sql = fs.readFileSync(
-    path.join(process.cwd(), "src/lib/db/migrations/159_remove_mimocode_provider.sql"),
+    path.join(process.cwd(), "src/lib/db/migrations/178_remove_mimocode_provider.sql"),
     "utf8"
   );
 
