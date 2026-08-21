@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { deriveRegistrationAllowed } from "@/lib/auth/registrationVisibility";
+import { isRegistrationAllowed } from "@/lib/auth/registrationPolicy";
 
 /**
  * Client hook: resolves whether the Register control should be shown, based on
- * the server-backed instance auth settings. UI visibility only — the actual
+ * the public registration-visibility settings (read from /api/settings/require-login,
+ * which is reachable without a session). UI visibility only — the actual
  * registration endpoint enforces the gate server-side (Task 04).
  */
 export function useRegistrationPolicy() {
@@ -15,14 +16,14 @@ export function useRegistrationPolicy() {
     let active = true;
     (async () => {
       try {
-        const res = await fetch("/api/auth/instance-settings", { method: "GET" });
+        const res = await fetch("/api/settings/require-login", { method: "GET" });
         if (!res.ok) {
           if (active) setAllowed(false);
           return;
         }
         const data = await res.json();
         if (!active) return;
-        setAllowed(deriveRegistrationAllowed(data?.settings));
+        setAllowed(isRegistrationAllowed(data));
       } catch {
         if (active) setAllowed(false);
       }

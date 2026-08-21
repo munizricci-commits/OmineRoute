@@ -93,7 +93,7 @@ export function UserDetailPanel({ userId, onClose }: { userId: string; onClose: 
   const actionLabel = detail ? blockActionLabel(detail.status) : "block";
 
   return (
-    <div className="mt-4 rounded-lg border border-border bg-[var(--color-bg-surface)] p-4">
+    <div className="mt-4 rounded-lg border border-border bg-[var(--color-surface)] p-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-[var(--color-text-main)]">{t("userDetails")}</h3>
         <button

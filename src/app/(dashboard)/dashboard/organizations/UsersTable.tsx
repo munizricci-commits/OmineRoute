@@ -40,7 +40,7 @@ export function UsersTable() {
   }, [t]);
 
   return (
-    <div className="rounded-lg border border-border bg-[var(--color-bg-surface)] p-4">
+    <div className="rounded-lg border border-border bg-[var(--color-surface)] p-4">
       <h2 className="text-base font-semibold text-[var(--color-text-main)]">{t("users")}</h2>
       {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
       {!error && users === null && (

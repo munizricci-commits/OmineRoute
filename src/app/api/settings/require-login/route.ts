@@ -13,6 +13,7 @@ import { updateRequireLoginSchema } from "@/shared/validation/schemas";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 import { isPasswordRecoverySupported } from "@/lib/auth/passwordRecoverySupport";
 import { isGithubOAuthEnabled } from "@/lib/db/githubOAuthConfig";
+import { resolveRegistrationVisibility } from "@/lib/auth/registrationConfig";
 
 function getJwtSecret(): Uint8Array | null {
   const secret = process.env.JWT_SECRET?.trim();
@@ -63,6 +64,7 @@ export async function GET() {
         process.env.OIDC_DISABLE_PASSWORD_LOGIN === "true");
     const passwordRecoverySupported = isPasswordRecoverySupported(settings);
     const githubOAuthEnabled = await isGithubOAuthEnabled();
+    const registration = resolveRegistrationVisibility();
     return NextResponse.json({
       authenticated,
       requireLogin,
@@ -72,6 +74,8 @@ export async function GET() {
       oidcDisablePasswordLogin,
       passwordRecoverySupported,
       githubOAuthEnabled,
+      multiUserEnabled: registration.multiUserEnabled,
+      registrationPolicy: registration.registrationPolicy,
       ...nodeInfo,
     });
   } catch (error) {
@@ -86,6 +90,8 @@ export async function GET() {
         oidcDisablePasswordLogin: false,
         passwordRecoverySupported: false,
         githubOAuthEnabled: false,
+        multiUserEnabled: false,
+        registrationPolicy: "disabled",
         ...nodeInfo,
       },
       { status: 200 }
