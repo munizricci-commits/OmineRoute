@@ -1,3 +1,9 @@
+---
+title: "Organizations Security Model"
+version: 3.8.50
+lastUpdated: 2026-08-21
+---
+
 # Organizations security model
 
 This document defines the trust boundaries for the multi-tenant Organizations
