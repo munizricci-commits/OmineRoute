@@ -68,13 +68,28 @@ test("platform admin can read settings via the API (200)", async () => {
   assert.equal(body.settings.registrationPolicy, "disabled");
 });
 
-test("ordinary user is rejected by the API (403), no settings disclosed", async () => {
+test("registration policy is publicly readable (GET 200, no credentials), mutation stays admin-only", async () => {
+  // GET is intentionally public: it exposes only the non-sensitive registration
+  // policy flags so the /login page can decide whether to show "Register".
   const user = await usersDb.createUser({ role: "user" });
   const token = await makeToken(user.id);
   const res = await route.GET(reqWithCookie(token));
-  assert.equal(res.status, 403);
+  assert.equal(res.status, 200, "GET is public — no auth required");
   const body = await res.json();
-  assert.equal(body.settings, undefined);
+  assert.ok(body.settings, "policy flags returned");
+  assert.equal(typeof body.settings.multiUserEnabled, "boolean");
+  assert.ok(["disabled", "invite-only"].includes(body.settings.registrationPolicy));
+
+  // Mutation (POST) must still be admin-only.
+  const post = await route.POST(
+    reqWithCookie(
+      token,
+      JSON.stringify({ multiUserEnabled: true, registrationPolicy: "invite-only" })
+    )
+  );
+  assert.equal(post.status, 403, "ordinary user cannot change policy");
+  const postBody = await post.json();
+  assert.equal(postBody.settings, undefined, "no settings disclosed on rejection");
 });
 
 test("platform admin can enable multi-user mode via POST (200)", async () => {

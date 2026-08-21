@@ -14,27 +14,20 @@ import {
   updateAuthSettingsForAdmin,
   PlatformAdminRequiredError,
 } from "@/lib/auth/instanceSettingsService";
+import { getInstanceAuthSettings } from "@/lib/db/instanceAuthSettings";
 import { buildErrorBody } from "@omniroute/open-sse/utils/error";
 
 export async function GET(request: Request) {
+  // Public, read-only projection of the registration-relevant policy flags.
+  // The payload carries only non-sensitive instance auth policy (no credentials),
+  // so it is safe to serve without authentication — the /login page needs it to
+  // decide whether to surface the "Register" control for an unauthenticated
+  // visitor. Mutating the policy stays admin-only via POST below.
   try {
-    const principal = await resolveDashboardUserPrincipal(request);
-    if (!principal) {
-      return NextResponse.json(buildErrorBody("unauthorized", "Authentication required"), {
-        status: 401,
-      });
-    }
-    const settings = await getAuthSettingsForAdmin(principal.user);
+    const settings = await getInstanceAuthSettings();
     return NextResponse.json({ settings });
   } catch (err) {
-    if (err instanceof PlatformAdminRequiredError) {
-      return NextResponse.json(
-        buildErrorBody("forbidden", "Platform administrator access required"),
-        {
-          status: 403,
-        }
-      );
-    }
+    console.error("[instance-settings] GET failed:", err);
     return NextResponse.json(buildErrorBody("internal_error", "Failed to read settings"), {
       status: 500,
     });
