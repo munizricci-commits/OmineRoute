@@ -102,21 +102,18 @@ test("manager can set org quota (POST /[id]/quota)", async () => {
 
 test("non-manager member cannot set org quota (403)", async () => {
   const { owner, org } = await makeOrg();
-  // Add a plain member (role user)
+  // Add a plain member (role user) directly. Note: the low-level
+  // acceptInvitation() does NOT create the membership row (callers wire
+  // membership creation at the API layer, per P7.05), so we add the member
+  // explicitly here to model a real non-manager membership.
   const member = await usersDb.createUser({ role: "user" });
-  // Owner invites a plain member, then the member accepts (the only path that
-  // creates a non-manager membership without owner privileges).
-  const inv = await import("../../src/lib/db/invitations.ts").then((m) =>
-    m.createInvitation({
-      organizationId: org.id,
-      email: "member@example.com",
-      role: "user",
-      invitedBy: owner.id,
-    })
-  );
-  await import("../../src/lib/db/invitations.ts").then((m) =>
-    m.acceptInvitation(inv.token, member.id)
-  );
+  const membersDb = await import("../../src/lib/db/members.ts");
+  await membersDb.addMember({
+    organizationId: org.id,
+    userId: member.id,
+    role: "user",
+    actorUserId: owner.id,
+  });
   const req = await authedAs(member.id, "POST", {
     limit: 100,
     window: "daily",
