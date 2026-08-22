@@ -120,6 +120,7 @@ import {
 } from "./reasoningRouting";
 import { createVirtualAutoCombo, resolveAutoRoutingState } from "./autoRouting";
 import type { RoutingScope } from "@/lib/org/autoScope";
+import { enforceOrgQuotaScope, consumeOrgQuota } from "@/lib/org/orgQuotaEnforcement";
 import { getComboFailureLogError } from "./comboFailureLogging";
 
 // Pipeline integration — wired modules
@@ -1036,6 +1037,41 @@ async function handleChatImplementation(
     // because only this layer knows which connectionId was actually selected.
     const { defer: deferContextOverflowWhenCompressible, exclusions: compressionExclusions } =
       await resolveComboContextOverflowDeferral(log, apiKeyInfo);
+
+    // P9.03 — org-scoped quota PRE-flight gate. Fail-open on any error so a
+    // transient quota-infra failure never blocks legitimate traffic. Only an
+    // organization routing scope (resolved from P6/P7) is subject to the org
+    // quota; personal/denied scopes skip this entirely (legacy path unchanged).
+    if (routingScope?.scope === "organization" && routingScope.organizationId) {
+      try {
+        const decision = await enforceOrgQuotaScope({
+          scope: "organization",
+          organizationId: routingScope.organizationId,
+          unit: "requests",
+          estimatedAmount: 1,
+        });
+        if (decision.kind === "block") {
+          return new Response(
+            JSON.stringify({
+              error: {
+                message: "Organization request quota exceeded. Try again later.",
+                code: "org_quota_exceeded",
+              },
+            }),
+            {
+              status: 429,
+              headers: {
+                "content-type": "application/json",
+                "retry-after": String(decision.retryAfterSeconds ?? 60),
+              },
+            }
+          );
+        }
+      } catch {
+        // Fail-open: never block on quota-infra errors.
+      }
+    }
+
     const response = await (handleComboChat as any)({
       body,
       combo,
@@ -1219,6 +1255,22 @@ async function handleChatImplementation(
         });
       } catch {}
     }
+
+    // P9.03 — org-scoped quota POST-flight accounting (non-streaming only).
+    // Fire-and-forget: consumeOrgQuota swallows all errors (fail-open). Streaming
+    // accounting is a documented follow-up (response-stream finalization in
+    // handleComboChat). Guarded by !body.stream so we never double-count or touch
+    // the SSE response body.
+    if (
+      routingScope?.scope === "organization" &&
+      routingScope.organizationId &&
+      !body.stream &&
+      response &&
+      (response as Response).ok
+    ) {
+      consumeOrgQuota(routingScope.organizationId, "requests", 1).catch(() => {});
+    }
+
     return withModalityBridgeHeader(
       withConversationId(
         withCorrelationId(withSessionHeader(response, sessionId), reqId),

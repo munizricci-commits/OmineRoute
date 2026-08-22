@@ -18,9 +18,11 @@ const usersDb = await import("../../src/lib/db/users.ts");
 const orgsDb = await import("../../src/lib/db/organizations.ts");
 const orgQuotas = await import("../../src/lib/db/orgQuotas.ts");
 const enf = await import("../../src/lib/org/orgQuotaEnforcement.ts");
+const { resetQuotaStoreSingleton } = await import("../../src/lib/quota/QuotaStore.ts");
 
 function resetStorage() {
   core.resetDbInstance();
+  resetQuotaStoreSingleton();
   for (const f of ["storage.sqlite", "storage.sqlite-wal", "storage.sqlite-shm"]) {
     try {
       fs.rmSync(path.join(TEST_DATA_DIR, f), { force: true });
@@ -152,4 +154,59 @@ test("non-member cannot consume org quota (fail-closed: scope not resolved)", as
     unit: "requests",
   });
   assert.equal(decision.kind, "allow");
+});
+
+test("consumeOrgQuota writes to the real org pool and a follow-up pre-flight blocks", async () => {
+  const org = await makeOrg("team1");
+  await orgQuotas.setOrganizationQuota(
+    org.id,
+    { limit: 5, window: "daily", scope: "requests" },
+    { organizationId: org.id, role: "owner" }
+  );
+
+  // Post-flight accounting: two requests of 3 each => 6 consumed into org:<orgId>.
+  await enf.consumeOrgQuota(org.id, "requests", 3);
+  await enf.consumeOrgQuota(org.id, "requests", 3);
+
+  // No getUsage seam => reads the REAL pool. 6 > 5 => block.
+  const decision = await enf.enforceOrgQuotaScope({
+    scope: "organization",
+    organizationId: org.id,
+    unit: "requests",
+    estimatedAmount: 1,
+  });
+  assert.equal(decision.kind, "block");
+  if (decision.kind === "block") {
+    assert.equal(decision.reason, "org_quota_exceeded");
+  }
+});
+
+test("consumeOrgQuota is cross-tenant isolated and fail-open on bad input", async () => {
+  const orgA = await makeOrg("teama");
+  const orgB = await makeOrg("teamb");
+  await orgQuotas.setOrganizationQuota(
+    orgA.id,
+    { limit: 5, window: "daily", scope: "requests" },
+    { organizationId: orgA.id, role: "owner" }
+  );
+  await orgQuotas.setOrganizationQuota(
+    orgB.id,
+    { limit: 5, window: "daily", scope: "requests" },
+    { organizationId: orgB.id, role: "owner" }
+  );
+
+  // Org B consumes 4; org A must remain at 0 (isolated pool keys).
+  await enf.consumeOrgQuota(orgB.id, "requests", 4);
+  const decisionA = await enf.enforceOrgQuotaScope({
+    scope: "organization",
+    organizationId: orgA.id,
+    unit: "requests",
+    estimatedAmount: 1,
+  });
+  assert.equal(decisionA.kind, "allow");
+
+  // Degenerate inputs are no-ops (fail-open, never throws).
+  await enf.consumeOrgQuota("", "requests", 1);
+  await enf.consumeOrgQuota(orgA.id, "requests", 0);
+  await enf.consumeOrgQuota(orgA.id, "requests", -5);
 });

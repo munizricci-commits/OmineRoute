@@ -15,8 +15,7 @@
 
 import { getOrganizationQuota } from "@/lib/db/orgQuotas";
 import { getQuotaStore } from "@/lib/quota/QuotaStore";
-import type { DimensionKey } from "@/lib/quota/dimensions";
-import type { QuotaUnit } from "@/lib/quota/dimensions";
+import type { DimensionKey, QuotaUnit, QuotaWindow } from "@/lib/quota/dimensions";
 import type { RoutingScope } from "@/lib/org/autoScope";
 
 export const ORG_QUOTA_POOL_PREFIX = "org:";
@@ -45,6 +44,11 @@ export interface EnforceOrgQuotaInput {
   getUsage?: (poolId: string, unit: QuotaUnit) => Promise<number>;
 }
 
+/** Build the store dimension key for an org quota pool (read + write agree). */
+function orgDimension(unit: QuotaUnit, window: QuotaWindow): DimensionKey {
+  return { poolId: "", unit, window } as DimensionKey;
+}
+
 /**
  * PRE-request org-quota gate.
  * - personal / denied scope => allow (legacy personal quota unchanged).
@@ -69,14 +73,20 @@ export async function enforceOrgQuotaScope(input: EnforceOrgQuotaInput): Promise
   const amount = input.estimatedAmount ?? 1;
   const unit = input.unit;
   const poolId = orgQuotaPoolId(orgId);
+  const window = (cfg.window as QuotaWindow) ?? "daily";
+  // The poolId is carried inside the DimensionKey so poolConsumedTotal() (which
+  // sums across all apiKeyIds sharing the dimKey) keys on the org pool, while
+  // consumeOrgQuota() writes under apiKeyId===poolId with the SAME dimKey.
+  const dim = orgDimension(unit, window);
+  (dim as { poolId: string }).poolId = poolId;
 
   let used = 0;
   try {
     if (input.getUsage) {
       used = await input.getUsage(poolId, unit);
     } else {
-      const store = getQuotaStore();
-      used = await store.poolConsumedTotal(poolId, unit as DimensionKey);
+      const store = await getQuotaStore();
+      used = await store.poolConsumedTotal(poolId, dim);
     }
   } catch {
     return { kind: "allow" };
@@ -86,4 +96,46 @@ export async function enforceOrgQuotaScope(input: EnforceOrgQuotaInput): Promise
     return { kind: "block", reason: "org_quota_exceeded", retryAfterSeconds: 60 };
   }
   return { kind: "allow" };
+}
+
+/**
+ * POST-request org-quota accounting (P9.03 enforcement completion).
+ *
+ * Mirrors the legacy personal-quota `recordConsumption` flow: writes the
+ * realized cost into the shared QuotaStore pool `org:<orgId>`. Fail-open — any
+ * store/lookup error is swallowed so a transient quota-infra failure never
+ * blocks legitimate traffic or throws to the caller. Fire-and-forget safe.
+ *
+ * Cross-tenant isolated by `org:<orgId>` poolId. A missing org quota config or
+ * store error is a silent no-op (unlimited behavior preserved).
+ *
+ * NOTE (known limitation): this is invoked for non-streaming responses today.
+ * Streaming org-quota accounting requires response-stream finalization in
+ * `handleComboChat` and is a documented follow-up (see P6-P9-HOTPATH-AUDIT.md).
+ */
+export async function consumeOrgQuota(
+  organizationId: string,
+  unit: QuotaUnit,
+  amount: number
+): Promise<void> {
+  if (!organizationId || amount <= 0) return;
+  const poolId = orgQuotaPoolId(organizationId);
+  let window: QuotaWindow = "daily";
+  try {
+    const cfg = await getOrganizationQuota(organizationId);
+    if (cfg?.window) window = cfg.window as QuotaWindow;
+  } catch {
+    // Keep default window; fail-open on lookup error.
+  }
+  const dim = orgDimension(unit, window);
+  (dim as { poolId: string }).poolId = poolId;
+  try {
+    const store = await getQuotaStore();
+    // Legacy store.consume(apiKeyId, dim, cost): write under apiKeyId===poolId
+    // with the same dimKey used by enforceOrgQuotaScope's poolConsumedTotal,
+    // so the pool sum reflects this org's consumption only.
+    await store.consume(poolId, dim, amount);
+  } catch {
+    // Fail-open: drift is acceptable (B29); never reject or throw.
+  }
 }
