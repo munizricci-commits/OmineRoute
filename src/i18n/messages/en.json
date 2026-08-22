@@ -9783,6 +9783,7 @@
     "loginIdentifierPlaceholder": "Login name or email",
     "loginIdentifierHint": "Optional: bind the session to your user. Leave blank to sign in with the admin password.",
     "createAccount": "Create account",
+    "backToSignIn": "Back to sign in",
     "users": "Users",
     "user": "User",
     "role": "Role",

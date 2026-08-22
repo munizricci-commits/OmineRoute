@@ -60,8 +60,24 @@ const PUBLIC_CLOUD_API_ROUTES = [
   { path: "/api/cloud/models/alias", methods: new Set(["GET", "HEAD", "OPTIONS"]) },
 ];
 
+// Public, handler-self-gated mutation routes matched by EXACT path + method.
+// /api/auth/register is the public self-service signup: the handler enforces the
+// instance registration policy (disabled -> 403, invite-only -> requires code)
+// and never returns secrets, so it must not be gated by management auth. Exact
+// path (not prefix) so it cannot widen to other /api/auth/* routes.
+const PUBLIC_API_ROUTES_EXACT_WITH_METHODS = [
+  { path: "/api/auth/register", methods: new Set(["POST", "OPTIONS"]) },
+];
+
 function pathMatchesExactRoute(pathname: string, routePath: string): boolean {
   return pathname === routePath || pathname === `${routePath}/`;
+}
+
+function isPublicExactMethodRoute(pathname: string, method: string): boolean {
+  const normalizedMethod = String(method).toUpperCase();
+  return PUBLIC_API_ROUTES_EXACT_WITH_METHODS.some(
+    ({ path, methods }) => pathMatchesExactRoute(pathname, path) && methods.has(normalizedMethod)
+  );
 }
 
 function isPublicCloudApiRoute(pathname: string, method: string): boolean {
@@ -72,6 +88,10 @@ function isPublicCloudApiRoute(pathname: string, method: string): boolean {
 }
 
 export function isPublicApiRoute(pathname: string, method = "GET"): boolean {
+  if (isPublicExactMethodRoute(pathname, method)) {
+    return true;
+  }
+
   if (isPublicCloudApiRoute(pathname, method)) {
     return true;
   }
@@ -98,4 +118,5 @@ export {
   PUBLIC_READONLY_API_ROUTE_PREFIXES,
   PUBLIC_READONLY_API_ROUTES_EXACT,
   PUBLIC_READONLY_METHODS,
+  PUBLIC_API_ROUTES_EXACT_WITH_METHODS,
 };

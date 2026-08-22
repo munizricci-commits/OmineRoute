@@ -68,8 +68,8 @@ export default function LoginPage() {
         setHasPassword(true);
         setSetupComplete(true);
         setOidcEnabled(false);
-          setOidcDisablePasswordLogin(false);
-          setRecoverySupported(false);
+        setOidcDisablePasswordLogin(false);
+        setRecoverySupported(false);
       }
     }
     checkAuth();
@@ -277,50 +277,60 @@ export default function LoginPage() {
               </div>
             ) : (
               <>
-                <form onSubmit={handleLogin} className="space-y-5 w-full">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-text-main">{t("loginIdentifier")}</label>
-                    <Input
-                      type="text"
-                      autoComplete="username"
-                      placeholder={t("loginIdentifierPlaceholder")}
-                      value={login}
-                      onChange={(e) => setLogin(e.target.value)}
-                      className="h-11"
-                    />
-                    <p className="text-xs text-text-muted/60 pt-0.5">{t("loginIdentifierHint")}</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-text-main">{t("password")}</label>
-                    <Input
-                      type="password"
-                      autoComplete="current-password"
-                      placeholder={t("enterPassword")}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      autoFocus
-                      className="h-11"
-                    />
-                    {error && (
-                      <p className="text-sm text-red-500 flex items-center gap-1.5 pt-1">
-                        <span className="material-symbols-outlined text-base">error</span>
-                        {error}
+                {mode === "login" && (
+                  <form onSubmit={handleLogin} className="space-y-5 w-full">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-text-main">
+                        {t("loginIdentifier")}
+                      </label>
+                      <Input
+                        type="text"
+                        autoComplete="username"
+                        placeholder={t("loginIdentifierPlaceholder")}
+                        value={login}
+                        onChange={(e) => setLogin(e.target.value)}
+                        className="h-11"
+                      />
+                      <p className="text-xs text-text-muted/60 pt-0.5">
+                        {t("loginIdentifierHint")}
                       </p>
-                    )}
-                    <p className="text-xs text-text-muted/60 pt-0.5">{t("defaultPasswordHint")}</p>
-                  </div>
+                    </div>
 
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    className="w-full h-11 text-sm font-medium"
-                    loading={loading}
-                  >
-                    {t("continue")}
-                  </Button>
-                </form>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-text-main">{t("password")}</label>
+                      <Input
+                        type="password"
+                        autoComplete="current-password"
+                        placeholder={t("enterPassword")}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        autoFocus
+                        className="h-11"
+                      />
+                      {error && (
+                        <p className="text-sm text-red-500 flex items-center gap-1.5 pt-1">
+                          <span className="material-symbols-outlined text-base">error</span>
+                          {error}
+                        </p>
+                      )}
+                      <p className="text-xs text-text-muted/60 pt-0.5">
+                        {t("defaultPasswordHint")}
+                      </p>
+                    </div>
+
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      className="w-full h-11 text-sm font-medium"
+                      loading={loading}
+                    >
+                      {t("continue")}
+                    </Button>
+                  </form>
+                )}
+
+                {mode === "register" && <RegistrationForm />}
 
                 {oidcEnabled && (
                   <div className="mt-4">
@@ -363,7 +373,16 @@ export default function LoginPage() {
                 )}
                 {registerAllowed === true &&
                   (mode === "register" ? (
-                    <RegistrationForm />
+                    <a
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setMode("login");
+                      }}
+                      className="block mt-3 text-sm text-primary hover:underline transition-colors"
+                    >
+                      {t("backToSignIn")}
+                    </a>
                   ) : (
                     <a
                       href="#"

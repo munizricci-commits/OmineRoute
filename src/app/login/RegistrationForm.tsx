@@ -59,7 +59,7 @@ export function RegistrationForm({ inviteCode }: RegistrationFormProps) {
         value={loginIdentifier}
         onChange={(e) => setLoginIdentifier(e.target.value)}
         placeholder={t("loginIdentifier")}
-        className="rounded border border-border px-3 py-2 text-sm"
+        className="rounded border border-border bg-surface px-3 py-2 text-sm text-text-main"
         autoComplete="username"
       />
       <input
@@ -67,7 +67,7 @@ export function RegistrationForm({ inviteCode }: RegistrationFormProps) {
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         placeholder={t("email")}
-        className="rounded border border-border px-3 py-2 text-sm"
+        className="rounded border border-border bg-surface px-3 py-2 text-sm text-text-main"
         autoComplete="email"
       />
       <input
@@ -75,7 +75,7 @@ export function RegistrationForm({ inviteCode }: RegistrationFormProps) {
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         placeholder={t("password")}
-        className="rounded border border-border px-3 py-2 text-sm"
+        className="rounded border border-border bg-surface px-3 py-2 text-sm text-text-main"
         autoComplete="new-password"
         minLength={8}
       />

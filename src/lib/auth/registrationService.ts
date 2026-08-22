@@ -12,7 +12,7 @@ import { z } from "zod";
 import { getDbInstance } from "@/lib/db/core";
 import { createUserSync, getUserByLoginIdentifier, getUserByEmail } from "@/lib/db/users";
 import { setUserPasswordSync } from "@/lib/db/userCredentials";
-import { getInstanceAuthSettings } from "@/lib/db/instanceAuthSettings";
+import { resolveRegistrationVisibility } from "@/lib/auth/registrationConfig";
 import { evaluatePassword, DEFAULT_PASSWORD_POLICY } from "@/lib/auth/passwordPolicy";
 import { normalizeLoginIdentifier } from "@/lib/db/users";
 
@@ -69,11 +69,13 @@ export async function acceptRegistration(raw: unknown): Promise<AcceptedUser> {
   }
   const input = parsed.data;
 
-  const settings = await getInstanceAuthSettings();
-  if (settings.registrationPolicy === "disabled") {
+  // Policy resolution is config (env) primary, DB fallback — matching what the
+  // login page shows. Env is the operator-facing source of truth.
+  const visibility = resolveRegistrationVisibility();
+  if (visibility.registrationPolicy === "disabled") {
     throw new RegistrationError("Registration is disabled", "DISABLED");
   }
-  if (settings.registrationPolicy === "invite-only" && !input.inviteCode) {
+  if (visibility.registrationPolicy === "invite-only" && !input.inviteCode) {
     throw new RegistrationError("Invite code required", "INVITE_REQUIRED");
   }
 
