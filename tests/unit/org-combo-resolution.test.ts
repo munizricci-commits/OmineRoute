@@ -159,3 +159,36 @@ test("org combo is NOT resolvable by a bare name (even by its own members)", asy
   const resolvedOther = await orgCombos.resolveComboInScope({ name: "org-combo" }, other.ctx);
   assert.equal(resolvedOther, null);
 });
+
+test("P6 chat-path: qualified model `team1/combo:dev` resolves to the member's org combo only", async () => {
+  // Exactly mirrors src/sse/handlers/chat.ts combo-resolution branch:
+  //   const parsed = parseQualifiedModel(resolvedModelStr);
+  //   resolveComboInScope({ name: parsed.route, organizationId }, ctx)
+  const { parseQualifiedModel } = await import("@/lib/org/qualifiedRoute.ts");
+
+  // Org A with a combo named "combo:dev-a".
+  const a = await ownerCtxFor("a");
+  const comboA = await orgComboFor(a.org, a.ctx as never, "combo:dev-a");
+
+  // Org B (different tenant) with its OWN combo name — must never be confused.
+  const b = await ownerCtxFor("b");
+  await orgComboFor(b.org, b.ctx as never, "combo:dev-b");
+
+  // Member of A resolving `acme-a/combo:dev-a`.
+  const parsedA = parseQualifiedModel(`acme-a/combo:dev-a`);
+  const resolvedA = await orgCombos.resolveComboInScope(
+    { name: parsedA.route, organizationId: a.org.id },
+    a.ctx
+  );
+  assert.ok(resolvedA, "member A resolves their own org combo");
+  assert.equal(resolvedA!.id, comboA.id);
+  assert.equal(parsedA.organizationSlug, "acme-a");
+
+  // Member of B resolving A's combo name under A's orgId must NOT leak: the
+  // route belongs to A, and B is not a member of A.
+  const resolvedBMistaken = await orgCombos.resolveComboInScope(
+    { name: parsedA.route, organizationId: a.org.id },
+    b.ctx
+  );
+  assert.equal(resolvedBMistaken, null, "cross-tenant resolution is fail-closed");
+});

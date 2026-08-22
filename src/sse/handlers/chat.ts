@@ -121,6 +121,8 @@ import {
 import { createVirtualAutoCombo, resolveAutoRoutingState } from "./autoRouting";
 import type { RoutingScope } from "@/lib/org/autoScope";
 import { enforceOrgQuotaScope, consumeOrgQuota } from "@/lib/org/orgQuotaEnforcement";
+import { parseQualifiedModel } from "@/lib/org/qualifiedRoute";
+import { resolveComboInScope } from "@/lib/db/orgCombos";
 import { getComboFailureLogError } from "./comboFailureLogging";
 
 // Pipeline integration — wired modules
@@ -877,6 +879,30 @@ async function handleChatImplementation(
 
   // Check if model is a combo (has multiple models with fallback)
   telemetry.startPhase("resolve");
+
+  // P6 — explicit organization combo (e.g. `team1/combo:dev`). When the request
+  // resolved to an org routing scope (verified member) and the model is
+  // org-qualified, resolve the combo from THAT organization only. This is the
+  // execution-time isolation boundary: a member of teamA can never resolve a
+  // combo belonging to teamB, and the resolved combo is the org's own. Personal
+  // / denied / unqualified models skip this entirely (legacy path unchanged).
+  if (routingScope?.scope === "organization" && routingScope.organizationId) {
+    const parsed = parseQualifiedModel(resolvedModelStr);
+    if (parsed.organizationSlug) {
+      const orgCombo = await resolveComboInScope(
+        { name: parsed.route, organizationId: routingScope.organizationId },
+        routingScope.ctx
+      );
+      if (orgCombo) {
+        log.info(
+          "ROUTING",
+          `Resolved org combo "${resolvedModelStr}" → org ${routingScope.organizationId}`
+        );
+        combo = orgCombo;
+      }
+    }
+  }
+
   let combo: any = await getComboForModel(resolvedModelStr);
   if (reasoningDecision?.targetCombo) combo = reasoningDecision.targetCombo;
 
