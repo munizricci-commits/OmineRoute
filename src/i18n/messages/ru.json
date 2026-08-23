@@ -974,7 +974,9 @@
     "batchFileUsedByCount": "Используется {count, plural, one {# партия} other {# партий}}",
     "batchFilePreview": "Предварительный просмотр",
     "batchFilePreviewTruncated": "Показаны первые {shown} строки ({total} всего строк)",
-    "batchFileDownloadFull": "Скачать полный файл"
+    "batchFileDownloadFull": "Скачать полный файл",
+    "bypassProviderQuota": "Обход квоты провайдера",
+    "bypassProviderQuotaDescription": "Разрешить этому подключению обходить квоты провайдера при маршрутизации."
   },
   "disabled": "Отключено",
   "featureFlagOmnirouteEmergencyFallbackDescription": "Перенаправлять запросы при исчерпании бюджета на резервный бесплатный провайдер/модель.",
@@ -1296,7 +1298,11 @@
     "noResults": "Нет результатов",
     "organizations": "Организации",
     "organizationsSection": "Организации",
-    "organizationsSubtitle": "Мультиарендные команды, участники и общий роутинг"
+    "organizationsSubtitle": "Мультиарендные команды, участники и общий роутинг",
+    "logout": "Выйти",
+    "quickNavigation": "Быстрая навигация",
+    "quickNavigationTitle": "Быстрая навигация",
+    "openQuickNavigation": "Открыть быструю навигацию"
   },
   "webhooks": {
     "title": "Вебхуки",
@@ -1859,7 +1865,12 @@
     "directDownloadHint": "Или загрузите соответствующий формат установщика напрямую:",
     "releaseNotes": "Примечания к выпуску",
     "readMore": "Читать далее",
-    "noAuthLabel": "Нет аутентификации"
+    "noAuthLabel": "Нет аутентификации",
+    "recentRequests": "Последние запросы",
+    "recentRequestsEmpty": "Запросов пока нет.",
+    "recentRequestsModel": "Модель",
+    "recentRequestsTokens": "Вход / Выход",
+    "recentRequestsWhen": "Когда"
   },
   "analytics": {
     "title": "Аналитика",
@@ -9715,6 +9726,11 @@
     "clientSecret": "Client Secret",
     "redirectUri": "Redirect URI",
     "githubOAuthRedirectHint": "Оставьте по умолчанию, если в GitHub OAuth App не задан свой путь callback. По умолчанию: /api/auth/github/callback",
+    "enabled": "Включено",
+    "save": "Сохранить",
+    "saved": "Сохранено",
+    "saveError": "Не удалось сохранить",
+    "adminRequired": "Требуется доступ администратора",
     "defaultPasswordHint": "Пароль по умолчанию: CHANGEME (если не задан INITIAL_PASSWORD)",
     "Authorization": "Авторизация",
     "Content-Disposition": "Содержание-Расположение",

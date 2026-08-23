@@ -974,7 +974,9 @@
     "batchFileUsedByCount": "Used by {count, plural, one {# batch} other {# batches}}",
     "batchFilePreview": "Preview",
     "batchFilePreviewTruncated": "Showing first {shown} lines ({total} total lines)",
-    "batchFileDownloadFull": "Download Full File"
+    "batchFileDownloadFull": "Download Full File",
+    "bypassProviderQuota": "Bypass Provider Quota",
+    "bypassProviderQuotaDescription": "Allow this connection to bypass provider-side quota limits when routing."
   },
   "disabled": "Disabled",
   "featureFlagOmnirouteEmergencyFallbackDescription": "Route budget-exhausted requests to the emergency free fallback provider/model.",
@@ -1296,7 +1298,11 @@
     "noResults": "No results",
     "organizations": "Organizations",
     "organizationsSection": "Organizations",
-    "organizationsSubtitle": "Multi-tenant teams, members & shared routing"
+    "organizationsSubtitle": "Multi-tenant teams, members & shared routing",
+    "logout": "Log out",
+    "quickNavigation": "Quick navigation",
+    "quickNavigationTitle": "Quick navigation",
+    "openQuickNavigation": "Open quick navigation"
   },
   "webhooks": {
     "title": "Webhooks",
@@ -9720,6 +9726,11 @@
     "clientSecret": "Client Secret",
     "redirectUri": "Redirect URI",
     "githubOAuthRedirectHint": "Leave default unless your GitHub OAuth App uses a custom callback path. Default: /api/auth/github/callback",
+    "enabled": "Enabled",
+    "save": "Save",
+    "saved": "Saved",
+    "saveError": "Failed to save settings",
+    "adminRequired": "Admin access required",
     "defaultPasswordHint": "Default password: CHANGEME (unless INITIAL_PASSWORD was set)",
     "Authorization": "Authorization",
     "Content-Disposition": "Content-Disposition",
