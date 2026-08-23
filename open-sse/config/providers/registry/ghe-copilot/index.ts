@@ -16,6 +16,11 @@ export const gheCopilotProvider: RegistryEntry = {
   forceStream: true,
   baseUrl: "https://api.githubcopilot.com/chat/completions",
   responsesBaseUrl: "https://api.githubcopilot.com/responses",
+  // Anthropic-native /v1/messages shim for Claude models. Static default only;
+  // the GHE executor's getMessagesBase() derives the real per-connection host
+  // from copilotApiUrl/gheUrl at request time. Its presence enables Claude ->
+  // /v1/messages routing in the buildUrl override.
+  messagesUrl: "https://api.githubcopilot.com/v1/messages",
   authType: "oauth",
   authHeader: "bearer",
   // GHE Copilot requires a custom gheUrl (set per-connection via providerSpecificData).

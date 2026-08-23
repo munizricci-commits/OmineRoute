@@ -1,4 +1,5 @@
 import { runtimeRequire as _require } from "./runtimeRequire";
+import { isNextBuildPhase } from "../../buildPhase";
 import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { createBetterSqliteAdapter } from "./betterSqliteAdapter";
@@ -212,8 +213,7 @@ export function createSyncDriverFactory(load: DriverLoader, betterSqliteProbe?: 
     filePath: string,
     options?: Record<string, unknown>
   ): SqliteAdapter | null {
-    // Bun ships a supported SQLite implementation. Prefer it over the native
-    // Node addon, which Bun intentionally skips because its ABI is incompatible.
+    // 1. Bun native sqlite driver: preferred built-in driver when running under Bun
     if (process.versions.bun) {
       try {
         const { Database } = load("bun:sqlite") as {
@@ -222,19 +222,30 @@ export function createSyncDriverFactory(load: DriverLoader, betterSqliteProbe?: 
         if (options?.fileMustExist === true && filePath !== ":memory:" && !existsSync(filePath)) {
           throw new Error(`SQLite file does not exist: ${filePath}`);
         }
-        const db = new Database(filePath, {
-          ...(options?.readonly === true
-            ? { readonly: true }
-            : { readwrite: true, create: options?.fileMustExist !== true }),
-        });
+        const bunOptions: Record<string, unknown> = {};
+        if (options?.readonly === true) bunOptions.readonly = true;
+        if (options?.create === false && filePath !== ":memory:") bunOptions.create = false;
+        const db =
+          Object.keys(bunOptions).length > 0
+            ? new Database(filePath, bunOptions)
+            : new Database(filePath);
         return createBunSqliteAdapter(db, filePath);
       } catch (err) {
         logSwallowedDriverError("bun:sqlite", err);
       }
     }
 
-    // better-sqlite3: rápido, nativo — skip em Bun
-    if (!process.versions.bun && mayLoadBetterSqlite()) {
+    // 2. better-sqlite3: preferred native driver on Node.js. Skipped on Bun and
+    // during the Next.js production build. Build workers sometimes lose
+    // NEXT_PHASE from process.env, so OMNIROUTE_BUILDING=1 (set by
+    // build-next-isolated.mjs and inherited by the build workers) is the primary
+    // build signal. Deliberately does NOT check isMainThread: at runtime many
+    // worker threads (pino thread-stream, compression workers) legitimately use
+    // better-sqlite3, and skipping it there would silently degrade to
+    // node:sqlite / sql.js in production. During the build the native addon
+    // cannot load: the Statement destructor aborts with SIGABRT on worker
+    // teardown (node::RemoveEnvironmentCleanupHook). (#10060)
+    if (!process.versions.bun && !isNextBuildPhase() && mayLoadBetterSqlite()) {
       try {
         const BetterSqlite = load("better-sqlite3") as {
           new (p: string, o?: object): import("better-sqlite3").Database;
@@ -242,7 +253,6 @@ export function createSyncDriverFactory(load: DriverLoader, betterSqliteProbe?: 
         const db = new BetterSqlite(filePath, options);
         return createBetterSqliteAdapter(db);
       } catch (err) {
-        // continua para próximo driver
         logSwallowedDriverError("better-sqlite3", err);
       }
     }

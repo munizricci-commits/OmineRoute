@@ -155,6 +155,11 @@
       "configSource": "codex",
       "provider": "codex"
     },
+    "codex-app-server": {
+      "className": "CodexAppServerExecutor",
+      "configSource": "codex-app-server",
+      "provider": "codex-app-server"
+    },
     "command-code": {
       "className": "CommandCodeExecutor",
       "configSource": "<custom-config>",
@@ -706,6 +711,6 @@
       "provider": "zai-web"
     }
   },
-  "keyCount": 141,
+  "keyCount": 142,
   "sharedInstances": []
 }

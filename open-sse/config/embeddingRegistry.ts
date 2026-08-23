@@ -413,6 +413,11 @@ export const EMBEDDING_PROVIDERS: Record<string, EmbeddingProvider> = {
 const EMBEDDING_PROVIDER_ALIASES: Record<string, string> = {
   jina: "jina-ai",
   voyage: "voyage-ai",
+  // The dashboard stores LM Studio connections under the hyphenated provider
+  // id "lm-studio" while the embedding registry keys the provider "lmstudio"
+  // (#11233). Alias the dashboard id so "lm-studio/<model>" resolves instead
+  // of failing with an unknown-provider 400.
+  "lm-studio": "lmstudio",
 };
 
 /** Family name used by clients; Jina's public SKU is omni-small. */

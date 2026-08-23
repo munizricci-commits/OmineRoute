@@ -10,7 +10,6 @@ process.env.DATA_DIR = TEST_DATA_DIR;
 
 const core = await import("../../src/lib/db/core.ts");
 const { handleResponsesCore } = await import("../../open-sse/handlers/responsesHandler.ts");
-const { COMMAND_CODE_VERSION } = await import("../../open-sse/executors/commandCode.ts");
 
 const originalFetch = globalThis.fetch;
 
@@ -354,26 +353,31 @@ test("handleResponsesCore transforms Command Code executor SSE through Responses
       input: "hello command code",
     },
     responseFactory() {
+      // /provider/v1/chat/completions returns standard OpenAI SSE (#10265).
+      const chunk = (delta: Record<string, unknown>) =>
+        `data: ${JSON.stringify({
+          id: "c1",
+          object: "chat.completion.chunk",
+          model: "gpt-5.4-mini",
+          choices: [{ index: 0, delta }],
+        })}\n\n`;
       return new Response(
         [
-          `data: ${JSON.stringify({ type: "text-delta", text: "command" })}`,
-          "",
-          `data: ${JSON.stringify({ type: "reasoning-delta", text: "thinking" })}`,
-          "",
-          `data: ${JSON.stringify({ type: "finish", finishReason: "stop" })}`,
-          "",
-        ].join("\n"),
-        { status: 200, headers: { "Content-Type": "application/x-ndjson" } }
+          chunk({ role: "assistant" }),
+          chunk({ content: "command" }),
+          chunk({}),
+        ].join("") + "data: [DONE]\n\n",
+        { status: 200, headers: { "Content-Type": "text/event-stream" } }
       );
     },
   });
 
   assert.equal(result.success, true);
-  assert.equal(call.url, "https://api.commandcode.ai/alpha/generate");
+  assert.equal(call.url, "https://api.commandcode.ai/provider/v1/chat/completions");
   assert.equal(call.headers.Authorization, "Bearer cc_test_key");
-  assert.equal(call.headers["x-command-code-version"], COMMAND_CODE_VERSION);
-  assert.equal(call.body.params.model, "gpt-5.4-mini");
-  assert.equal(call.body.params.stream, true);
+  assert.equal(call.headers["x-command-code-version"], undefined);
+  assert.equal(call.body.model, "gpt-5.4-mini");
+  assert.equal(call.body.stream, true);
 
   const sse = await result.response.text();
   assert.match(sse, /event: response\.created/);

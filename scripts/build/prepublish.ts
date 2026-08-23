@@ -22,14 +22,12 @@ import {
   readdirSync,
   statSync,
   chmodSync,
-  openSync,
-  readSync,
-  closeSync,
 } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { assembleStandalone } from "./assembleStandalone.mjs";
+import { isNativeExecutable, resolveLocalBinEntry } from "./buildToolRunner.mjs";
 import { resolveBundledNpmEntry } from "./resolveNpmEntry.ts";
 import {
   APP_STAGING_ALLOWED_EXACT_PATHS,
@@ -51,52 +49,15 @@ const NPX_BIN = process.platform === "win32" ? "npx.cmd" : "npx";
 //
 // `shell: true` would fix the spawn but disables argument escaping (DEP0190), so it
 // is only the last resort. Preferred order: run the tool's own JS entry point with
-// this Node binary — no shim, no shell, nothing to escape.
-function resolveLocalBinEntry(packageName: string, binName: string): string | null {
-  try {
-    const packageJsonPath = join(ROOT, "node_modules", packageName, "package.json");
-    if (!existsSync(packageJsonPath)) return null;
-    const meta = JSON.parse(readFileSync(packageJsonPath, "utf8")) as {
-      bin?: string | Record<string, string>;
-    };
-    const relative = typeof meta.bin === "string" ? meta.bin : meta.bin?.[binName];
-    if (!relative) return null;
-    const absolute = join(ROOT, "node_modules", packageName, relative);
-    return existsSync(absolute) ? absolute : null;
-  } catch {
-    return null;
-  }
-}
+// this Node binary — no shim, no shell, nothing to escape. `resolveLocalBinEntry()`
+// and `isNativeExecutable()` implement that resolution and now live in
+// buildToolRunner.mjs, shared with the plain-`node` build scripts.
 
 /**
  * Runs a build tool without ever touching a `.cmd` shim. `packageName` is where the
  * tool lives in the local dependency tree; when it is not installed there the call
  * falls back to the Node-resolved `npx` entry point, and only then to the shim.
  */
-/**
- * esbuild ≥0.25 ships its `bin/esbuild` as the NATIVE platform executable on
- * Linux/macOS (ELF / Mach-O) instead of a JS shim — running it through
- * `process.execPath` makes Node parse machine code as JavaScript and crash with
- * "SyntaxError: Invalid or unexpected token". Sniff the magic bytes and exec
- * native entries directly; JS entries keep going through this Node binary.
- */
-function isNativeExecutable(entryPath: string): boolean {
-  try {
-    const fd = openSync(entryPath, "r");
-    const head = Buffer.alloc(4);
-    readSync(fd, head, 0, 4, 0);
-    closeSync(fd);
-    return (
-      (head[0] === 0x7f && head[1] === 0x45 && head[2] === 0x4c && head[3] === 0x46) || // ELF
-      head.readUInt32BE(0) === 0xfeedfacf || // Mach-O 64
-      head.readUInt32BE(0) === 0xcffaedfe || // Mach-O 64 (LE on disk)
-      (head[0] === 0x4d && head[1] === 0x5a) // PE (Windows MZ)
-    );
-  } catch {
-    return false;
-  }
-}
-
 function runBuildTool(
   packageName: string,
   binName: string,

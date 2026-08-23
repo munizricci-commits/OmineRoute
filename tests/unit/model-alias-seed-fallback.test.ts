@@ -64,3 +64,63 @@ test("resolveModelAliasWithSeedFallback: export name is distinct from the sync r
   assert.equal(typeof mod.resolveModelAliasWithSeedFallback, "function");
   assert.equal(mod.resolveModelAlias, undefined, "must not export the colliding sync name");
 });
+
+test("resolveModelAliasWithSeedFallback: preserves model name when a combo exists with the same name", async () => {
+  await withEmptyAliasDb(async () => {
+    const { createCombo } = await import("../../src/lib/db/combos");
+    const { setModelAlias } = await import("../../src/lib/db/models/aliases");
+    const { invalidateAliasCache } = await import("../../src/lib/modelAliasResolver");
+
+    // Simulate managed alias synced from provider
+    await setModelAlias("gemini-3.7-flash", "oc/gemini-3.7-flash");
+    invalidateAliasCache();
+
+    // Create a combo named "gemini-3.7-flash"
+    await createCombo({
+      id: "test-combo-gemini-3-7-flash",
+      name: "gemini-3.7-flash",
+      models: [
+        {
+          id: "target-1",
+          model: "agy/gemini-3.7-flash-high",
+          providerId: "agy",
+          weight: 100,
+        },
+      ],
+      strategy: "round-robin",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    // Should NOT be rewritten to "oc/gemini-3.7-flash" because the combo takes precedence
+    const resolved = await resolveModelAliasWithSeedFallback("gemini-3.7-flash");
+    assert.equal(resolved, "gemini-3.7-flash");
+
+    // Explicit combo/ prefix should also remain unchanged
+    const explicitCombo = await resolveModelAliasWithSeedFallback("combo/gemini-3.7-flash");
+    assert.equal(explicitCombo, "combo/gemini-3.7-flash");
+  });
+});
+
+test("resolveModelAliasWithSeedFallback: skips alias when the target model is hidden", async () => {
+  await withEmptyAliasDb(async () => {
+    const { setModelAlias } = await import("../../src/lib/db/models/aliases");
+    const { mergeModelCompatOverride } = await import("../../src/lib/db/models");
+    const { invalidateAliasCache } = await import("../../src/lib/modelAliasResolver");
+
+    // Set alias pointing to opencode/glm-5
+    await setModelAlias("glm-5", "opencode/glm-5");
+    invalidateAliasCache();
+
+    // Before hiding, alias resolves to target
+    const beforeHidden = await resolveModelAliasWithSeedFallback("glm-5");
+    assert.equal(beforeHidden, "opencode/glm-5");
+
+    // Hide the model
+    mergeModelCompatOverride("opencode", "glm-5", { isHidden: true });
+
+    // After hiding, alias should be skipped and return original model name
+    const afterHidden = await resolveModelAliasWithSeedFallback("glm-5");
+    assert.equal(afterHidden, "glm-5");
+  });
+});

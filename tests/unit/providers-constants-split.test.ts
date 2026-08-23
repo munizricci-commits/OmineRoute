@@ -24,7 +24,9 @@
 // (base-reds round 3, #9985) are both included in that measurement; Cursor API (specialty-media,
 // #10729) brings it to 229; Token Kiosk (gateways, #10722) — merged in the same
 // merge-train batch — independently bumped the gateways family too, landing at 231; Freebuff
-// (gateways, #10531) brings it to 232.
+// (gateways, #10531) brings it to 232. #8864 moves uncloseai (gateways family) into
+// NOAUTH_PROVIDERS, dropping the APIKEY_PROVIDERS count to 231. Logfare (gateways, #10987) brings it back to 232.
+// #11176 removes hackclub (gateways family), landing at 231.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
@@ -53,12 +55,12 @@ test("barrel still exports every catalog + key helpers", () => {
   }
 });
 
-test("APIKEY_PROVIDERS merges the 6 family files into 232 entries (no loss / no dup)", async () => {
+test("APIKEY_PROVIDERS merges the 6 family files into 231 entries (no loss / no dup)", async () => {
   const keys = Object.keys((P as Record<string, object>).APIKEY_PROVIDERS);
-  assert.equal(keys.length, 232);
-  assert.equal(new Set(keys).size, 232, "duplicate keys after spread-merge");
+  assert.equal(keys.length, 231);
+  assert.equal(new Set(keys).size, 231, "duplicate keys after spread-merge");
   // the merged object's entry-count equals the sum of the 6 semantic family files; families are a
-  // strict partition (every provider in exactly one), so the sum must be exactly 232.
+  // strict partition (every provider in exactly one), so the sum must be exactly 231.
   const families: [string, string][] = [
     ["gateways", "APIKEY_PROVIDERS_GATEWAYS"],
     ["frontier-labs", "APIKEY_PROVIDERS_FRONTIER"],
@@ -78,7 +80,7 @@ test("APIKEY_PROVIDERS merges the 6 family files into 232 entries (no loss / no 
       seen.add(k);
     }
   }
-  assert.equal(famTotal, 232, "families must partition all 232 providers");
+  assert.equal(famTotal, 231, "families must partition all 231 providers");
 });
 
 test("AI_PROVIDERS Proxy aggregates all sections; lookups resolve", () => {

@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 const collector = await import("../../open-sse/utils/streamPayloadCollector.ts");
+import { splitConcatenatedToolCallArguments } from "../../open-sse/utils/streamPayloadCollector.ts";
 
 test("compactStructuredStreamPayload returns null for null input", () => {
   assert.equal(collector.compactStructuredStreamPayload(null), null);
@@ -42,7 +43,7 @@ test("buildStreamSummaryFromEvents handles empty array", () => {
 });
 
 test("buildStreamSummaryFromEvents handles single event", () => {
-  const events = [{ data: { choices: [{ delta: { content: "hello" } }] } }];
+  const events = [{ index: 0, data: { choices: [{ delta: { content: "hello" } }] } }];
   const result = collector.buildStreamSummaryFromEvents(events) as any;
   assert.ok(result !== null);
   assert.ok(typeof result === "object");
@@ -50,8 +51,8 @@ test("buildStreamSummaryFromEvents handles single event", () => {
 
 test("buildStreamSummaryFromEvents handles multiple events", () => {
   const events = [
-    { data: { choices: [{ delta: { content: "hello" } }] } },
-    { data: { choices: [{ delta: { content: " world" } }] } },
+    { index: 0, data: { choices: [{ delta: { content: "hello" } }] } },
+    { index: 1, data: { choices: [{ delta: { content: " world" } }] } },
   ];
   const result = collector.buildStreamSummaryFromEvents(events) as any;
   assert.ok(result !== null);
@@ -218,6 +219,106 @@ test("buildStreamSummaryFromEvents keeps two genuinely different interleaved too
   assert.equal(toolCalls[1].function.arguments, '{"path":"b"}');
 });
 
+// opencode/muse-spark-1.2-contributor-free (zen provider): the upstream SSE stream
+// never varies `index`/`id` for a 2nd/3rd tool_call of the SAME name in one turn —
+// every delta lands on the same accumulator key, so 3 distinct `task` calls
+// concatenate into a single malformed `arguments` string containing 3 back-to-back
+// JSON objects (the model emits the whole 3rd call already glued to the first two
+// in one delta — no true streaming needed to trigger it).
+test("buildStreamSummaryFromEvents splits a tool_call whose arguments are multiple concatenated JSON objects under the same id/index (muse-spark SSE index bug)", () => {
+  const glued =
+    '{"description":"Subagent OK 1","prompt":"Reply only \\"OK\\". Nothing else.","subagent_type":"general"}' +
+    '{"description":"Subagent OK 2","prompt":"Reply only \\"OK\\". Nothing else.","subagent_type":"general"}' +
+    '{"description":"Subagent OK 3","prompt":"Reply only \\"OK\\". Nothing else.","subagent_type":"general"}';
+
+  const events = [
+    toolCallEvent({
+      role: "assistant",
+      tool_calls: [
+        {
+          index: 0,
+          id: "call_task_glued",
+          type: "function",
+          function: { name: "task", arguments: glued },
+        },
+      ],
+    }),
+    toolCallEvent({}, "tool_calls"),
+  ];
+
+  const summary = collector.buildStreamSummaryFromEvents(
+    events,
+    "openai",
+    "opencode/muse-spark-1.2-contributor-free"
+  ) as ToolCallSummary;
+  const toolCalls = summary.choices[0].message.tool_calls;
+
+  assert.equal(
+    toolCalls.length,
+    3,
+    `expected 3 split tool_calls, got ${toolCalls.length}: ${JSON.stringify(toolCalls)}`
+  );
+  for (const [i, tc] of toolCalls.entries()) {
+    assert.equal(tc.function.name, "task");
+    const parsed = JSON.parse(tc.function.arguments);
+    assert.equal(parsed.description, `Subagent OK ${i + 1}`);
+  }
+});
+
+test("buildStreamSummaryFromEvents leaves a single valid JSON arguments string untouched (no false-positive split)", () => {
+  const events = [
+    toolCallEvent({
+      role: "assistant",
+      tool_calls: [
+        {
+          index: 0,
+          id: "call_single",
+          type: "function",
+          function: { name: "write", arguments: '{"path":"a.txt","content":"{}"}' },
+        },
+      ],
+    }),
+    toolCallEvent({}, "tool_calls"),
+  ];
+
+  const summary = collector.buildStreamSummaryFromEvents(
+    events,
+    "openai",
+    "deepseek-v4-flash-free"
+  ) as ToolCallSummary;
+  const toolCalls = summary.choices[0].message.tool_calls;
+
+  assert.equal(toolCalls.length, 1);
+  assert.equal(toolCalls[0].function.arguments, '{"path":"a.txt","content":"{}"}');
+});
+
+test("buildStreamSummaryFromEvents leaves genuinely malformed (non-concatenated) JSON arguments untouched (no worse than before)", () => {
+  const events = [
+    toolCallEvent({
+      role: "assistant",
+      tool_calls: [
+        {
+          index: 0,
+          id: "call_broken",
+          type: "function",
+          function: { name: "write", arguments: '{"path":"a.txt", "content": tr' },
+        },
+      ],
+    }),
+    toolCallEvent({}, "tool_calls"),
+  ];
+
+  const summary = collector.buildStreamSummaryFromEvents(
+    events,
+    "openai",
+    "deepseek-v4-flash-free"
+  ) as ToolCallSummary;
+  const toolCalls = summary.choices[0].message.tool_calls;
+
+  assert.equal(toolCalls.length, 1);
+  assert.equal(toolCalls[0].function.arguments, '{"path":"a.txt", "content": tr');
+});
+
 type OpenAIStreamSummary = {
   choices: Array<{
     finish_reason: string;
@@ -312,4 +413,34 @@ test("#9315: getSummary() returns undefined when no format was configured (unaff
   const c = collector.createStructuredSSECollector({ maxEvents: 200 });
   c.push({ choices: [{ index: 0, delta: { content: "hi" } }] });
   assert.equal(c.getSummary(), undefined);
+});
+
+test("splitConcatenatedToolCallArguments — two back-to-back JSON objects", () => {
+  const a = JSON.stringify({ tool: "x", args: "1" });
+  const b = JSON.stringify({ tool: "y", args: "2" });
+  const out = splitConcatenatedToolCallArguments(a + b);
+  assert.deepEqual(out, [a, b]); // >=2 valid values -> split (array of parts)
+});
+
+test("splitConcatenatedToolCallArguments — nested object + escaped quotes stay single JSON", () => {
+  const a = JSON.stringify({ a: 'he said "hi"', b: { c: 1 } });
+  const single = a; // a is ONE valid JSON object -> no split
+  const out = splitConcatenatedToolCallArguments(single);
+  assert.equal(out, null); // single valid JSON -> untouched (null)
+});
+
+test("splitConcatenatedToolCallArguments — braces/quotes inside strings exercise escaped scanner", () => {
+  // Two valid JSON values whose string bodies contain braces and escaped quotes.
+  // Concatenated they reach the inString/escaped state machine (not the JSON.parse
+  // fast path), so this covers the case the owner asked about.
+  const a = JSON.stringify({ cmd: 'echo "}{" ; x' });
+  const b = JSON.stringify({ cmd: "{[not json]}" });
+  const out = splitConcatenatedToolCallArguments(a + b);
+  assert.deepEqual(out, [a, b]); // >=2 valid values -> split into parts
+});
+
+test("splitConcatenatedToolCallArguments — top-level array is single value", () => {
+  const arr = JSON.stringify([{ tool: "x" }, { tool: "y" }]);
+  const out = splitConcatenatedToolCallArguments(arr);
+  assert.equal(out, null); // one value boundary (array) -> not split
 });

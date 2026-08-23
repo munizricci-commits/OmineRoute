@@ -105,6 +105,11 @@ test("clearRecoveredProviderState ignores empty payloads and clears recoverable 
   await auth.clearRecoveredProviderState(null);
   await auth.clearRecoveredProviderState({});
   await auth.clearRecoveredProviderState({
+    allExpired: true,
+    expiredCount: 1,
+    expiredStatus: "expired",
+  });
+  await auth.clearRecoveredProviderState({
     connectionId: created.id,
     testStatus: "unavailable",
     lastError: "temporary failure",

@@ -58,6 +58,8 @@ import {
   type CodexEffortLevel as EffortLevel,
 } from "./codex/reasoningSuffix.ts";
 import { repairMissingCodexToolCallOutputs } from "./codex/toolCallRepair.ts";
+import { resolveAppServerConfig } from "./codex/appServerConfig.ts";
+import { CodexAppServerExecutor } from "./codex-app-server.ts";
 // Re-exported for external importers (tests + provider services).
 export { isCodexFreePlan, normalizeCodexTools } from "./codex/tools.ts";
 
@@ -100,6 +102,12 @@ export function __setCodexWebSocketTransportForTesting(
   websocket: WebsocketFn | null | undefined
 ): void {
   _websocketOverride = websocket;
+}
+
+// Exposed for the app-server transport, which needs the same wreq-js websocket
+// factory (with the testing override honored) to open its JSON-RPC socket.
+export function getCodexAppServerWebsocketTransport(): WebsocketFn | null {
+  return getCodexWebSocketTransport();
 }
 
 function codexWebSocketUnavailableResponse(): Response {
@@ -395,6 +403,34 @@ function isCodexWsGloballyEnabled(): boolean {
   }
 }
 
+/**
+ * Global Codex app-server kill-switch (feature flag OMNIROUTE_CODEX_APP_SERVER_ENABLED,
+ * default ON). Fail-open, mirroring isCodexWsGloballyEnabled.
+ */
+function isCodexAppServerGloballyEnabled(): boolean {
+  try {
+    return isFeatureFlagEnabled("OMNIROUTE_CODEX_APP_SERVER_ENABLED");
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * True when the connection opted into the app-server transport
+ * (providerSpecificData.codexTransport === "app-server") AND the app-server is
+ * configured (URL + token resolvable) AND the global flag is on. Selected BEFORE
+ * the websocket check so it wins when configured.
+ */
+export function isCodexAppServerRequired(credentials: unknown): boolean {
+  if (!isCodexAppServerGloballyEnabled()) return false;
+  const providerSpecificData =
+    credentials && typeof credentials === "object"
+      ? (credentials as { providerSpecificData?: Record<string, unknown> }).providerSpecificData
+      : null;
+  if (providerSpecificData?.codexTransport !== "app-server") return false;
+  return !!resolveAppServerConfig(providerSpecificData);
+}
+
 export function isCodexResponsesWebSocketRequired(_model: string, credentials: unknown): boolean {
   // Global kill-switch (default ON). When disabled, Codex never uses the WS
   // transport — even per-connection codexTransport=websocket falls back to the
@@ -517,10 +553,12 @@ export function filterNonstandardCodexSse(response: Response): Response {
   const transform = new TransformStream<Uint8Array, Uint8Array>({
     transform(chunk, controller) {
       buffer += decoder.decode(chunk, { stream: true });
-      let sep: number;
-      while ((sep = buffer.indexOf("\n\n")) !== -1) {
-        const block = buffer.slice(0, sep + 2);
-        buffer = buffer.slice(sep + 2);
+      while (true) {
+        const separator = /\r?\n\r?\n/.exec(buffer);
+        if (!separator) break;
+        const blockEnd = separator.index + separator[0].length;
+        const block = buffer.slice(0, blockEnd);
+        buffer = buffer.slice(blockEnd);
         if (!dropBlock(block)) controller.enqueue(encoder.encode(block));
       }
     },
@@ -758,6 +796,8 @@ function normalizeCodexWsHeaders(headers: Record<string, string>): Record<string
  * IMPORTANT: Includes chatgpt-account-id header for workspace binding.
  */
 export class CodexExecutor extends BaseExecutor {
+  private appServer: CodexAppServerExecutor | null = null;
+
   constructor() {
     super("codex", PROVIDERS.codex);
   }
@@ -775,6 +815,15 @@ export class CodexExecutor extends BaseExecutor {
       requestInput.body
     );
     const nextInput = { ...requestInput, credentials };
+
+    if (isCodexAppServerRequired(nextInput.credentials)) {
+      if (!this.appServer) {
+        this.appServer = new CodexAppServerExecutor({
+          websocketFn: getCodexAppServerWebsocketTransport(),
+        });
+      }
+      return this.appServer.execute(nextInput);
+    }
 
     if (!isCodexResponsesWebSocketRequired(nextInput.model, nextInput.credentials)) {
       const httpResult = await super.execute(nextInput);
@@ -1396,7 +1445,6 @@ export class CodexExecutor extends BaseExecutor {
       provider: "codex",
       preserveEncryptedReasoning:
         credentials?.providerSpecificData?.preserveEncryptedReasoning === true,
-      onIncompatibleReasoning: "drop",
     });
 
     if (nativeCodexPassthrough) {

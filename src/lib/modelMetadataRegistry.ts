@@ -130,6 +130,11 @@ function uniqueStrings(values: Array<string | null | undefined>) {
   ];
 }
 
+export function isGlmFamilyModel(modelId: string, displayName = ""): boolean {
+  const glmFamilyPattern = /(?:^|[/@:_. -])glm(?=$|[-._ /@:](?:z)?\d|\d)/i;
+  return glmFamilyPattern.test(modelId) || glmFamilyPattern.test(displayName);
+}
+
 function toQualifiedId(
   providerAlias: string | null,
   provider: string | null,
@@ -477,11 +482,16 @@ export function enrichCatalogModelEntry<T extends JsonRecord>(
         ? declaredEffortTiers
         : sourceDeclaresThinking
           ? undefined
-          : extendCodexGpt56EffortValues(
-              metadata.provider,
-              metadata.model,
-              CANONICAL_EFFORT_VALUES
-            );
+          : // #10963: GLM-family models never inherit generic OpenAI tiers — an
+            // explicit empty list is authoritative unless a provider-declared
+            // contract exists (handled by declaredEffortTiers above).
+            isGlmFamilyModel(metadata.model, metadata.displayName)
+            ? []
+            : extendCodexGpt56EffortValues(
+                metadata.provider,
+                metadata.model,
+                CANONICAL_EFFORT_VALUES
+              );
   const capabilityFields = {
     ...(typeof metadata.capabilities.vision === "boolean"
       ? { vision: metadata.capabilities.vision }
@@ -502,7 +512,9 @@ export function enrichCatalogModelEntry<T extends JsonRecord>(
     // #6241: surface thinking support + the canonical effort tiers so the frontend can
     // render the effort/thinking toggles. `thinking` is kept for back-compat; `supportsThinking`
     // is the explicit flag and `effort_tiers` lists the selectable reasoning levels
-    // (only when the model actually supports thinking).
+    // (only when the model actually supports thinking). An explicit empty registry list
+    // is authoritative; GLM models also require a provider-declared contract instead of
+    // inheriting generic OpenAI effort tiers.
     ...(typeof metadata.capabilities.supportsThinking === "boolean"
       ? {
           thinking: metadata.capabilities.supportsThinking,

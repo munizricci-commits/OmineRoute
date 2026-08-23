@@ -1295,6 +1295,13 @@
       "open": "open",
       "close": "close"
     },
+    "cheaperInferenceSponsorBanner": {
+      "title": "Cheaper Inference is an OmniRoute Open Source Friend",
+      "description": "A cost-ranked gateway reselling dozens of frontier models behind one OpenAI-compatible endpoint — routing each request to the cheapest eligible provider, never above list price.",
+      "cta": "Get an API Key",
+      "partnerLinkNote": "Partner link",
+      "dismissAriaLabel": "Dismiss"
+    },
     "noResults": "No results",
     "organizations": "Organizations",
     "organizationsSection": "Organizations",

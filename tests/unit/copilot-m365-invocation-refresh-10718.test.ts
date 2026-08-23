@@ -41,7 +41,7 @@ test("#10718: metricsFrame emits the exact bytes observed in the browser capture
 
 // ── Recaptured invocation shape ────────────────────────────────────────────
 
-test("#10718: buildChatInvocation matches the recaptured arguments[0] key set", () => {
+test("2026-08-21: buildChatInvocation matches the recaptured arguments[0] key set", () => {
   const arg = buildChatInvocation({
     text: "Say OK in one word.",
     traceId: "11111111-1111-1111-1111-111111111111",
@@ -50,19 +50,25 @@ test("#10718: buildChatInvocation matches the recaptured arguments[0] key set", 
     conversationId: "44444444-4444-4444-4444-444444444444",
   }).arguments[0] as Record<string, unknown>;
 
-  // Exact key set from the capture — additions AND omissions are both pinned,
-  // because the stale keys are exactly what got the shape dropped.
+  // Exact key set from the 2026-08-21 capture (issue: individual/consumer M365
+  // Copilot calls got only SignalR keepalive pings and no type:1 update at all
+  // — "Stream ended before producing a non-ping SSE event" client-side). The
+  // #10718 shape below is missing exactly the keys this capture added.
   assert.deepEqual(Object.keys(arg).sort(), [
     "allowedMessageTypes",
     "clientCorrelationId",
     "clientInfo",
     "conversationId",
+    "disconnectBehavior",
+    "extraExtensionParameters",
+    "isSbsSupported",
     "isStartOfSession",
     "message",
     "options",
     "optionsSets",
     "plugins",
     "productThreadType",
+    "renderReferencesBehindEOS",
     "sessionId",
     "sliceIds",
     "source",
@@ -73,13 +79,32 @@ test("#10718: buildChatInvocation matches the recaptured arguments[0] key set", 
     "traceId",
   ]);
   assert.equal(arg.productThreadType, "Office");
-  assert.deepEqual(arg.clientInfo, { clientAppName: "Office", clientPlatform: "mcmcopilot-web" });
+  assert.deepEqual(arg.clientInfo, {
+    clientAppName: "Office",
+    clientPlatform: "mcmcopilot-web",
+    clientEntrypoint: "mcmcopilot-officeweb",
+    clientSessionId: "22222222-2222-2222-2222-222222222222",
+    ProductCategory: "Chat",
+    clientAppType: "Web",
+    productEntryPoint: "ChatPanel",
+    deviceOS: "Windows",
+    deviceType: "Desktop",
+    clientPlatformVersion: "10",
+  });
   assert.equal(arg.conversationId, "44444444-4444-4444-4444-444444444444");
   assert.equal(arg.toolChoice, null);
-  assert.equal(arg.tone, "magic");
+  // The individual/consumer surface now sends "Magic" (capitalized), matching
+  // the enterprise tone literal — the #10718 lowercase "magic" is stale.
+  assert.equal(arg.tone, "Magic");
+  assert.equal(arg.isSbsSupported, true);
+  assert.equal(arg.renderReferencesBehindEOS, true);
+  assert.deepEqual(arg.extraExtensionParameters, {});
+  assert.deepEqual(arg.plugins, [{ Id: "BingWebSearch", Source: "BuiltIn" }]);
+  // Sent on every tier now, not gated to enterprise as #8971 described.
+  assert.equal(arg.disconnectBehavior, "continue");
 });
 
-test("#10718: the message object carries the recaptured rich shape", () => {
+test("2026-08-21: the message object carries the recaptured rich shape", () => {
   const arg = buildChatInvocation({
     text: "Say OK in one word.",
     traceId: "t",
@@ -93,7 +118,9 @@ test("#10718: the message object carries the recaptured rich shape", () => {
     "adaptiveCards",
     "attachments",
     "author",
+    "clientInfo",
     "clientPreferences",
+    "connectedFederatedConnections",
     "entityAnnotationTypes",
     "experienceType",
     "inputMethod",
@@ -107,26 +134,41 @@ test("#10718: the message object carries the recaptured rich shape", () => {
   assert.equal(message.messageType, "Chat");
   assert.equal(message.requestId, "r");
   assert.equal(message.experienceType, "Default");
-  assert.deepEqual(message.entityAnnotationTypes, ["People", "File", "Event", "Email", "TeamsMessage"]);
+  assert.deepEqual(message.entityAnnotationTypes, [
+    "People",
+    "File",
+    "Event",
+    "Email",
+    "TeamsMessage",
+  ]);
   assert.equal(message.attachments, null);
   assert.deepEqual(message.locationInfo, { timeZone: "UTC", timeZoneOffset: 0 });
+  assert.deepEqual(message.connectedFederatedConnections, ["dummyId"]);
+  // Same clientInfo object echoed inside message, per the capture.
+  assert.deepEqual(message.clientInfo, arg.clientInfo);
 });
 
-test("#10718: default tier lists are the recaptured 14-entry optionsSets / 6-entry allowedMessageTypes", () => {
+test("2026-08-21: default tier lists are the recaptured 34-entry optionsSets / 30-entry allowedMessageTypes", () => {
   const overrides = resolveChatInvocationOverrides(undefined);
-  assert.equal(overrides.optionsSets.length, 14);
-  assert.equal(overrides.allowedMessageTypes.length, 6);
-  assert.equal(overrides.tone, "magic");
-  // The pre-#10718 consumer/MSA flags are gone from the wire.
+  assert.equal(overrides.optionsSets.length, 34);
+  assert.equal(overrides.allowedMessageTypes.length, 30);
+  assert.equal(overrides.tone, "Magic");
+  assert.equal(overrides.disconnectBehavior, "continue");
   const optionSets = M365_DEFAULT_OPTION_SETS as readonly string[];
   const messageTypes = ALLOWED_MESSAGE_TYPES as readonly string[];
-  for (const stale of ["enable_msa_user", "pdnascan", "cwc_code_interpreter", "rich_responses"]) {
-    assert.ok(!optionSets.includes(stale), `${stale} must not be in the default option sets`);
+  // Entries the 2026-08-21 capture showed that the #10718 lists lacked.
+  for (const present of [
+    "cwc_code_interpreter",
+    "rich_responses",
+    "async_client_interaction",
+    "flux_v3_references",
+  ]) {
+    assert.ok(optionSets.includes(present), `${present} must be in the default option sets`);
   }
-  for (const stale of ["InternalSearchQuery", "GeneratedCode", "RenderCardRequest", "AdsQuery", "SemanticSerp", "GenerateContentQuery"]) {
-    assert.ok(!messageTypes.includes(stale), `${stale} must not be in allowedMessageTypes`);
+  for (const present of ["InternalSearchQuery", "GeneratedCode", "AuthError", "TriggerPlugin"]) {
+    assert.ok(messageTypes.includes(present), `${present} must be in allowedMessageTypes`);
   }
-  // Entries the capture showed and the old lists lacked.
+  // Entries the #10718 capture showed and this capture still confirms.
   assert.ok(optionSets.includes("cwcfluxgptv"));
   assert.ok(messageTypes.includes("EndOfRequest"));
 });
@@ -134,8 +176,7 @@ test("#10718: default tier lists are the recaptured 14-entry optionsSets / 6-ent
 // ── refresh_token helpers ──────────────────────────────────────────────────
 
 function fakeJwt(claims: Record<string, unknown>): string {
-  const b64 = (value: unknown) =>
-    Buffer.from(JSON.stringify(value)).toString("base64url");
+  const b64 = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64url");
   return `${b64({ alg: "none" })}.${b64(claims)}.sig`;
 }
 

@@ -172,28 +172,26 @@ test("Responses -> Chat keeps summary-only reasoning out of continuation state",
   assert.equal(result.messages[0].reasoning_content, undefined);
 });
 
-test("Responses -> Chat rejects opaque reasoning instead of replaying its plaintext companion", () => {
-  assert.throws(
-    () =>
-      openaiResponsesToOpenAIRequest(
-        "deepseek-v4-pro",
+test("Responses -> Chat replays the plaintext companion of an opaque reasoning item (#10949)", () => {
+  const result = openaiResponsesToOpenAIRequest(
+    "deepseek-v4-pro",
+    {
+      input: [
         {
-          input: [
-            {
-              id: "rs_opaque",
-              type: "reasoning",
-              encrypted_content: "opaque-provider-state",
-              content: [{ type: "reasoning_text", text: "Untrusted plaintext companion" }],
-              summary: [{ type: "summary_text", text: "Display summary" }],
-            },
-            { type: "function_call", call_id: "call_1", name: "search", arguments: "{}" },
-          ],
+          id: "rs_opaque",
+          type: "reasoning",
+          encrypted_content: "opaque-provider-state",
+          content: [{ type: "reasoning_text", text: "Untrusted plaintext companion" }],
+          summary: [{ type: "summary_text", text: "Display summary" }],
         },
-        false,
-        { _preserveReasoningContent: true }
-      ),
-    /Reasoning continuation is not compatible/
-  );
+        { type: "function_call", call_id: "call_1", name: "search", arguments: "{}" },
+      ],
+    },
+    false,
+    { _preserveReasoningContent: true }
+  ) as { messages: Array<Record<string, unknown>> };
+
+  assert.equal(result.messages[0].reasoning_content, "Untrusted plaintext companion");
 });
 
 test("Responses -> Chat merges assistant text that follows a function call", () => {
@@ -475,6 +473,7 @@ test("Chat -> Responses defaults unannotated targets to plaintext reasoning", ()
     {
       type: "reasoning",
       content: [{ type: "reasoning_text", text: "Inspect the repository first" }],
+      summary: [],
     },
     {
       type: "function_call",
@@ -513,6 +512,7 @@ test("Chat -> DeepSeek Responses accepts the plaintext reasoning alias", () => {
   assert.deepEqual(result.input[0], {
     type: "reasoning",
     content: [{ type: "reasoning_text", text: "Alias plaintext reasoning" }],
+    summary: [],
   });
 });
 

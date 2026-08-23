@@ -91,6 +91,14 @@ interface KieImageOptions {
   } | null;
 }
 
+export const KIE_MARKET_UPSTREAM_MODEL_IDS: ReadonlyMap<string, string> = new Map([
+  ["google-imagen/nano-banana-2", "nano-banana-2"],
+]);
+
+export function resolveKieMarketUpstreamModelId(publicModelId: string): string {
+  return KIE_MARKET_UPSTREAM_MODEL_IDS.get(publicModelId) ?? publicModelId;
+}
+
 const OPENAI_IMAGE_TO_IMAGE_MODELS = new Set([
   "black-forest-labs/FLUX.2-max",
   "black-forest-labs/FLUX.2-pro",
@@ -205,7 +213,9 @@ function isCodexChatGptModelAccessError(status: number, errorText: string, model
       if (typeof nested === "string") detail = nested;
     }
   }
-  return detail === `The '${model}' model is not supported when using Codex with a ChatGPT account.`;
+  return (
+    detail === `The '${model}' model is not supported when using Codex with a ChatGPT account.`
+  );
 }
 
 const BFL_MODEL_ENDPOINTS = {
@@ -773,7 +783,7 @@ async function handleKieImageGeneration({
       input.image_url = imageUrl;
     }
     payload = {
-      model,
+      model: resolveKieMarketUpstreamModelId(model),
       input,
     };
   } else {

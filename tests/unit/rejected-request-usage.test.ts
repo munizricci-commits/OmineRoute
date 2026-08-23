@@ -60,12 +60,17 @@ test("gate-rejected request is attributed to the api key in usage_history", asyn
   assert.equal(keyRows.length, 1, "expected one usage_history row for the rejected request");
   assert.equal(keyRows[0].success, false, "rejected request must be recorded as success:false");
 
-  // call_logs visibility is preserved (dashboard/logs).
-  const logs = await callLogs.getCallLogs({});
-  const rejected = (logs.logs ?? logs).filter?.(
-    (l: { apiKeyName?: string | null }) => l.apiKeyName === "opencode-mac"
-  );
-  assert.ok(rejected && rejected.length >= 1, "expected a call_logs row for the rejected request");
+  // call_logs visibility is preserved (dashboard/logs). saveCallLog is
+  // fire-and-forget inside recordRejectedRequestUsage, so poll briefly for the
+  // row instead of asserting synchronously after the await.
+  let rejected: Array<{ apiKeyName?: string | null }> = [];
+  for (let i = 0; i < 50 && rejected.length === 0; i++) {
+    const logs = await callLogs.getCallLogs({});
+    const list = (logs.logs ?? logs) as Array<{ apiKeyName?: string | null }>;
+    rejected = (list ?? []).filter((l) => l.apiKeyName === "opencode-mac");
+    if (rejected.length === 0) await new Promise((r) => setTimeout(r, 10));
+  }
+  assert.ok(rejected.length >= 1, "expected a call_logs row for the rejected request");
 });
 
 test("combo-exhausted rejection is also counted per api key", async () => {
@@ -111,10 +116,15 @@ test("combo-exhausted rejection persists the client request body for dashboard i
     requestBody: { model: "default", messages: [{ role: "user", content: "hello" }] },
   });
 
-  const logs = await callLogs.getCallLogs({});
-  const rejected = (logs.logs ?? logs).find?.(
-    (l: { apiKeyName?: string | null }) => l.apiKeyName === "request-body-test"
-  );
+  // saveCallLog is fire-and-forget — poll briefly for the row.
+  let rejected: { id: string; hasRequestBody: boolean } | undefined;
+  for (let i = 0; i < 50 && !rejected; i++) {
+    const logs = await callLogs.getCallLogs({});
+    const list = (logs.logs ?? logs) as Array<{ apiKeyName?: string | null }>;
+    const found = (list ?? []).find((l) => l.apiKeyName === "request-body-test");
+    if (found) rejected = found as unknown as { id: string; hasRequestBody: boolean };
+    else await new Promise((r) => setTimeout(r, 10));
+  }
   assert.ok(rejected, "expected a call_logs row for the rejected request");
   assert.equal(rejected.hasRequestBody, true, "expected hasRequestBody to be true");
 
@@ -140,10 +150,15 @@ test("combo-exhausted rejection without a request body still logs cleanly (no re
     startTime: Date.now() - 100,
   });
 
-  const logs = await callLogs.getCallLogs({});
-  const rejected = (logs.logs ?? logs).find?.(
-    (l: { apiKeyName?: string | null }) => l.apiKeyName === "no-body-test"
-  );
+  // saveCallLog is fire-and-forget — poll briefly for the row.
+  let rejected: { id: string } | undefined;
+  for (let i = 0; i < 50 && !rejected; i++) {
+    const logs = await callLogs.getCallLogs({});
+    const list = (logs.logs ?? logs) as Array<{ apiKeyName?: string | null }>;
+    const found = (list ?? []).find((l) => l.apiKeyName === "no-body-test");
+    if (found) rejected = found as unknown as { id: string };
+    else await new Promise((r) => setTimeout(r, 10));
+  }
   assert.ok(rejected, "expected a call_logs row even without a request body");
   assert.equal(rejected.hasRequestBody, false);
 });

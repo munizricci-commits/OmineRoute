@@ -24,9 +24,9 @@ test("an update cannot remove every model from a combo", () => {
   assert.equal(updateComboSchema.safeParse({ name: "renamed" }).success, true);
 });
 
-test("creating a combo with no model stays allowed — the CLI does it on purpose", () => {
-  assert.equal(createComboSchema.safeParse({ name: "drafted", models: [] }).success, true);
-  assert.equal(createComboSchema.safeParse({ name: "drafted" }).success, true);
+test("creating a combo without a model is refused at the boundary", () => {
+  assert.equal(createComboSchema.safeParse({ name: "drafted", models: [] }).success, false);
+  assert.equal(createComboSchema.safeParse({ name: "drafted" }).success, false);
 });
 
 test("the copilot createCombo tool stores targets where the router looks for them", async () => {

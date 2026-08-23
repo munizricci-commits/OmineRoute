@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+### ✨ New Features
+
+- **feat(sse): STRICT_ZERO_COST** — opt-in, off-by-default `freeAccessPolicy: "strict"` setting
+  that hard-verifies every auto-combo candidate against live quota state and per-connection
+  economic safety before it can be dispatched, going beyond `hidePaidModels`'s static catalog
+  check. Adds curated `hardStopGuaranteed` metadata to `FREE_MODEL_BUDGETS`, a short-TTL quota
+  cache reusing `getUsageForProvider()`, and a connection-safety guarantee: a candidate backed
+  by multiple accounts has its `allowedConnectionIds` narrowed to exactly the connections
+  independently verified `SAFE`, so dispatch can never use an unverified account. An
+  `excludeTosAvoid` guard (default `false`) is available separately for contractual risk. See
+  `docs/routing/STRICT_ZERO_COST.md`.
+
 ---
 
 ## [3.8.50] — TBD

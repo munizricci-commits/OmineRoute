@@ -28,8 +28,8 @@ const databases = db.pragma("database_list") as Array<{ file?: string; name?: st
 const activeDbPath = databases.find((database) => database.name === "main")?.file;
 assert.ok(activeDbPath, "test requires a file-backed main SQLite database");
 assert.equal(
-  path.dirname(path.resolve(activeDbPath)),
-  path.resolve(TEST_DATA_DIR),
+  fs.realpathSync(path.dirname(path.resolve(activeDbPath))),
+  fs.realpathSync(path.resolve(TEST_DATA_DIR)),
   `active test database must be under TEST_DATA_DIR before inserts: ${activeDbPath}`
 );
 

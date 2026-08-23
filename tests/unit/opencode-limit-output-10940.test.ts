@@ -54,8 +54,8 @@ describe("opencode config generator — limit.output always emitted (#10940)", (
         `entry.limit.output must be a number, got ${JSON.stringify(entry.limit?.output)}`
       );
       assert.ok(entry.limit.output > 0, "entry.limit.output must be a positive number");
-      // context stays unknown — we must NOT fabricate it.
-      assert.strictEqual(entry.limit.context, undefined);
+      // context defaults to 128k when unknown to satisfy OpenCode's required limit.context schema (#11035).
+      assert.strictEqual(entry.limit.context, 128_000);
     } finally {
       stub.restore();
     }

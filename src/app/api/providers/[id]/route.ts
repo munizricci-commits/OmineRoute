@@ -121,7 +121,17 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const { id } = await params;
     const validation = validateBody(updateProviderConnectionSchema, rawBody);
     if (isValidationFailure(validation)) {
-      return NextResponse.json({ error: validation.error }, { status: 400 });
+      // never drop an operator's intent silently. Surface the rejected
+      // keys (field paths and unrecognized-key names) alongside the existing
+      // error envelope so clients and the UI can tell exactly what was refused.
+      const rejected = [
+        ...validation.error.details.map((d) => d.field).filter(Boolean),
+        ...validation.error.details.flatMap((d) => d.keys ?? []),
+      ];
+      return NextResponse.json(
+        { error: { ...validation.error, rejected } },
+        { status: 400 }
+      );
     }
     const body = validation.data;
     const {

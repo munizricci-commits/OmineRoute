@@ -2218,6 +2218,10 @@
     "fullAccess": "Повний доступ",
     "keyManagement": "Керування ключами API",
     "keyManagementDesc": "Створюйте та керуйте ключами API для автентифікації запитів до кінцевої точки",
+    "requestFlowAria": "Your app sends requests through an API key to OmniRoute",
+    "requestFlowYourApp": "Your app",
+    "requestFlowApiKey": "API key",
+    "requestFlowOmniRoute": "OmniRoute",
     "totalKeys": "Всього ключів",
     "restricted": "Обмежений",
     "totalRequests": "Загальна кількість запитів",
@@ -5830,6 +5834,8 @@
     "rateLimitOverridesSection": "Перевизначення лімітів запитів",
     "rateLimitOverridesMaxConcurrentHint": "Перевизначення максимальної кількості одночасних запитів для цього підключення. Перевизначає обмеження на рівні облікового запису.",
     "rateLimitOverridesMaxConcurrentLabel": "Макс. одночасних (ліміт запитів)",
+    "rateLimitOverridesMaxWaitMsHint": "__MISSING__:Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "Мінімальний час (мс) між запитами. Перевизначає стандартну затримку обмежувача частоти запитів.",
     "rateLimitOverridesMinTimeLabel": "Мін. інтервал (мс)",
     "rateLimitOverridesRpmHint": "Максимальна кількість запитів на хвилину для цього підключення. Перевизначає значення за замовчуванням для провайдера.",
@@ -6107,7 +6113,6 @@
       "glmt": "Попередньо встановлений профіль GLM із більшим бюджетом токенів, увімкненим мисленням та довшим таймаутом.",
       "getgoapi": "Підключіть GoAPI за допомогою API-ключа.",
       "groq": "Безкоштовний тариф: 30 RPM / 14.4K RPD — без кредитної картки",
-      "hackclub": "Увійдіть за допомогою свого облікового запису Hack Club на ai.hackclub.com.",
       "haiper": "Отримайте API-ключ на haiper.ai/haiper-api",
       "heroku": "Підключіть Heroku AI за допомогою API-ключа.",
       "hcnsec": "Отримайте API-ключ на api.hcnsec.cn",
@@ -12202,7 +12207,7 @@
       },
       "omni-webhooks": {
         "name": "Вебхуки",
-        "description": "Реєструйте, переглядайте, тестуйте та видаляйте кінцеві точки вебхуків. Налаштовуйте підписки на події (request.completed, provider.error, budget.exceeded тощо) та керуйте повторними спробами доставки."
+        "description": "__MISSING__:Register, list, test, and remove webhook endpoints. Configure event subscriptions (request.completed, request.failed, quota.exceeded, etc.) and manage delivery retries."
       },
       "omni-mcp": {
         "name": "Сервер MCP",

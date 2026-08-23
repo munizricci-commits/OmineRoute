@@ -106,8 +106,17 @@ import {
   resolveProviderId,
   NOAUTH_PROVIDERS,
   WEB_COOKIE_PROVIDERS,
+  isSelfHostedChatProvider,
 } from "@/shared/constants/providers";
-import { isModelExcludedByConnection } from "@/domain/connectionModelRules";
+import {
+  isModelExcludedByConnection,
+  isModelAdvertisedByConnection,
+} from "@/domain/connectionModelRules";
+import {
+  getSyncedAvailableModelsByConnection,
+  SYNCED_AVAILABLE_MODELS_MALFORMED,
+  type SyncedAvailableModelsByConnection,
+} from "@/lib/db/models";
 import { isFreeModel } from "@/shared/utils/freeModels";
 import {
   applySessionAffinityPin,
@@ -1161,6 +1170,54 @@ function materializeConnection(
 }
 
 /**
+ * #11089: load the per-connection synced model inventory for self-hosted chat
+ * providers so connection selection can drop hosts that never advertised the
+ * requested model.
+ *
+ * Scoped to SELF_HOSTED_CHAT_PROVIDER_IDS: those are the providers where one
+ * provider id fans out to several independent hosts with genuinely different
+ * inventories. Hosted providers share one catalog per provider, so filtering
+ * there would only add a DB read.
+ *
+ * Returns an empty map (= no filtering) when there is no model to match, when
+ * no candidate is self-hosted, or when the persisted rows are malformed — a
+ * partial read must never silently shrink the pool.
+ */
+async function loadAdvertisedModelsForSelfHostedConnections(
+  connections: ProviderConnectionView[],
+  requestedModel: string | null
+): Promise<Map<string, Set<string>>> {
+  const advertised = new Map<string, Set<string>>();
+  if (!requestedModel) return advertised;
+
+  const selfHostedProviders = new Set(
+    connections
+      .map((c) => c.provider)
+      .filter((p): p is string => typeof p === "string" && isSelfHostedChatProvider(p))
+  );
+  if (selfHostedProviders.size === 0) return advertised;
+
+  await Promise.all(
+    [...selfHostedProviders].map(async (providerId) => {
+      let byConnection: SyncedAvailableModelsByConnection;
+      try {
+        byConnection = await getSyncedAvailableModelsByConnection(providerId);
+      } catch {
+        return;
+      }
+      // Malformed persisted rows: fail open for the whole provider.
+      if (byConnection[SYNCED_AVAILABLE_MODELS_MALFORMED]) return;
+      for (const [connectionId, models] of Object.entries(byConnection)) {
+        if (!Array.isArray(models) || models.length === 0) continue;
+        advertised.set(connectionId, new Set(models.map((m) => m.id)));
+      }
+    })
+  );
+
+  return advertised;
+}
+
+/**
  * Get provider credentials from localDb
  * Filters out unavailable accounts and returns the selected account based on strategy
  * @param {string} provider - Provider name
@@ -1435,6 +1492,14 @@ export async function getProviderCredentials(
     let modelLockedCount = 0;
     let familyLockedCount = 0;
     const connectionFilterStatus = new Map<string, string>();
+    // #11089: multi-host self-hosted providers keep a per-connection synced
+    // inventory. Without it, a request can be routed to a host that never had
+    // the model, producing a spurious model-not-found instead of pinning to
+    // the host that does. Empty map = no inventory known = no filtering.
+    const advertisedModelsByConnection = await loadAdvertisedModelsForSelfHostedConnections(
+      connections,
+      requestedModel
+    );
     // Filter out unavailable accounts and excluded connection
     let availableConnections = connections.filter((c) => {
       if (excludedConnectionIds.has(c.id)) {
@@ -1443,6 +1508,13 @@ export async function getProviderCredentials(
       }
       if (requestedModel && isModelExcludedByConnection(requestedModel, c.providerSpecificData)) {
         connectionFilterStatus.set(c.id, "modelExcluded");
+        return false;
+      }
+      if (
+        requestedModel &&
+        !isModelAdvertisedByConnection(requestedModel, advertisedModelsByConnection.get(c.id))
+      ) {
+        connectionFilterStatus.set(c.id, "modelNotAdvertised");
         return false;
       }
       if (!allowSuppressedConnections) {
@@ -1510,6 +1582,7 @@ export async function getProviderCredentials(
       const codexScopeLimited = status === "codexScopeLimited";
       const modelLocked = status === "modelLocked";
       const modelExcluded = status === "modelExcluded";
+      const modelNotAdvertised = status === "modelNotAdvertised";
       if (excluded || rateLimited) {
         log.debug(
           "AUTH",
@@ -1519,6 +1592,11 @@ export async function getProviderCredentials(
         log.debug(
           "AUTH",
           `  → ${c.id?.slice(0, 8)} | excluded by per-account model rule for ${requestedModel}`
+        );
+      } else if (modelNotAdvertised) {
+        log.debug(
+          "AUTH",
+          `  → ${c.id?.slice(0, 8)} | synced inventory does not advertise ${requestedModel}`
         );
       } else if (terminalStatus) {
         log.debug(
@@ -2196,6 +2274,11 @@ export async function getProviderCredentialsWithQuotaPreflight(
     //   • a per-connection override on this row
     //   • a per-(provider, window) default in resilience settings
     //   • the legacy `quotaPreflightEnabled` flag in providerSpecificData
+    //   • the operator-enabled quota cutoff (resilience.quotaPreflight.enabled /
+    //     QUOTA_PREFLIGHT_CUTOFF_ENABLED) — #11234: it previously only armed the
+    //     auto-strategy candidate builder and the per-target cutoff for pinned
+    //     connections, so priority combos over sibling connections (no pinned
+    //     connectionId) never filtered an exhausted sister
     //   • the global default is stricter than the factory no-op level
     //     (factory = 2% remaining, basically "right before 429" — anything
     //     stricter means the operator wants enforcement everywhere)
@@ -2217,10 +2300,12 @@ export async function getProviderCredentialsWithQuotaPreflight(
 
     const hasConnectionOverrides = Object.keys(perConnectionWindowOverrides).length > 0;
     const legacyForceEnable = isQuotaPreflightEnabled(credentials as Record<string, unknown>);
+    const globalCutoffEnabled = resilience.quotaPreflight.enabled === true;
     if (
       !hasConnectionOverrides &&
       !providerHasDefaults &&
       !legacyForceEnable &&
+      !globalCutoffEnabled &&
       !globalDefaultIsRestrictive
     ) {
       const committed = await commitLease();
@@ -2452,6 +2537,18 @@ export async function markAccountUnavailable(
 
   try {
     await currentMutex;
+
+    // STRICT_ZERO_COST: this connection just failed (whatever the reason) —
+    // drop any cached "SAFE" free-allowance reading for it immediately rather
+    // than waiting out the TTL, so the very next candidate-pool build reads a
+    // clean cache miss (UNKNOWN → excluded) instead of a stale SAFE. Cheap,
+    // idempotent, and correct to over-invalidate on non-quota failures too —
+    // worst case is one extra background refresh.
+    if (provider) {
+      const { invalidateFreeAccessState } =
+        await import("@omniroute/open-sse/services/autoCombo/freeAccessQuota.ts");
+      invalidateFreeAccessState(provider, connectionId);
+    }
 
     const resourceBypass = getResource404Bypass(status, errorText, connectionId, log);
     if (resourceBypass) return resourceBypass;
@@ -3092,11 +3189,9 @@ export async function clearAccountError(
 }
 
 /**
- * Optional CAS token. When provided, the clear is performed via an atomic
- * conditional UPDATE (clearConnectionErrorIfUnchanged) that aborts if the row
- * was written by a concurrent path between the caller's snapshot read and this
- * clear. Closes the TOCTOU window in the quota-recovery path. When omitted,
- * the clear is unconditional (preserves existing post-success-call behavior).
+ * Optional CAS token. When provided, clearConnectionErrorIfUnchanged atomically
+ * aborts if another path modified the row after the caller's snapshot.
+ * This closes the TOCTOU window; omission preserves unconditional clearing.
  */
 export interface RecoveredStateExpectation {
   testStatus: string | null;
@@ -3104,23 +3199,25 @@ export interface RecoveredStateExpectation {
   rateLimitedUntil: string | null;
 }
 export async function clearRecoveredProviderState(
-  credentials: Partial<RecoverableConnectionState> | null,
+  credentials: unknown,
   expectedState?: RecoveredStateExpectation
 ): Promise<{ applied: boolean }> {
-  if (!credentials?.connectionId) return { applied: false };
+  const recoverable = credentials as Partial<RecoverableConnectionState> | null;
+  if (typeof recoverable?.connectionId !== "string" || !recoverable.connectionId)
+    return { applied: false };
   if (expectedState) {
-    const applied = await clearConnectionErrorIfUnchanged(credentials.connectionId, expectedState);
+    const applied = await clearConnectionErrorIfUnchanged(recoverable.connectionId, expectedState);
     if (!applied) {
       log.info(
         "AUTH",
-        `Skipped recovery clear for ${credentials.connectionId.slice(0, 8)} — state changed concurrently (CAS miss)`
+        `Skipped recovery clear for ${recoverable.connectionId.slice(0, 8)} — state changed concurrently (CAS miss)`
       );
       return { applied: false };
     }
-    log.info("AUTH", `Account ${credentials.connectionId.slice(0, 8)} error cleared (CAS)`);
+    log.info("AUTH", `Account ${recoverable.connectionId.slice(0, 8)} error cleared (CAS)`);
     return { applied: true };
   }
-  await clearAccountError(credentials.connectionId, credentials);
+  await clearAccountError(recoverable.connectionId, recoverable);
   return { applied: true };
 }
 type AuthRequestLike = {

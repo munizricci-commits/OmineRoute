@@ -49,6 +49,7 @@ import {
 import { getWebSessionCredentialRequirement } from "../../webSessionCredentials";
 import { useOpenRouterPresetControl } from "../OpenRouterPresetInput";
 import WebSessionCredentialGuide from "../WebSessionCredentialGuide";
+import HarImportButton from "../HarImportButton";
 import CcCompatibleRequestDefaultsFields from "./CcCompatibleRequestDefaultsFields";
 import { CodexConnectionFields } from "./CodexFingerprintFields";
 import { assignEditApiKeyProviderSpecificData } from "./connectionProviderSpecificData";
@@ -107,6 +108,7 @@ export default function EditConnectionModal({
     tpm: "",
     tpd: "",
     minTime: "",
+    maxWaitMs: "",
     rateLimitMaxConcurrent: "",
     apiKey: "",
     healthCheckInterval: 60,
@@ -114,6 +116,8 @@ export default function EditConnectionModal({
     targetFormat: "",
     cx: "",
     region: "",
+    awsAccessKeyId: "",
+    awsSessionToken: "",
     apiRegion: "international",
     validationModelId: "",
     defaultModel: "",
@@ -215,6 +219,7 @@ export default function EditConnectionModal({
   const isLocalSelfHostedProvider = !!localProviderMetadata;
   const isGooglePse = provider === "google-pse-search";
   const isChatGptWebCodex = provider === "chatgpt-web-codex";
+  const isAwsPolly = provider === "aws-polly";
   const isM365TierCapable = isM365TierCapableProvider(provider);
   const webSessionCredential = getWebSessionCredentialRequirement(provider);
   const isNoAuthWebSessionCredential = webSessionCredential?.kind === "none";
@@ -231,9 +236,11 @@ export default function EditConnectionModal({
     isOpenAICompatibleProvider(provider) || isAnthropicCompatibleProvider(provider);
   const apiCredentialLabel = webSessionCredential
     ? getWebSessionCredentialLabel(t, webSessionCredential, apiKeyOptional)
-    : apiKeyOptional
-      ? t("apiKeyOptionalLabel")
-      : t("apiKeyLabel");
+    : isAwsPolly
+      ? providerText(t, "awsPollySecretAccessKeyLabel", "AWS Secret Access Key")
+      : apiKeyOptional
+        ? t("apiKeyOptionalLabel")
+        : t("apiKeyLabel");
   const apiCredentialPlaceholder = isWebSessionCredential
     ? webSessionCredential.placeholder
     : isVertex
@@ -254,6 +261,9 @@ export default function EditConnectionModal({
       const existingBaseUrl = stringField(connection.providerSpecificData?.baseUrl);
       const existingTargetFormat = stringField(connection.providerSpecificData?.targetFormat);
       const existingRegion = stringField(connection.providerSpecificData?.region);
+      const existingAwsAccessKeyId =
+        stringField(connection.providerSpecificData?.accessKeyId) ||
+        stringField(connection.providerSpecificData?.awsAccessKeyId);
       const existingCustomUserAgent = stringField(connection.providerSpecificData?.customUserAgent);
       const existingOpenRouterPreset = stringField(connection.providerSpecificData?.preset);
       const existingCx = stringField(connection.providerSpecificData?.cx);
@@ -303,6 +313,10 @@ export default function EditConnectionModal({
           connection.rateLimitOverrides?.minTime != null
             ? String(connection.rateLimitOverrides.minTime)
             : "",
+        maxWaitMs:
+          connection.rateLimitOverrides?.maxWaitMs != null
+            ? String(connection.rateLimitOverrides.maxWaitMs)
+            : "",
         rateLimitMaxConcurrent:
           connection.rateLimitOverrides?.maxConcurrent != null
             ? String(connection.rateLimitOverrides.maxConcurrent)
@@ -312,7 +326,11 @@ export default function EditConnectionModal({
         baseUrl: existingBaseUrl || defaultBaseUrl,
         targetFormat: existingTargetFormat || "",
         cx: existingCx,
-        region: existingRegion || (showsRegion ? defaultRegion : ""),
+        region:
+          existingRegion ||
+          (effectiveProvider === "aws-polly" ? "us-east-1" : showsRegion ? defaultRegion : ""),
+        awsAccessKeyId: existingAwsAccessKeyId,
+        awsSessionToken: "",
         apiRegion: (connection.providerSpecificData?.apiRegion as string) || "international",
         validationModelId: (connection.providerSpecificData?.validationModelId as string) || "",
         defaultModel: (connection.defaultModel as string) || "",
@@ -434,7 +452,8 @@ export default function EditConnectionModal({
     if (
       !provider ||
       isNoAuthWebSessionCredential ||
-      (!isCompatible && !apiKeyOptional && !formData.apiKey)
+      (!isCompatible && !apiKeyOptional && !formData.apiKey) ||
+      (isAwsPolly && !formData.awsAccessKeyId.trim())
     ) {
       return;
     }
@@ -450,7 +469,13 @@ export default function EditConnectionModal({
           validationModelId: formData.validationModelId || undefined,
           customUserAgent: formData.customUserAgent.trim() || undefined,
           baseUrl: formData.baseUrl.trim() || undefined,
-          region: showsRegion ? formData.region.trim() || defaultRegion : undefined,
+          region: isAwsPolly
+            ? formData.region.trim() || "us-east-1"
+            : showsRegion
+              ? formData.region.trim() || defaultRegion
+              : undefined,
+          accessKeyId: isAwsPolly ? formData.awsAccessKeyId.trim() || undefined : undefined,
+          sessionToken: isAwsPolly ? formData.awsSessionToken.trim() || undefined : undefined,
           cx: formData.cx.trim() || undefined,
           runtimeKey: isChatGptWebCodex ? formData.runtimeKey.trim() || undefined : undefined,
           tunnelId: isChatGptWebCodex ? formData.tunnelId.trim() || undefined : undefined,
@@ -508,6 +533,7 @@ export default function EditConnectionModal({
       if (formData.tpm.trim()) overrides.tpm = Number(formData.tpm);
       if (formData.tpd.trim()) overrides.tpd = Number(formData.tpd);
       if (formData.minTime.trim()) overrides.minTime = Number(formData.minTime);
+      if (formData.maxWaitMs.trim()) overrides.maxWaitMs = Number(formData.maxWaitMs);
       if (formData.rateLimitMaxConcurrent.trim())
         overrides.maxConcurrent = Number(formData.rateLimitMaxConcurrent);
       updates.rateLimitOverrides = Object.keys(overrides).length > 0 ? overrides : null;
@@ -549,7 +575,13 @@ export default function EditConnectionModal({
                 validationModelId: formData.validationModelId || undefined,
                 customUserAgent: formData.customUserAgent.trim() || undefined,
                 baseUrl: formData.baseUrl.trim() || undefined,
-                region: showsRegion ? formData.region.trim() || defaultRegion : undefined,
+                region: isAwsPolly
+                  ? formData.region.trim() || "us-east-1"
+                  : showsRegion
+                    ? formData.region.trim() || defaultRegion
+                    : undefined,
+                accessKeyId: isAwsPolly ? formData.awsAccessKeyId.trim() || undefined : undefined,
+                sessionToken: isAwsPolly ? formData.awsSessionToken.trim() || undefined : undefined,
                 cx: formData.cx.trim() || undefined,
                 runtimeKey: isChatGptWebCodex ? formData.runtimeKey.trim() || undefined : undefined,
                 tunnelId: isChatGptWebCodex ? formData.tunnelId.trim() || undefined : undefined,
@@ -909,6 +941,12 @@ export default function EditConnectionModal({
                 t={t}
               />
             )}
+            {provider && (
+              <HarImportButton
+                provider={provider}
+                onImport={(apiKey) => setFormData({ ...formData, apiKey })}
+              />
+            )}
             {!isNoAuthWebSessionCredential && (
               <div className="flex gap-2">
                 <Input
@@ -928,6 +966,7 @@ export default function EditConnectionModal({
                     onClick={handleValidate}
                     disabled={
                       (!isCompatible && !apiKeyOptional && !formData.apiKey) ||
+                      (isAwsPolly && !formData.awsAccessKeyId.trim()) ||
                       (isGooglePse && !formData.cx.trim()) ||
                       validating ||
                       saving
@@ -1028,6 +1067,56 @@ export default function EditConnectionModal({
                 placeholder="012345678901234567890:abc123xyz"
                 hint={t("searchEngineIdHint")}
               />
+            )}
+            {isAwsPolly && (
+              <>
+                <Input
+                  label={providerText(t, "awsPollyAccessKeyIdLabel", "AWS Access Key ID")}
+                  value={formData.awsAccessKeyId}
+                  onChange={(e) => setFormData({ ...formData, awsAccessKeyId: e.target.value })}
+                  placeholder="AKIA..."
+                  hint={providerText(
+                    t,
+                    "awsPollyAccessKeyIdHint",
+                    "Used with the secret access key to sign Amazon Polly requests."
+                  )}
+                  autoComplete="off"
+                  spellCheck={false}
+                  autoCapitalize="off"
+                />
+                <Input
+                  label={providerText(t, "awsPollyRegionLabel", "AWS Region")}
+                  value={formData.region}
+                  onChange={(e) => setFormData({ ...formData, region: e.target.value })}
+                  placeholder="us-east-1"
+                  hint={providerText(
+                    t,
+                    "awsPollyRegionHint",
+                    "Defaults to us-east-1 when left blank."
+                  )}
+                  autoComplete="off"
+                  spellCheck={false}
+                  autoCapitalize="off"
+                />
+                <Input
+                  label={providerText(
+                    t,
+                    "awsPollySessionTokenLabel",
+                    "AWS Session Token (optional)"
+                  )}
+                  type="password"
+                  value={formData.awsSessionToken}
+                  onChange={(e) => setFormData({ ...formData, awsSessionToken: e.target.value })}
+                  hint={providerText(
+                    t,
+                    "awsPollySessionTokenHint",
+                    "Required only for temporary AWS credentials."
+                  )}
+                  autoComplete="off"
+                  spellCheck={false}
+                  autoCapitalize="off"
+                />
+              </>
             )}
             {validationResult && (
               <Badge variant={validationResult === "success" ? "success" : "error"}>
@@ -1140,6 +1229,15 @@ export default function EditConnectionModal({
                       onChange={(e) => setFormData({ ...formData, minTime: e.target.value })}
                       placeholder={t("inherit")}
                       hint={t("rateLimitOverridesMinTimeHint")}
+                    />
+                    <Input
+                      label={t("rateLimitOverridesMaxWaitMsLabel")}
+                      type="number"
+                      min={0}
+                      value={formData.maxWaitMs}
+                      onChange={(e) => setFormData({ ...formData, maxWaitMs: e.target.value })}
+                      placeholder={t("inherit")}
+                      hint={t("rateLimitOverridesMaxWaitMsHint")}
                     />
                     <Input
                       label={t("rateLimitOverridesMaxConcurrentLabel")}

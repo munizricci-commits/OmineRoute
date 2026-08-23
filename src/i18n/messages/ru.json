@@ -1295,6 +1295,13 @@
       "open": "открыть",
       "close": "закрыть"
     },
+    "cheaperInferenceSponsorBanner": {
+      "title": "Cheaper Inference — дружественный Open Source проект OmniRoute",
+      "description": "Шлюз с маршрутизацией по цене, перепродающий десятки фронтирных моделей за одним OpenAI-совместимым эндпоинтом — каждый запрос направляется к самому дешёвому подходящему провайдеру, никогда выше рекомендованной цены.",
+      "cta": "Получить API-ключ",
+      "partnerLinkNote": "Партнёрская ссылка",
+      "dismissAriaLabel": "Закрыть"
+    },
     "noResults": "Нет результатов",
     "organizations": "Организации",
     "organizationsSection": "Организации",
@@ -2232,6 +2239,10 @@
     "fullAccess": "Полный доступ",
     "keyManagement": "Управление ключами API",
     "keyManagementDesc": "Создавайте ключи API для аутентификации запросов к вашей конечной точке и управляйте ими.",
+    "requestFlowAria": "Your app sends requests through an API key to OmniRoute",
+    "requestFlowYourApp": "Your app",
+    "requestFlowApiKey": "API key",
+    "requestFlowOmniRoute": "OmniRoute",
     "totalKeys": "Всего ключей",
     "restricted": "Ограниченный",
     "totalRequests": "Всего запросов",
@@ -5844,6 +5855,8 @@
     "rateLimitOverridesSection": "Переопределение лимитов запросов",
     "rateLimitOverridesMaxConcurrentHint": "Переопределение максимального количества одновременных запросов для этого подключения. Переопределяет ограничение на уровне аккаунта.",
     "rateLimitOverridesMaxConcurrentLabel": "Макс. одновременных (лимит запросов)",
+    "rateLimitOverridesMaxWaitMsHint": "__MISSING__:Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "Минимальное время (мс) между запросами. Переопределяет задержку ограничителя запросов по умолчанию.",
     "rateLimitOverridesMinTimeLabel": "Мин. интервал (мс)",
     "rateLimitOverridesRpmHint": "Максимальное количество запросов в минуту для этого подключения. Переопределяет значение по умолчанию для провайдера.",
@@ -6121,7 +6134,6 @@
       "glmt": "Предустановленный профиль GLM с увеличенным лимитом токенов, включенным режимом рассуждения и более длительным таймаутом.",
       "getgoapi": "Подключите GoAPI с помощью API-ключа.",
       "groq": "Бесплатный тариф: 30 RPM / 14.4K RPD — без кредитной карты",
-      "hackclub": "Войдите с помощью учетной записи Hack Club на ai.hackclub.com.",
       "haiper": "Получите API-ключ на haiper.ai/haiper-api",
       "heroku": "Подключите Heroku AI с помощью API-ключа.",
       "hcnsec": "Получите API-ключ на api.hcnsec.cn",
@@ -12262,7 +12274,7 @@
       },
       "omni-webhooks": {
         "name": "Вебхуки",
-        "description": "Регистрация, просмотр списка, тестирование и удаление конечных точек вебхуков. Настройка подписок на события (request.completed, provider.error, budget.exceeded и т. д.) и управление повторными попытками доставки."
+        "description": "__MISSING__:Register, list, test, and remove webhook endpoints. Configure event subscriptions (request.completed, request.failed, quota.exceeded, etc.) and manage delivery retries."
       },
       "omni-mcp": {
         "name": "MCP-сервер",

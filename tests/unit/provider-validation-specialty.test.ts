@@ -16,7 +16,6 @@ const { __setTlsFetchOverrideForTesting: __setPplxTlsFetchOverride } =
 const { __setTlsFetchOverrideForTesting: __setGrokTlsFetchOverride } =
   await import("../../open-sse/services/grokTlsClient.ts");
 
-const { COMMAND_CODE_VERSION } = await import("../../open-sse/executors/commandCode.ts");
 
 const originalFetch = globalThis.fetch;
 
@@ -216,11 +215,11 @@ test("specialty provider validators cover Deepgram, AssemblyAI, ElevenLabs and I
 
 test("validateCommandCodeProvider ignores caller baseUrl and chatPath overrides", async () => {
   globalThis.fetch = async (url, init = {}) => {
-    assert.equal(String(url), "https://api.commandcode.ai/alpha/generate");
+    assert.equal(String(url), "https://api.commandcode.ai/provider/v1/chat/completions");
     const headers = init.headers as Record<string, string>;
     assert.equal(headers.Authorization, "Bearer cc-key");
     const body = JSON.parse(String(init.body));
-    assert.equal(body.params.model, "command-code-validation-model");
+    assert.equal(body.model, "command-code-validation-model");
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   };
 
@@ -239,7 +238,7 @@ test("validateCommandCodeProvider ignores caller baseUrl and chatPath overrides"
 test("validateCommandCodeProvider defaults probe model to DeepSeek flash", async () => {
   globalThis.fetch = async (_url, init = {}) => {
     const body = JSON.parse(String(init.body));
-    assert.equal(body.params.model, "deepseek/deepseek-v4-flash");
+    assert.equal(body.model, "deepseek/deepseek-v4-flash");
     return new Response("", { status: 400 });
   };
 
@@ -340,6 +339,18 @@ test("AWS Polly specialty validator requires an access key id", async () => {
   });
 
   assert.equal(result.error, "Missing AWS accessKeyId");
+});
+
+test("AWS Polly specialty validator identifies invalid AWS credentials", async () => {
+  globalThis.fetch = async () => new Response("forbidden", { status: 403 });
+
+  const result = await validateProviderApiKey({
+    provider: "aws-polly",
+    apiKey: "aws-secret",
+    providerSpecificData: { accessKeyId: "AKIA_POLLY" },
+  });
+
+  assert.equal(result.error, "Invalid AWS credentials");
 });
 
 test("embedding and rerank specialty validators surface auth failures for Voyage AI and Jina AI", async () => {
@@ -2285,7 +2296,7 @@ test("specialty validator rejects invalid Runway credentials", async () => {
   assert.equal(runway.error, "Invalid API key");
 });
 
-test("validateCommandCodeProvider sends Command Code probe URL, headers, and wrapper body", async () => {
+test("validateCommandCodeProvider sends Command Code probe URL, headers, and flat OpenAI body", async () => {
   const calls: Array<{
     url: string;
     method?: string;
@@ -2309,22 +2320,21 @@ test("validateCommandCodeProvider sends Command Code probe URL, headers, and wra
 
   assert.deepEqual(result, { valid: true, error: null });
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].url, "https://api.commandcode.ai/alpha/generate");
+  // Probe targets the documented /provider/v1/chat/completions endpoint, not
+  // the CLI-only /alpha/generate (#10265).
+  assert.equal(calls[0].url, "https://api.commandcode.ai/provider/v1/chat/completions");
   assert.equal(calls[0].method, "POST");
   assert.equal(calls[0].headers.Authorization, "Bearer cc_test_key");
   assert.equal(calls[0].headers["Content-Type"], "application/json");
-  assert.equal(calls[0].headers["x-command-code-version"], COMMAND_CODE_VERSION);
-  assert.equal(calls[0].headers["x-cli-environment"], "external");
-  assert.equal(calls[0].headers["x-project-slug"], "pi-cc");
-  assert.equal(calls[0].headers["x-taste-learning"], "false");
-  assert.equal(calls[0].headers["x-co-flag"], "false");
-  assert.equal(typeof calls[0].headers["x-session-id"], "string");
-  assert.equal(calls[0].body.config.environment, "external");
-  assert.equal(calls[0].body.permissionMode, "standard");
-  assert.equal(calls[0].body.skills, "");
-  assert.equal(calls[0].body.params.model, "gpt-5.4-mini");
-  assert.equal(calls[0].body.params.stream, true);
-  assert.equal(calls[0].body.params.max_tokens, 1);
+  // No CLI-impersonation headers.
+  assert.equal(calls[0].headers["x-command-code-version"], undefined);
+  assert.equal(calls[0].headers["x-cli-environment"], undefined);
+  assert.equal(calls[0].headers["x-project-slug"], undefined);
+  // Flat OpenAI chat.completions body (no CLI wrapper).
+  assert.equal(calls[0].body.params, undefined, "CLI envelope params wrapper must not be sent");
+  assert.equal(calls[0].body.model, "gpt-5.4-mini");
+  assert.equal(calls[0].body.stream, true);
+  assert.equal(calls[0].body.max_tokens, 1);
 });
 
 for (const status of [400, 422, 429]) {

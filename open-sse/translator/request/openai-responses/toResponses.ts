@@ -201,6 +201,14 @@ export function openaiToOpenAIResponsesRequest(
         input.push({
           type: "reasoning",
           content: [{ type: "reasoning_text", text: reasoning }],
+          // Strict Responses-API upstreams (e.g. opencode/zen) require `summary`
+          // on every `input[]` item of type "reasoning", plaintext or opaque —
+          // omitting it rejects the request with `input[N] missing required
+          // field summary`. This item is always freshly built from a chat
+          // client's plaintext reasoning, so there is no source summary to
+          // preserve; default to an empty array like the replay sanitizer does
+          // for opaque items in reasoningInputPolicy.ts (#11108).
+          summary: [],
         });
       }
 

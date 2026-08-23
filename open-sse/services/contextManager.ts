@@ -669,13 +669,35 @@ function purifyHistory(messages: Record<string, unknown>[], targetTokens: number
   result = fixToolPairs(result);
   result = stripTrailingAssistantOrphanToolUse(result);
 
-  // Add summary of dropped messages
+  // Add summary of dropped messages. Merge the notice INTO the leading
+  // system/developer message instead of splicing a second system-role message
+  // mid-array: strict gateways (TokenRouter confirmed live 2026-08-22, see the
+  // PROVIDERS_SYSTEM_MUST_BE_FIRST list in src/lib/memory/injection.ts) reject
+  // any system message at index > 0 with HTTP 400 "System message must be at
+  // the beginning". When there is no leading system message, prepend one --
+  // index 0 is accepted by every provider (same slot the old splice used when
+  // system[] was empty).
   if (keep < nonSystem.length) {
     const dropped = nonSystem.length - keep;
-    result.splice(system.length, 0, {
-      role: "system",
-      content: `[Context compressed: ${dropped} earlier messages removed to fit context window]`,
-    });
+    const droppedNotice = `[Context compressed: ${dropped} earlier messages removed to fit context window]`;
+    const first = result[0];
+    if (first && (first.role === "system" || first.role === "developer")) {
+      if (typeof first.content === "string") {
+        result[0] = {
+          ...first,
+          content: first.content ? `${droppedNotice}\n${first.content}` : droppedNotice,
+        };
+      } else if (Array.isArray(first.content)) {
+        result[0] = {
+          ...first,
+          content: [{ type: "text", text: droppedNotice }, ...(first.content as unknown[])],
+        };
+      } else {
+        result[0] = { ...first, content: droppedNotice };
+      }
+    } else {
+      result.unshift({ role: "system", content: droppedNotice });
+    }
   }
 
   return result;

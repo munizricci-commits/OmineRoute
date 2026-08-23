@@ -16,7 +16,7 @@ export const hailuo_webProvider: RegistryEntry = {
   alias: "hailuo-web",
   format: "openai",
   executor: "hailuo-web",
-  baseUrl: "https://www.hailuo.ai",
+  baseUrl: "https://chat.minimax.io",
   authType: "apikey",
   authHeader: "bearer",
   models: HAILUO_WEB_STATIC_MODELS,

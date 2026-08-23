@@ -8,6 +8,10 @@ import {
   getProviderModel,
   getProviderModels,
 } from "../../config/providerModels.ts";
+import {
+  getLearnedReasoningEffort,
+  clampToLearned,
+} from "../../services/learnedReasoningEffortCaps.ts";
 
 /**
  * Sanitize reasoning_effort for providers that don't accept all values.
@@ -336,6 +340,23 @@ export function sanitizeReasoningEffortForProvider(
     return body;
   }
 
+  // Generic learned clamp (downgrade-only: greatest accepted <= demand).
+  // Sits AFTER the per-provider early returns by design: deepseek/command-code/
+  // ollama-cloud have deliberate static translations that take precedence; the
+  // learned set governs every other provider and all effort values, before the
+  // xhigh/max static fallbacks below.
+  const learnedSet = getLearnedReasoningEffort(provider, modelStr);
+  if (learnedSet && learnedSet.size > 0 && !learnedSet.has(effortStr)) {
+    const clamped = clampToLearned(effortStr, learnedSet);
+    if (clamped && clamped !== effortStr) {
+      log?.info?.(
+        "REASONING_SANITIZE",
+        `${provider}/${modelStr}: clamped reasoning_effort ${effortStr} → ${clamped} (learned)`
+      );
+      return writeEffortValue(b, clamped, c);
+    }
+  }
+
   const supportsXHigh = supportsXHighEffort(provider, modelStr);
   const supportsMax = supportsMaxEffortForProvider(provider, modelStr);
 
@@ -382,7 +403,7 @@ export function sanitizeReasoningEffortForProvider(
     )?.supportedThinkingEfforts;
     const maxFallback =
       Array.isArray(explicitEfforts) && !explicitEfforts.includes("max")
-        ? ["xhigh", "high", "medium", "low"].find((tier) => explicitEfforts.includes(tier))
+        ? ["ultra", "xhigh", "high", "medium", "low"].find((tier) => explicitEfforts.includes(tier))
         : undefined;
     if (maxFallback) {
       log?.info?.(

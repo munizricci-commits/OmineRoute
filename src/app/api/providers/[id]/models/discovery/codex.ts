@@ -165,14 +165,19 @@ function buildCodexDiscoveryModel(record: JsonRecord): CodexDiscoveryModel | nul
     apiFormat: "responses",
     supportedEndpoints: ["responses"],
   };
+  // The live Codex OAuth catalog reports BOTH `context_window` (the first
+  // pricing tier, ~272K) and `max_context_window` (the real usable window,
+  // ~872K). Requests well past the pricing tier succeed upstream, so the max
+  // window must win whenever it is present; `context_window` is only a
+  // fallback for catalogs that omit the max.
   const inputTokenLimit = firstPositiveNumber(
     record.inputTokenLimit,
     record.maxInputTokens,
     record.max_input_tokens,
     record.contextLength,
     record.context_length,
-    record.context_window,
     record.max_context_window,
+    record.context_window,
     topProvider.context_length,
     limits.input_tokens,
     limits.inputTokenLimit,

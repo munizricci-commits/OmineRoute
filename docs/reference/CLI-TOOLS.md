@@ -176,7 +176,7 @@ All tools that appear in `/dashboard/cli-code`. Those with `baseUrlSupport: none
 Tools with `baseUrlSupport: "partial"` show a badge "⚠ Base URL parcial" in the dashboard card.
 ---
 
-## 2. CLI Agents Catalog (8 tools)
+## 2. CLI Agents Catalog (9 tools)
 
 Autonomous agents that appear in `/dashboard/cli-agents`:
 
@@ -190,6 +190,7 @@ Autonomous agents that appear in `/dashboard/cli-agents`:
 | agent-deck   | Agent Deck       | asheshgoplani (OSS)      | full           | false        |
 | omp          | Oh My Pi         | OSS                      | full           | true         |
 | letta        | Letta CLI        | Letta                    | full           | false        |
+| prime-agent  | Prime Agent      | Prime Intellect (OSS)    | full           | false        |
 
 ---
 

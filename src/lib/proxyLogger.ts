@@ -194,43 +194,103 @@ export function logProxyEvent(entry: ProxyLogInput) {
     proxyLogs.length = MAX_IN_MEMORY_ENTRIES;
   }
 
-  // 2. Persist to SQLite
+  // 2. Queue for background batch persistence (SQLite / Redis)
   if (shouldPersistToDisk) {
-    try {
-      const db = getDbInstance();
-      db.prepare(
-        `INSERT INTO proxy_logs (id, timestamp, status, proxy_type, proxy_host, proxy_port,
-          level, level_id, provider, target_url, public_ip, egress_ip, latency_ms, error,
-          connection_id, combo_id, account, tls_fingerprint)
-        VALUES (@id, @timestamp, @status, @proxyType, @proxyHost, @proxyPort,
-          @level, @levelId, @provider, @targetUrl, @clientIp, @egressIp, @latencyMs, @error,
-          @connectionId, @comboId, @account, @tlsFingerprint)`
-      ).run({
-        id: log.id,
-        timestamp: log.timestamp,
-        status: log.status,
-        proxyType: log.proxy?.type || null,
-        proxyHost: log.proxy?.host || null,
-        proxyPort: log.proxy?.port ? Number(log.proxy.port) : null,
-        level: log.level,
-        levelId: log.levelId,
-        provider: log.provider,
-        targetUrl: log.targetUrl,
-        clientIp: log.clientIp,
-        egressIp: log.egressIp,
-        latencyMs: log.latencyMs,
-        error: log.error,
-        connectionId: log.connectionId,
-        comboId: log.comboId,
-        account: log.account,
-        tlsFingerprint: log.tlsFingerprint ? 1 : 0,
-      });
-    } catch (err: any) {
-      console.warn("[proxyLogger] Failed to persist:", err.message);
-    }
+    enqueueProxyLog(log);
   }
 
   return log;
+}
+
+// ──────────────── Background Batch Persistence ────────────────
+
+const BATCH_FLUSH_INTERVAL_MS = 1000;
+const BATCH_SIZE_THRESHOLD = 100;
+
+let pendingLogsQueue: ProxyLogEntry[] = [];
+let batchTimer: NodeJS.Timeout | null = null;
+
+function ensureBatchTimer() {
+  if (batchTimer) return;
+  batchTimer = setInterval(() => {
+    flushProxyLogsSync();
+  }, BATCH_FLUSH_INTERVAL_MS);
+  if (typeof batchTimer.unref === "function") {
+    batchTimer.unref();
+  }
+}
+
+function enqueueProxyLog(log: ProxyLogEntry) {
+  pendingLogsQueue.push(log);
+  ensureBatchTimer();
+  if (pendingLogsQueue.length >= BATCH_SIZE_THRESHOLD) {
+    flushProxyLogsSync();
+  }
+}
+
+export function flushProxyLogsSync() {
+  if (pendingLogsQueue.length === 0) return;
+  const batch = pendingLogsQueue;
+  pendingLogsQueue = [];
+
+  // 1. If Redis driver is active, asynchronously publish batch to Redis Stream/Channel
+  if (process.env.QUOTA_STORE_DRIVER === "redis" || process.env.QUOTA_STORE_REDIS_URL) {
+    try {
+      import("@/lib/quota/redisQuotaStore").then(({ getRedisQuotaStore }) => {
+        const store = getRedisQuotaStore(process.env.QUOTA_STORE_REDIS_URL || "");
+        const client = (store as any)?.client;
+        if (client && typeof client.publish === "function") {
+          for (const entry of batch) {
+            client.publish("omniroute:proxy_logs", JSON.stringify(entry)).catch(() => {});
+          }
+        }
+      }).catch(() => {});
+    } catch {
+      /* ignore redis pub errors */
+    }
+  }
+
+  // 2. Persist to SQLite using a single transaction for high-performance non-blocking write
+  try {
+    const db = getDbInstance();
+    const insertStmt = db.prepare(
+      `INSERT INTO proxy_logs (id, timestamp, status, proxy_type, proxy_host, proxy_port,
+        level, level_id, provider, target_url, public_ip, egress_ip, latency_ms, error,
+        connection_id, combo_id, account, tls_fingerprint)
+      VALUES (@id, @timestamp, @status, @proxyType, @proxyHost, @proxyPort,
+        @level, @levelId, @provider, @targetUrl, @clientIp, @egressIp, @latencyMs, @error,
+        @connectionId, @comboId, @account, @tlsFingerprint)`
+    );
+
+    const transaction = db.transaction((entries: ProxyLogEntry[]) => {
+      for (const item of entries) {
+        insertStmt.run({
+          id: item.id,
+          timestamp: item.timestamp,
+          status: item.status,
+          proxyType: item.proxy?.type || null,
+          proxyHost: item.proxy?.host || null,
+          proxyPort: item.proxy?.port ? Number(item.proxy.port) : null,
+          level: item.level,
+          levelId: item.levelId,
+          provider: item.provider,
+          targetUrl: item.targetUrl,
+          clientIp: item.clientIp,
+          egressIp: item.egressIp,
+          latencyMs: item.latencyMs,
+          error: item.error,
+          connectionId: item.connectionId,
+          comboId: item.comboId,
+          account: item.account,
+          tlsFingerprint: item.tlsFingerprint ? 1 : 0,
+        });
+      }
+    });
+
+    transaction(batch);
+  } catch (err: any) {
+    console.warn("[proxyLogger] Failed to write proxy log batch to disk:", err?.message || err);
+  }
 }
 
 // ──────────────── Query ────────────────

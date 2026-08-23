@@ -15,7 +15,10 @@ class MockM365WebSocket {
   closed = false;
   listeners = new Map<string, Listener[]>();
 
-  constructor(public url: string, public options: unknown) {
+  constructor(
+    public url: string,
+    public options: unknown
+  ) {
     MockM365WebSocket.instances.push(this);
     queueMicrotask(() => this.emit("open"));
   }
@@ -144,30 +147,55 @@ test("#7870: enterprise-tier chat invocation defaults tone to Magic", async () =
   assert.equal(invocationArgs.tone, "Magic");
 });
 
-test("#10718: individual (no tier) chat invocation carries the recaptured 2026-08 shape", async () => {
+test("2026-08-21: individual (no tier) chat invocation carries the recaptured shape", async () => {
   const invocationArgs = await sendChatInvocation(undefined);
   const optionsSets = invocationArgs.optionsSets as string[];
-  // The 25-entry consumer/MSA set (enable_msa_user, pdnascan, …) is gone from
-  // the wire — the stale set was part of the silently-dropped shape.
+  // The pre-#10718 25-entry consumer/MSA set (enable_msa_user, pdnascan, …) is
+  // still gone from the wire — only the 2026-08-21 34-entry set is current.
   assert.ok(!optionsSets.includes("enable_msa_user"));
   assert.ok(optionsSets.includes("enable_gg_gpt"));
-  // The browser sends tone:"magic" (lowercase) on the individual/EDU surface.
-  assert.equal(invocationArgs.tone, "magic");
+  // The individual/consumer surface now sends tone:"Magic" (capitalized) —
+  // the #10718 lowercase "magic" is stale.
+  assert.equal(invocationArgs.tone, "Magic");
   assert.deepEqual(invocationArgs.allowedMessageTypes, [
     "Chat",
     "Suggestion",
+    "InternalSearchQuery",
     "Disengaged",
-    "Progress",
-    "EndOfRequest",
     "InternalLoaderMessage",
+    "Progress",
+    "GeneratedCode",
+    "RenderCardRequest",
+    "AdsQuery",
+    "SemanticSerp",
+    "GenerateContentQuery",
+    "GenerateGraphicArt",
+    "SearchQuery",
+    "ConfirmationCard",
+    "AuthError",
+    "DeveloperLogs",
+    "TriggerPlugin",
+    "HintInvocation",
+    "MemoryUpdate",
+    "EndOfRequest",
+    "TriggerConfirmation",
+    "ResumeInvokeAction",
+    "ResumeUserInputRequest",
+    "TriggerUserInputRequest",
+    "EscapeHatch",
+    "TriggerPluginAuth",
+    "ResumePluginAuth",
+    "SideBySide",
+    "ReferencesListComplete",
+    "SwitchRespondingEndpoint",
   ]);
 });
 
-test("#10718: EDU-tier chat invocation carries the same recaptured shape", async () => {
+test("2026-08-21: EDU-tier chat invocation carries the same recaptured shape", async () => {
   const invocationArgs = await sendChatInvocation("edu");
   const optionsSets = invocationArgs.optionsSets as string[];
   assert.ok(!optionsSets.includes("enable_msa_user"));
-  assert.equal(invocationArgs.tone, "magic");
+  assert.equal(invocationArgs.tone, "Magic");
 });
 
 test("#8971: enterprise-tier chat invocation must send disconnectBehavior=continue", async () => {
@@ -179,11 +207,11 @@ test("#8971: enterprise-tier chat invocation must send disconnectBehavior=contin
   );
 });
 
-test("#8971/#10718: individual (no tier) chat invocation omits disconnectBehavior (not on the 2026-08 wire)", async () => {
+test("2026-08-21: individual (no tier) chat invocation also sends disconnectBehavior=continue (now on every tier)", async () => {
   const invocationArgs = await sendChatInvocation(undefined);
   assert.equal(
     invocationArgs.disconnectBehavior,
-    undefined,
-    `individual-tier invocation must omit disconnectBehavior; got ${JSON.stringify(invocationArgs.disconnectBehavior)}`
+    "continue",
+    `individual-tier invocation must carry disconnectBehavior="continue"; got ${JSON.stringify(invocationArgs.disconnectBehavior)}`
   );
 });

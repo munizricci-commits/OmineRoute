@@ -1,10 +1,10 @@
 /**
- * KimiWebExecutor — Moonshot AI Chat via www.kimi.com (international)
+ * KimiWebExecutor — Moonshot AI Chat via www.kimi.ai (international)
  *
  * Routes requests through Kimi's consumer chat API on the international domain.
  * Originally this executor targeted `kimi.moonshot.cn` (mainland-CN consumer
  * chat). That domain now redirects every visitor outside CN to
- * `https://www.kimi.com/`, which speaks a completely different API surface:
+ * `https://www.kimi.ai/`, which speaks a completely different API surface:
  *
  *   - Endpoint:  POST /apiv2/kimi.gateway.chat.v1.ChatService/Chat
  *   - Protocol:  Connect-RPC (unary envelope framing — 5-byte header + JSON)
@@ -326,7 +326,7 @@ export class KimiWebExecutor extends BaseExecutor {
     if (!accessToken) {
       return makeErrorResult(
         400,
-        "Missing Kimi access_token — log in at www.kimi.com and capture access_token from localStorage.",
+        "Missing Kimi access_token — log in at www.kimi.ai and capture access_token from localStorage.",
         body,
         CHAT_URL
       );
@@ -410,10 +410,7 @@ export class KimiWebExecutor extends BaseExecutor {
       const refreshToken =
         credentials?.refreshToken || credentials?.providerSpecificData?.refreshToken;
       if (refreshToken && typeof refreshToken === "string") {
-        const refreshRes = await exchangeKimiRefreshToken(
-          refreshToken,
-          getKimiWebBaseUrl()
-        );
+        const refreshRes = await exchangeKimiRefreshToken(refreshToken, getKimiWebBaseUrl());
         if (refreshRes.success && refreshRes.accessToken) {
           accessToken = refreshRes.accessToken;
           const retryHeaders = this.buildKimiHeaders(accessToken);

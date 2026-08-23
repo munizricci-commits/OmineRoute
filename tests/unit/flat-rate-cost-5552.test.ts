@@ -25,6 +25,7 @@ test("isFlatRateProvider: dedicated subscription / coding-plan providers are fla
     "glm-cn",
     "claude",
     "cc",
+    "opencode-go",
   ]) {
     assert.equal(isFlatRateProvider(id), true, `${id} should be flat-rate`);
   }
@@ -83,6 +84,27 @@ test("computeCostFromPricing: opt-in only — flat-rate provider WITHOUT the fla
   assert.equal(computeCostFromPricing(PRICING, TOKENS, { provider: "chatgpt-web" }), 3);
 });
 
+test("#11149: opencode-go is a flat-rate subscription, not metered", () => {
+  // opencode-go (https://opencode.ai/go) is a $10/month flat subscription that
+  // resells GLM, Kimi, Grok, DeepSeek, MiniMax, Qwen and GPT-5.x. Because it is
+  // an aggregator, every call was priced at the UNDERLYING model's metered rate,
+  // so the overstatement is large rather than marginal (a reported ~$13.35 for a
+  // month actually billed at $10 flat). It is api-key auth, so it is not covered
+  // by the dynamic WEB_COOKIE_PROVIDERS branch and needs the explicit id.
+  assert.equal(isFlatRateProvider("opencode-go"), true);
+  assert.equal(
+    computeCostFromPricing(PRICING, TOKENS, { provider: "opencode-go", flatRateAsZero: true }),
+    0
+  );
+  // Still opt-in: without the flag the per-request estimate is unchanged.
+  assert.equal(computeCostFromPricing(PRICING, TOKENS, { provider: "opencode-go" }), 3);
+});
+
+test("#11149: sibling opencode ids keep their own billing semantics", () => {
+  // Only the Go subscription is flat-rate. The keyless `opencode` provider is a
+  // different id and must not be swept in by a prefix-style match.
+  assert.equal(isFlatRateProvider("opencode"), false);
+});
 test("computeCostFromPricing: metered provider with the flag still estimates", () => {
   assert.equal(
     computeCostFromPricing(PRICING, TOKENS, { provider: "openai", flatRateAsZero: true }),

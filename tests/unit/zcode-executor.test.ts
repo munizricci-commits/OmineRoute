@@ -26,6 +26,8 @@ function requestBody() {
 test("ZCode accepts GLM Coding Plan models and rejects unsafe/unknown ids", async () => {
   const { resolveZcodeModel } = await loadZcodeExecutor();
   assert.deepEqual(resolveZcodeModel("glm-5.2"), { ok: true, model: "glm-5.2" });
+  assert.equal(resolveZcodeModel("glm-5.2-high").ok, false);
+  assert.equal(resolveZcodeModel("glm-5.3-low").ok, false);
   assert.equal(resolveZcodeModel("-unexpected").ok, false);
   assert.equal(resolveZcodeModel("unknown-model").ok, false);
 });
@@ -70,7 +72,7 @@ test("ZCode buffers the completed turn into OpenAI SSE when stream=true", async 
   });
 
   const result = await executor.execute({
-    model: "glm-5.2-high",
+    model: "glm-5.2",
     body: requestBody(),
     stream: true,
     credentials: {},

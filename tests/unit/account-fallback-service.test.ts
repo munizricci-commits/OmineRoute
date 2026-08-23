@@ -453,6 +453,25 @@ test("hasPerModelQuota returns true for GitHub Copilot provider (#1624)", () => 
   assert.equal(hasPerModelQuota("github", "gpt-5-mini"), true);
 });
 
+test("hasPerModelQuota honors shared-registry passthrough providers (#11071)", () => {
+  // These declare passthroughModels:true in src/shared/constants/providers/, but are absent
+  // from the open-sse REGISTRY passthrough set and are neither local nor self-hosted — so the
+  // isLocalProvider/isSelfHostedChatProvider branch (#11078) never reaches them. Without the
+  // shared-registry lookup a missing model on one of these cools the WHOLE connection.
+  assert.equal(hasPerModelQuota("novita"), true);
+  assert.equal(hasPerModelQuota("uncloseai"), true);
+  assert.equal(hasPerModelQuota("orcarouter"), true);
+
+  // Already covered by the local/self-hosted branch — asserted so this port cannot regress it.
+  assert.equal(hasPerModelQuota("ollama-local"), true);
+  assert.equal(hasPerModelQuota("lm-studio"), true);
+  assert.equal(hasPerModelQuota("vllm"), true);
+
+  // Neither declared in the shared registry nor local: a failure here is still connection-wide.
+  assert.equal(hasPerModelQuota("openai"), false);
+  assert.equal(hasPerModelQuota("anthropic"), false);
+});
+
 test("Codex Spark 429s are scoped away from normal Codex models", () => {
   const connectionId = `codex-${Date.now()}`;
   clearModelLock("codex", connectionId, "gpt-5.3-codex-spark");
@@ -1659,7 +1678,11 @@ test("#10460: model-unsupported 400 handles various phrasings", async () => {
     // Verify connection stays healthy after each iteration
     const conn = await providersDb.getProviderConnectionById(id);
     assert.ok(!conn.rateLimitedUntil, `"${errorText}" must not rate-limit connection`);
-    assert.notStrictEqual(conn.testStatus, "unavailable", `"${errorText}" must not mark unavailable`);
+    assert.notStrictEqual(
+      conn.testStatus,
+      "unavailable",
+      `"${errorText}" must not mark unavailable`
+    );
   }
 });
 
@@ -1692,7 +1715,11 @@ test("#10460: non-400 status with model-unsupported text does NOT trigger guard"
     "test-model"
   );
 
-  assert.strictEqual(result.shouldFallback, true, "non-400 must not be short-circuited by model guard");
+  assert.strictEqual(
+    result.shouldFallback,
+    true,
+    "non-400 must not be short-circuited by model guard"
+  );
   // The key assertion: guard returns shouldFallback:false. If we get here with
   // shouldFallback:true, the guard did NOT fire (correct behavior).
 });
@@ -1723,7 +1750,11 @@ test("#10460: auth-credential 400 text does NOT match model-unsupported guard", 
 
   // This text does NOT match MODEL_ACCESS_DENIED_PATTERNS (verified by regex test)
   // so it falls through to checkFallbackError which returns shouldFallback:false for generic 400
-  assert.strictEqual(result.shouldFallback, false, "auth-credential 400 must not be caught by model guard");
+  assert.strictEqual(
+    result.shouldFallback,
+    false,
+    "auth-credential 400 must not be caught by model guard"
+  );
   // The generic 400 path returns cooldownMs:0 — same as the guard, but the
   // connection was NOT touched (no rateLimitedUntil set). This distinguishes
   // it from the normal fallback path which would set a cooldown.
@@ -1737,7 +1768,11 @@ test("#10460: guard early return does not touch DB (distinguishes from normal pa
 
   // Guard path: model-unsupported 400 → shouldFallback:false, cooldownMs:0, no DB change
   const guardResult = await auth.markAccountUnavailable(
-    connId, 400, "The requested model is not supported", "github", "test-model"
+    connId,
+    400,
+    "The requested model is not supported",
+    "github",
+    "test-model"
   );
   assert.strictEqual(guardResult.shouldFallback, false);
   assert.strictEqual(guardResult.cooldownMs, 0);

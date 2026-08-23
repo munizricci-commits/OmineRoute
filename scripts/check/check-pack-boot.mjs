@@ -26,10 +26,16 @@ const MAX_SERVER_OUTPUT_CHARS = 1_000_000;
 const SQLJS_STARTUP_MARKER = "Pre-initializing sql.js WASM";
 const DEFAULT_CLI_SALT = "omniroute-cli-auth-v1";
 
+// Dependency-based packaging (#11242): the tarball can never contain a node_modules
+// path (files[] has "!**/node_modules/**" and check:pack-artifact fails on the
+// segment), so sql.js must be required where a clean `npm install` of the declared
+// `dependencies` places it — <packageRoot>/node_modules/sql.js — NOT under the old
+// vendored dist/node_modules location. The runtime resolves the WASM the same way
+// (src/lib/db/adapters/sqljsAdapter.ts → <cwd>/node_modules/sql.js/dist/sql-wasm.wasm).
 export const REQUIRED_SQLJS_RUNTIME_FILES = Object.freeze([
-  "dist/node_modules/sql.js/package.json",
-  "dist/node_modules/sql.js/dist/sql-wasm.js",
-  "dist/node_modules/sql.js/dist/sql-wasm.wasm",
+  "node_modules/sql.js/package.json",
+  "node_modules/sql.js/dist/sql-wasm.js",
+  "node_modules/sql.js/dist/sql-wasm.wasm",
 ]);
 
 export const REQUIRED_MACHINE_TOKEN_RUNTIME_FILES = Object.freeze([

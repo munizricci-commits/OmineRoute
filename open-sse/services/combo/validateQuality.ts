@@ -617,7 +617,18 @@ export async function validateResponseQuality(
   try {
     json = JSON.parse(text);
   } catch {
-    if (text.startsWith("data:") || text.startsWith("event:")) return { valid: true };
+    // An SSE stream body is expected for streamed upstreams. Besides `data:` and
+    // `event:` frames, the SSE spec also allows comment lines that begin with a
+    // colon (`:`), which providers use for keep-alives while the model is still
+    // generating — e.g. OpenRouter emits `: OPENROUTER PROCESSING` on slower /
+    // reasoning responses. A stream that opens with such a comment (or with
+    // leading whitespace/newlines) is still a valid stream, not malformed JSON,
+    // so trim and recognize the comment prefix before rejecting. Without this,
+    // otherwise-good streamed completions get failed as "not valid JSON".
+    const trimmed = text.trimStart();
+    if (trimmed.startsWith("data:") || trimmed.startsWith("event:") || trimmed.startsWith(":")) {
+      return { valid: true };
+    }
     return { valid: false, reason: "response is not valid JSON" };
   }
 

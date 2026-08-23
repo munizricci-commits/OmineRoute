@@ -260,7 +260,9 @@ export interface ComboAutopilotReport {
     degradedCount: number;
     downCount: number;
     issueCount: number;
-    actionableCount: number;
+    suggestionCount: number;
+    /** @deprecated Use suggestionCount instead. Kept as an alias for backward compatibility; remove after 2 releases. */
+    actionableCount?: number;
   };
   combos: ComboAutopilotCombo[];
 }

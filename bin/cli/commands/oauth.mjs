@@ -228,20 +228,37 @@ async function runSocialFlow(def, opts) {
 
 async function runDeviceFlow(def, opts) {
   const providerKey = resolveBackendKey(def.id);
-  const startRes = await apiFetch(`/api/providers/${providerKey}/auth/start`, {
-    ...targetApiOptions(opts),
-    method: "POST",
-  });
+  let startRes = await apiFetch(`/api/oauth/${providerKey}/device-code`, targetApiOptions(opts));
+  if (!startRes.ok) {
+    startRes = await apiFetch(`/api/providers/${providerKey}/auth/start`, {
+      ...targetApiOptions(opts),
+      method: "POST",
+    });
+  }
   if (!startRes.ok) {
     process.stderr.write(`Failed to start device flow: ${startRes.status}\n`);
     process.exit(1);
   }
   const start = await startRes.json();
-  process.stdout.write(
-    `\nDevice code: ${start.userCode ?? start.user_code ?? ""}\nVisit: ${start.verificationUri ?? start.verification_uri}\n\n`
-  );
-  if (opts.browser !== false)
-    await openBrowser(start.verificationUri ?? start.verification_uri ?? "");
+  const userCode = start.userCode ?? start.user_code ?? "";
+  const verificationUri =
+    start.verificationUriComplete ??
+    start.verification_uri_complete ??
+    start.verificationUri ??
+    start.verification_uri ??
+    start.authUrl ??
+    start.url ??
+    "";
+
+  if (userCode) {
+    process.stdout.write(`\nDevice code: ${userCode}\nVisit: ${verificationUri}\n\n`);
+  } else if (verificationUri) {
+    process.stdout.write(`\nVisit: ${verificationUri}\n\n`);
+  } else {
+    process.stdout.write(`\nAuthorization URL not available\n\n`);
+  }
+
+  if (opts.browser !== false && verificationUri) await openBrowser(verificationUri);
   process.stderr.write("Waiting for device authorization...\n");
   const deadline = Date.now() + (opts.timeout ?? 300000);
   const intervalMs = (start.intervalMs ?? start.interval ?? 5) * 1000;
@@ -302,7 +319,18 @@ export async function runOAuthStatus(opts, cmd) {
     process.exit(1);
   }
   const data = await res.json();
-  const connections = (data.connections ?? data.providers ?? data.items ?? data).filter(
+  const payload = data?.connections ?? data?.providers ?? data?.items ?? data;
+  // #11236 (bug 5 residual): a 200 whose body is out of contract (no
+  // connections/providers/items array — e.g. `{"status":"ok"}`) used to fall
+  // through to `.filter` on a non-array and crash with a bare TypeError plus a
+  // libuv teardown assertion on Windows. Coerce to an empty list with a
+  // sanitized one-line warning instead of dumping a stack trace.
+  if (!Array.isArray(payload)) {
+    process.stderr.write(
+      "Warning: unexpected response shape from /api/providers; showing no connections.\n"
+    );
+  }
+  const connections = (Array.isArray(payload) ? payload : []).filter(
     (c) => c.authType === "oauth" || c.authType === "oauth2"
   );
   emit(connections, globalOpts, connectionSchema);

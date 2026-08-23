@@ -17,6 +17,8 @@ import { logRoutingDecision } from "@/lib/a2a/routingLogger";
 import { createA2AStream, SSE_HEADERS } from "@/lib/a2a/streaming";
 import { A2A_SKILL_HANDLERS, executeA2ATaskWithState } from "@/lib/a2a/taskExecution";
 import { getSettings } from "@/lib/db/settings";
+import { isRequireApiKeyEnabled } from "@/shared/utils/featureFlags";
+import { extractApiKey, isValidApiKey } from "@/sse/services/auth";
 
 // ============ A2A v1.0 ↔ v0.3 compatibility layer ============
 // A2A 1.0 renamed the JSON-RPC methods (message/send → SendMessage,
@@ -136,14 +138,25 @@ function tokensMatch(provided: string, expected: string): boolean {
   return timingSafeEqual(a, b);
 }
 
-function authenticate(req: NextRequest): boolean {
-  // If no API key is configured, allow all requests
-  const configuredKey = process.env.OMNIROUTE_API_KEY;
-  if (!configuredKey) return true;
+async function authenticate(req: NextRequest): Promise<boolean> {
+  // /a2a is outside the authz proxy matcher, so the REQUIRE_API_KEY posture the
+  // pipeline enforces for /v1 never ran here — the route accepted every caller
+  // whenever OMNIROUTE_API_KEY was unset, which is the shipped default
+  // (GHSA-v54m-6rm3-p565). Apply the same posture directly: when a client key is
+  // required, demand a valid OmniRoute key; otherwise honor the legacy explicit
+  // A2A key; otherwise stay keyless (the same local-first default as /v1).
+  const apiKey = extractApiKey(req);
+  if (isRequireApiKeyEnabled()) {
+    return apiKey ? await isValidApiKey(apiKey) : false;
+  }
 
-  const authHeader = req.headers.get("authorization") || "";
-  const token = authHeader.replace(/^Bearer\s+/i, "");
-  return tokensMatch(token, configuredKey);
+  const configuredKey = process.env.OMNIROUTE_API_KEY;
+  if (configuredKey) {
+    return apiKey ? tokensMatch(apiKey, configuredKey) : false;
+  }
+
+  // No API key required and none configured — allow (keyless local-first).
+  return true;
 }
 
 // ============ JSON-RPC Helpers ============
@@ -179,7 +192,7 @@ async function rejectIfA2ADisabled(id: string | number | null) {
 
 export async function POST(req: NextRequest) {
   // Auth check
-  if (!authenticate(req)) {
+  if (!(await authenticate(req))) {
     return jsonRpcError(null, -32600, "Unauthorized: missing or invalid API key");
   }
 

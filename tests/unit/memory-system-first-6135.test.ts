@@ -49,6 +49,11 @@ describe("injectMemory system-must-be-first (#6135)", () => {
   it("flags xiaomi-mimo (and alias mimo) as system-must-be-first", () => {
     assert.equal(systemMessageMustBeFirst("xiaomi-mimo"), true);
     assert.equal(systemMessageMustBeFirst("mimo"), true);
+    // tokenrouter: confirmed live 2026-08-22 — mid-array system message
+    // (e.g. the purifyHistory compression notice) -> HTTP 400
+    // "System message must be at the beginning".
+    assert.equal(systemMessageMustBeFirst("tokenrouter"), true);
+    assert.equal(systemMessageMustBeFirst("TokenRouter"), true); // case-insensitive
     // default: unlisted providers keep current (non-first-constrained) behavior
     assert.equal(systemMessageMustBeFirst("anthropic"), false);
     assert.equal(systemMessageMustBeFirst(null), false);

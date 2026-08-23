@@ -46,9 +46,19 @@ import {
   getCodexGlobalServiceMode,
   type CodexGlobalServiceMode,
 } from "@/lib/providers/codexFastTier";
-import AddCompatibleProviderModal from "./components/AddCompatibleProviderModal";
+import dynamic from "next/dynamic";
+const AddCompatibleProviderModal = dynamic(
+  () => import("./components/AddCompatibleProviderModal"),
+  { ssr: false }
+);
 import { CategoryDot } from "./components/CategoryDot";
-import { ImportProvidersFromFileModal } from "./components/ImportProvidersFromFileModal";
+const ImportProvidersFromFileModal = dynamic(
+  () =>
+    import("./components/ImportProvidersFromFileModal").then(
+      (m) => m.ImportProvidersFromFileModal
+    ),
+  { ssr: false }
+);
 import NoAuthProvidersSection from "./components/NoAuthProvidersSection";
 import HighlightableProviderCard from "./components/HighlightableProviderCard";
 import ProviderCountBadge from "./components/ProviderCountBadge";

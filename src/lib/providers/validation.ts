@@ -108,6 +108,7 @@ import {
   validateBytezProvider,
 } from "./validation/webCookie";
 import { validateAiHordeProvider } from "./validation/aihorde";
+import { validateDifyProvider } from "./validation/dify";
 import { validateAdobeFireflyProvider } from "./validation/adobeFirefly";
 import {
   validateV0VercelProvider,
@@ -230,6 +231,10 @@ export async function validateProviderApiKey({ provider, apiKey, providerSpecifi
     freebuff: validateFreebuffProvider,
     "command-code": validateCommandCodeProvider,
     huggingface: validateHuggingFaceProvider,
+    // #11002: Dify serves no OpenAI-compatible route — only POST /v1/chat-messages.
+    // The generic OpenAI-like probe 404s on /v1/models and /v1/chat/completions,
+    // so every real app key was misreported as "endpoint not supported".
+    dify: validateDifyProvider,
     // #5422: auth-only probe — Bytez 404s on every chat model until the account adds it to
     // its catalog, so the generic chat probe can't validate a fresh key.
     bytez: validateBytezProvider,

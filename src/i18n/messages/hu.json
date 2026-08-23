@@ -2218,6 +2218,10 @@
     "fullAccess": "Teljes hozzáférés",
     "keyManagement": "API kulcskezelés",
     "keyManagementDesc": "API-kulcsok létrehozása és kezelése a végponthoz intézett kérések hitelesítéséhez",
+    "requestFlowAria": "Your app sends requests through an API key to OmniRoute",
+    "requestFlowYourApp": "Your app",
+    "requestFlowApiKey": "API key",
+    "requestFlowOmniRoute": "OmniRoute",
     "totalKeys": "Összes kulcs",
     "restricted": "Korlátozott",
     "totalRequests": "Összes kérés",
@@ -5830,6 +5834,8 @@
     "rateLimitOverridesSection": "Sebességkorlátok felülbírálása",
     "rateLimitOverridesMaxConcurrentHint": "Maximális párhuzamos kérések felülbírálása ehhez a kapcsolathoz. Felülbírálja a fiókszintű korlátot.",
     "rateLimitOverridesMaxConcurrentLabel": "Max. párhuzamos (sebességkorlát)",
+    "rateLimitOverridesMaxWaitMsHint": "__MISSING__:Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "Kérések közötti minimális idő (ms). Felülbírálja az alapértelmezett sebességkorlátozó késleltetést.",
     "rateLimitOverridesMinTimeLabel": "Min. intervallum (ms)",
     "rateLimitOverridesRpmHint": "Maximális percenkénti kérésszám ehhez a kapcsolathoz. Felülbírálja a szolgáltató alapértelmezését.",
@@ -6107,7 +6113,6 @@
       "glmt": "Előre beállított GLM-profil magasabb tokenkerettel, engedélyezett gondolkodással és hosszabb időtúllépéssel.",
       "getgoapi": "Csatlakoztassa a GoAPI-t egy API-kulccsal.",
       "groq": "Ingyenes csomag: 30 RPM / 14,4K RPD — bankkártya nem szükséges",
-      "hackclub": "Jelentkezzen be Hack Club-fiókjával az ai.hackclub.com oldalon.",
       "haiper": "Szerezzen API-kulcsot a haiper.ai/haiper-api oldalon",
       "heroku": "Csatlakoztassa a Heroku AI-t egy API-kulccsal.",
       "hcnsec": "Szerezzen API-kulcsot itt: api.hcnsec.cn",
@@ -12202,7 +12207,7 @@
       },
       "omni-webhooks": {
         "name": "Webhookok",
-        "description": "Webhook-végpontok regisztrálása, listázása, tesztelése és eltávolítása. Eseményfeliratkozások (request.completed, provider.error, budget.exceeded stb.) konfigurálása és a kézbesítési újrapróbálkozások kezelése."
+        "description": "__MISSING__:Register, list, test, and remove webhook endpoints. Configure event subscriptions (request.completed, request.failed, quota.exceeded, etc.) and manage delivery retries."
       },
       "omni-mcp": {
         "name": "MCP-szerver",

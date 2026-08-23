@@ -1120,6 +1120,9 @@ async function buildUnifiedModelsResponseCore(
           else if (endpoints.includes("rerank")) modelType = "rerank";
           else if (endpoints.includes("images")) modelType = "image";
           else if (endpoints.includes("audio")) modelType = "audio";
+          // Same owned_by the alias/canonical entries below will carry — computed once
+          // so the effort_tiers exclusion (codex/glm/kimi) and the entries agree.
+          const syncedOwnedBy = resolvePublicOwnerId(providerId, canonicalProviderId);
           const syncedFields = {
             ...(modelType ? { type: modelType } : {}),
             ...(apiFormat !== "chat-completions" ? { api_format: apiFormat } : {}),
@@ -1133,12 +1136,19 @@ async function buildUnifiedModelsResponseCore(
               : {}),
             // #4264/#7694: vision + reasoning-effort-tier flags captured at sync time,
             // merged into a single capabilities object (see ./syncedCapabilities.ts).
-            ...(buildSyncedCapabilities(sm) ? { capabilities: buildSyncedCapabilities(sm) } : {}),
+            // ownedBy gates effort_tiers off for codex/glm/kimi (own suffix mechanism).
+            ...(buildSyncedCapabilities(sm, syncedOwnedBy)
+              ? { capabilities: buildSyncedCapabilities(sm, syncedOwnedBy) }
+              : {}),
           };
 
           const existingAliasModel = models.find((model) => model.id === aliasId);
           if (existingAliasModel) {
-            const mergedCapabilities = mergeSyncedCapabilities(existingAliasModel.capabilities, sm);
+            const mergedCapabilities = mergeSyncedCapabilities(
+              existingAliasModel.capabilities,
+              sm,
+              syncedOwnedBy
+            );
             Object.assign(existingAliasModel, syncedFields);
             if (mergedCapabilities) existingAliasModel.capabilities = mergedCapabilities;
             continue;

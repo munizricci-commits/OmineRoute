@@ -30,6 +30,7 @@ test.after(() => {
 test("combo schemas accept names with spaces and square brackets", () => {
   const createResult = schemas.createComboSchema.safeParse({
     name: "Claude [1m]",
+    models: ["anthropic/claude-3-opus"],
   });
   const updateResult = schemas.updateComboSchema.safeParse({
     name: "Claude [1m]",

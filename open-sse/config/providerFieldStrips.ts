@@ -56,12 +56,21 @@ export function stripGroqUnsupportedFields<T extends Record<string, unknown>>(bo
   delete next.top_logprobs;
   if (Array.isArray(next.messages)) {
     next.messages = next.messages.map((m) => {
-      if (m && typeof m === "object" && "name" in m) {
-        const { name: _name, ...rest } = m as Record<string, unknown>;
+      if (m && typeof m === "object") {
+        const {
+          name: _name,
+          model: _model,
+          messageId: _msgId,
+          sender: _sender,
+          ...rest
+        } = m as Record<string, unknown>;
+
         return rest;
       }
+
       return m;
     });
   }
   return next as T;
 }
+

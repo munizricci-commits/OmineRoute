@@ -28,6 +28,7 @@ import {
 } from "@/lib/oauth/gitlab";
 import { providerAllowsOptionalApiKey } from "@/shared/constants/providers";
 import { shouldUseApiKeyConnectionTest } from "./webSessionTestDispatch";
+import { testCodexAppServerConnection, makeDiagnosis } from "./codexAppServerHealth";
 import { removeConnectionHealth } from "@omniroute/open-sse/services/apiKeyRotator.ts";
 import { isConnectionUnavailableToAuxiliaryActivity } from "@/lib/exclusiveLeaseIsolation";
 import { classifyAmbiguousOrAuthError, type ClassifyFailureArgs } from "./mistralAmbiguousAuth";
@@ -50,20 +51,6 @@ function toSafeMessage(value: any, fallback = "Unknown error"): string {
   if (typeof value !== "string") return fallback;
   const trimmed = value.trim();
   return trimmed || fallback;
-}
-
-function makeDiagnosis(
-  type: string,
-  source: string,
-  message: string | null,
-  code: string | null = null
-) {
-  return {
-    type,
-    source,
-    message: message || null,
-    code: code ?? null,
-  };
 }
 
 /**
@@ -252,6 +239,15 @@ async function getProviderRuntimeStatus(connection: any) {
  *
  * @returns {object} { accessToken, expiresIn, refreshToken } or null if failed
  */
+/**
+ * Fallback expiry persisted when a successful refresh returns neither
+ * expiresAt nor expiresIn: keeps a NULL expires_at (treated as expired by
+ * isTokenExpired) from forcing a token rotation on every subsequent test.
+ * 30 minutes — the historical Google/OAuth default window, well inside any
+ * realistic token TTL.
+ */
+const FALLBACK_REFRESH_EXPIRY_MS = 30 * 60 * 1000;
+
 async function refreshOAuthToken(connection: any) {
   const { provider, refreshToken } = connection;
   if (!refreshToken) return null;
@@ -288,6 +284,15 @@ async function refreshOAuthToken(connection: any) {
         const expiresAt = new Date(Date.now() + refreshed.expiresIn * 1000).toISOString();
         update.expiresAt = expiresAt;
         update.tokenExpiresAt = expiresAt;
+      } else {
+        // Upstream returned neither expiresAt nor expiresIn. Persist a
+        // conservative 30-minute expiry so a NULL expiresAt (treated as
+        // expired by isTokenExpired when a refresh token exists) does not
+        // force a token rotation on EVERY subsequent test — the historical
+        // Google/OAuth default window, well inside any realistic token TTL.
+        const expiresAt = new Date(Date.now() + FALLBACK_REFRESH_EXPIRY_MS).toISOString();
+        update.expiresAt = expiresAt;
+        update.tokenExpiresAt = expiresAt;
       }
       if (refreshed.providerSpecificData) {
         update.providerSpecificData = {
@@ -299,18 +304,32 @@ async function refreshOAuthToken(connection: any) {
     });
     return result; // { accessToken, expiresIn, refreshToken } or null
   } catch (err) {
-    console.log(`Error refreshing ${provider} token:`, (err as any).message);
+    console.error(`Error refreshing ${provider} token:`, (err as any).message);
     return null;
   }
 }
 
 /**
- * Check if token is expired or about to expire (within 5 minutes)
+ * Check if token is expired or about to expire (within 5 minutes).
+ *
+ * A NULL/missing expiry is treated as expired when the connection carries a
+ * refresh token: connections imported without an expires_at (bulk import,
+ * manual entry) would otherwise never trigger the proactive refresh before the
+ * probe, and a stale access token then surfaces as a provider-specific 400
+ * that the 401/403 reactive branch never recovers from. When there is no
+ * refresh token the old behaviour stands — an unknown expiry cannot be fixed,
+ * so probing as-is is the only option.
  */
 function isTokenExpired(connection: any) {
   const expiresAtValue = connection.expiresAt || connection.tokenExpiresAt;
-  if (!expiresAtValue) return false;
+  if (!expiresAtValue) {
+    return typeof connection.refreshToken === "string" && connection.refreshToken.length > 0;
+  }
   const expiresAt = new Date(expiresAtValue).getTime();
+  if (!Number.isFinite(expiresAt)) {
+    // Corrupt date string: unverifiable, and refreshable if we can refresh.
+    return typeof connection.refreshToken === "string" && connection.refreshToken.length > 0;
+  }
   const buffer = 5 * 60 * 1000; // 5 minutes
   return expiresAt <= Date.now() + buffer;
 }
@@ -361,6 +380,37 @@ async function syncToCloudIfEnabled() {
   } catch (error) {
     console.log("Error syncing to cloud after token refresh:", error);
   }
+}
+
+/**
+ * Whether a 400 probe failure should trigger one reactive refresh + retry:
+ * the status is a hard 400 (not accepted as auth-ok by acceptStatuses, not
+ * declared inconclusive by the provider config), nothing was refreshed yet,
+ * the connection is refreshable with a non-empty refresh token, and the
+ * provider is not a rotating one (single-use refresh tokens stay with the
+ * mutex-guarded 401 path).
+ */
+export function isReactive400Recoverable(args: {
+  status: number;
+  config: { acceptStatuses?: unknown; inconclusiveStatuses?: unknown; refreshable?: boolean };
+  refreshed: boolean;
+  connection: { refreshToken?: unknown };
+  isRotatingProvider: boolean;
+}): boolean {
+  const { status, config, refreshed, connection, isRotatingProvider } = args;
+  if (status !== 400) return false;
+  if (Array.isArray(config.acceptStatuses) && config.acceptStatuses.includes(400)) return false;
+  // A provider that explicitly classifies 400 as inconclusive keeps that
+  // contract — the refresh attempt would mask an inconclusive verdict.
+  if (Array.isArray(config.inconclusiveStatuses) && config.inconclusiveStatuses.includes(400)) {
+    return false;
+  }
+  if (refreshed) return false;
+  if (!config.refreshable) return false;
+  if (typeof connection.refreshToken !== "string" || connection.refreshToken.length === 0) {
+    return false;
+  }
+  return !isRotatingProvider;
 }
 
 /**
@@ -510,6 +560,133 @@ export async function testOAuthConnection(
     if (config.body && !builtProbe) fetchInit.body = config.body;
     if (builtProbe?.body) fetchInit.body = builtProbe.body;
     const res = await fetch(url, fetchInit);
+
+    // Some providers (Antigravity family) reject a stale access token with 400
+    // instead of 401/403. If the token has not been refreshed yet and the
+    // connection is refreshable, try one reactive refresh + retry BEFORE the
+    // inconclusive classification — a token that refreshes clean is a healthy
+    // connection, not an "inconclusive" one. acceptStatuses (Codex's
+    // intentional auth-ok 400) is checked first so that contract is untouched.
+    if (
+      isReactive400Recoverable({
+        status: res.status,
+        config,
+        refreshed,
+        connection,
+        isRotatingProvider,
+      })
+    ) {
+      const tokens = await refreshOAuthToken(connection);
+      if (tokens?.accessToken) {
+        // Rebuild the probe from scratch with the fresh token instead of
+        // string-substituting inside the old headers: buildProbe derives the
+        // full header set (provider-specific auth included) from the token,
+        // so a rebuilt probe is always coherent — no accidental-substitution
+        // risk across unrelated header values.
+        const retryProbe =
+          typeof config.buildProbe === "function"
+            ? await config.buildProbe(connection, tokens.accessToken)
+            : null;
+        const retryHeaders = retryProbe
+          ? (retryProbe.headers as Record<string, string>)
+          : {
+              ...headers,
+              [config.authHeader]: `${config.authPrefix}${tokens.accessToken}`,
+            };
+        const retryUrl = retryProbe ? retryProbe.url : url;
+        const retryInit: RequestInit = {
+          method: retryProbe?.method ?? builtProbe?.method ?? config.method,
+          headers: retryHeaders,
+          signal: AbortSignal.timeout(timeoutMs),
+        };
+        // Mirror the original probe's body precedence exactly:
+        // config.body && !builtProbe (static body only when no builder ran),
+        // then builtProbe.body (first attempt's body if any), then retryProbe.body.
+        // A built probe without a body deliberately sends none.
+        if (!builtProbe && config.body) retryInit.body = config.body;
+        else if (retryProbe?.body) retryInit.body = retryProbe.body;
+        else if (builtProbe?.body) retryInit.body = builtProbe.body;
+        let retryRes: Response;
+        try {
+          retryRes = await fetch(retryUrl, retryInit);
+        } catch {
+          // Network failure on the retry: the refresh itself succeeded and
+          // is persisted — report it as a (recoverable) upstream error with
+          // the new tokens instead of surfacing a raw transport exception.
+          const error = "Connection test failed after token refresh (network)";
+          return {
+            valid: false,
+            error,
+            refreshed: true,
+            newTokens: tokens,
+            statusCode: 502,
+            diagnosis: classifyFailure({ error, statusCode: 502 }),
+          };
+        }
+        // An inconclusive retry result keeps the inconclusive semantics of
+        // the main probe path (warning + valid), not a bare "ok".
+        const retryInconclusive =
+          Array.isArray(config.inconclusiveStatuses) &&
+          config.inconclusiveStatuses.includes(retryRes.status);
+        if (retryInconclusive) {
+          const retryInconclusiveBody = await retryRes
+            .clone()
+            .text()
+            .catch(() => "");
+          const classification = classifyOAuthProbeInconclusive(
+            config,
+            connection.provider,
+            retryRes.status,
+            retryInconclusiveBody
+          );
+          if (classification) {
+            return {
+              valid: true,
+              error: null,
+              warning: classification.warning,
+              refreshed: true,
+              newTokens: tokens,
+              statusCode: retryRes.status,
+              diagnosis: makeDiagnosis(
+                classification.diagnosisType,
+                "upstream",
+                classification.warning,
+                classification.diagnosisCode
+              ),
+            };
+          }
+        }
+        const retryAccepted =
+          retryRes.ok ||
+          (Array.isArray(config.acceptStatuses) && config.acceptStatuses.includes(retryRes.status));
+        if (retryAccepted) {
+          return {
+            valid: true,
+            error: null,
+            refreshed: true,
+            newTokens: tokens,
+            diagnosis: makeDiagnosis("ok", "upstream", null, null),
+          };
+        }
+        // The refresh itself succeeded and its tokens are already persisted
+        // (onPersist inside refreshOAuthToken) — propagate them even though
+        // the probe retry still fails, so the caller does not throw away a
+        // healthy token pair and re-burn the old refresh token.
+        return {
+          valid: false,
+          error: `API returned ${retryRes.status} after token refresh`,
+          refreshed: true,
+          newTokens: tokens,
+          statusCode: retryRes.status,
+          diagnosis: classifyFailure({
+            error: `API returned ${retryRes.status} after token refresh`,
+            statusCode: retryRes.status,
+          }),
+        };
+      }
+      // Fall through with the original 400 when the refresh itself fails — the
+      // inconclusive / geo-block / generic-error paths below handle it.
+    }
 
     const inconclusiveBody =
       Array.isArray(config.inconclusiveStatuses) && config.inconclusiveStatuses.includes(res.status)
@@ -834,6 +1011,13 @@ export async function testSingleConnection(connectionId: string, validationModel
   const startTime = Date.now();
   const runtime = await getProviderRuntimeStatus(connection);
 
+  // Codex app-server connections carry no validatable OpenAI token (the codex
+  // app-server process self-manages its own OAuth). Probe the app-server's
+  // /readyz liveness endpoint instead of the meaningless token check — otherwise
+  // every sweep reports a false "Token invalid or revoked" 401 and cools the
+  // connection down. Returns null for non-app-server connections (fall through).
+  const appServerResult = await testCodexAppServerConnection(connection);
+
   if ((runtime as any)?.diagnosis) {
     result = {
       valid: false,
@@ -841,6 +1025,10 @@ export async function testSingleConnection(connectionId: string, validationModel
       refreshed: false,
       diagnosis: (runtime as any).diagnosis,
     };
+  } else if (appServerResult) {
+    result = await runWithProxyContext(proxyInfo?.proxy || null, () =>
+      Promise.resolve(appServerResult)
+    );
   } else if (shouldUseApiKeyConnectionTest(connection.authType, provider)) {
     const enrichedConnection = validationModelId
       ? {

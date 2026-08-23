@@ -2218,6 +2218,10 @@
     "fullAccess": "Пълен достъп",
     "keyManagement": "Управление на API ключове",
     "keyManagementDesc": "Създавайте и управлявайте API ключове за удостоверяване на заявки към вашата крайна точка",
+    "requestFlowAria": "Your app sends requests through an API key to OmniRoute",
+    "requestFlowYourApp": "Your app",
+    "requestFlowApiKey": "API key",
+    "requestFlowOmniRoute": "OmniRoute",
     "totalKeys": "Общо ключове",
     "restricted": "Ограничен",
     "totalRequests": "Общо заявки",
@@ -5830,6 +5834,8 @@
     "rateLimitOverridesSection": "Предефиниране на ограниченията на скоростта",
     "rateLimitOverridesMaxConcurrentHint": "Предефиниране на максималния брой едновременни заявки за тази връзка. Предефинира ограничението на ниво акаунт.",
     "rateLimitOverridesMaxConcurrentLabel": "Макс. едновременни (Ограничение на скоростта)",
+    "rateLimitOverridesMaxWaitMsHint": "__MISSING__:Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "Минимално време (ms) между заявките. Предефинира закъснението по подразбиране на ограничителя на скоростта.",
     "rateLimitOverridesMinTimeLabel": "Мин. интервал (ms)",
     "rateLimitOverridesRpmHint": "Максимален брой заявки в минута за тази връзка. Предефинира стойността по подразбиране на доставчика.",
@@ -6107,7 +6113,6 @@
       "glmt": "Предварително зададен GLM профил с по-висок бюджет за токени, активирано мислене и по-дълъг таймаут.",
       "getgoapi": "Свържете GoAPI с API ключ.",
       "groq": "Безплатен план: 30 RPM / 14.4K RPD — без кредитна карта",
-      "hackclub": "Влезте с вашия Hack Club акаунт на ai.hackclub.com.",
       "haiper": "Вземете API ключ на haiper.ai/haiper-api",
       "heroku": "Свържете Heroku AI с API ключ.",
       "hcnsec": "Вземете API ключ на api.hcnsec.cn",
@@ -12202,7 +12207,7 @@
       },
       "omni-webhooks": {
         "name": "Уебхукове",
-        "description": "Register, list, test, and remove webhook endpoints. Configure event subscriptions (request.completed, provider.error, budget.exceeded, etc.) and manage delivery retries."
+        "description": "__MISSING__:Register, list, test, and remove webhook endpoints. Configure event subscriptions (request.completed, request.failed, quota.exceeded, etc.) and manage delivery retries."
       },
       "omni-mcp": {
         "name": "MCP сървър",

@@ -2218,6 +2218,10 @@
     "fullAccess": "การเข้าถึงแบบเต็ม",
     "keyManagement": "การจัดการคีย์ API",
     "keyManagementDesc": "สร้างและจัดการคีย์ API สำหรับการตรวจสอบคำขอไปยังปลายทางของคุณ",
+    "requestFlowAria": "Your app sends requests through an API key to OmniRoute",
+    "requestFlowYourApp": "Your app",
+    "requestFlowApiKey": "API key",
+    "requestFlowOmniRoute": "OmniRoute",
     "totalKeys": "คีย์ทั้งหมด",
     "restricted": "ถูกจำกัด",
     "totalRequests": "คำขอทั้งหมด",
@@ -5830,6 +5834,8 @@
     "rateLimitOverridesSection": "การเขียนทับการจำกัดอัตรา",
     "rateLimitOverridesMaxConcurrentHint": "การเขียนทับจำนวนคำขอพร้อมกันสูงสุดสำหรับการเชื่อมต่อนี้ ซึ่งจะเขียนทับขีดจำกัดในระดับบัญชี",
     "rateLimitOverridesMaxConcurrentLabel": "จำนวนพร้อมกันสูงสุด (การจำกัดอัตรา)",
+    "rateLimitOverridesMaxWaitMsHint": "__MISSING__:Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "เวลาขั้นต่ำ (มิลลิวินาที) ระหว่างคำขอ ซึ่งจะเขียนทับการหน่วงเวลาของตัวจำกัดอัตราเริ่มต้น",
     "rateLimitOverridesMinTimeLabel": "ช่วงเวลาขั้นต่ำ (มิลลิวินาที)",
     "rateLimitOverridesRpmHint": "จำนวนคำขอสูงสุดต่อนาทีสำหรับการเชื่อมต่อนี้ ซึ่งจะเขียนทับค่าเริ่มต้นของผู้ให้บริการ",
@@ -6107,7 +6113,6 @@
       "glmt": "โปรไฟล์ GLM ที่ตั้งค่าไว้ล่วงหน้าพร้อมงบประมาณโทเค็นที่สูงขึ้น เปิดใช้งานการคิด และหมดเวลาการทำงานที่นานขึ้น",
       "getgoapi": "เชื่อมต่อ GoAPI ด้วยคีย์ API",
       "groq": "ระดับการใช้งานฟรี: 30 RPM / 14.4K RPD — ไม่ต้องใช้บัตรเครดิต",
-      "hackclub": "ลงชื่อเข้าใช้ด้วยบัญชี Hack Club ของคุณที่ ai.hackclub.com",
       "haiper": "รับคีย์ API ได้ที่ haiper.ai/haiper-api",
       "heroku": "เชื่อมต่อ Heroku AI ด้วยคีย์ API",
       "hcnsec": "รับ API key ได้ที่ api.hcnsec.cn",
@@ -12202,7 +12207,7 @@
       },
       "omni-webhooks": {
         "name": "เว็บฮุค",
-        "description": "ลงทะเบียน, แสดงรายการ, ทดสอบ และลบปลายทางเว็บฮุค กำหนดค่าการสมัครรับเหตุการณ์ (request.completed, provider.error, budget.exceeded ฯลฯ) และจัดการการพยายามส่งใหม่"
+        "description": "__MISSING__:Register, list, test, and remove webhook endpoints. Configure event subscriptions (request.completed, request.failed, quota.exceeded, etc.) and manage delivery retries."
       },
       "omni-mcp": {
         "name": "เซิร์ฟเวอร์ MCP",

@@ -2218,6 +2218,10 @@
     "fullAccess": "Volledige toegang",
     "keyManagement": "API-sleutelbeheer",
     "keyManagementDesc": "Maak en beheer API-sleutels voor het verifiëren van verzoeken aan uw eindpunt",
+    "requestFlowAria": "Your app sends requests through an API key to OmniRoute",
+    "requestFlowYourApp": "Your app",
+    "requestFlowApiKey": "API key",
+    "requestFlowOmniRoute": "OmniRoute",
     "totalKeys": "Totaal aantal sleutels",
     "restricted": "Beperkt",
     "totalRequests": "Totaal aantal verzoeken",
@@ -5830,6 +5834,8 @@
     "rateLimitOverridesSection": "Rate limit-overschrijvingen",
     "rateLimitOverridesMaxConcurrentHint": "Overschrijving van het maximaal aantal gelijktijdige verzoeken voor deze verbinding. Overschrijft de limiet op accountniveau.",
     "rateLimitOverridesMaxConcurrentLabel": "Max. gelijktijdig (rate limit)",
+    "rateLimitOverridesMaxWaitMsHint": "__MISSING__:Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "Minimale tijd (ms) tussen verzoeken. Overschrijft de standaardvertraging van de rate limiter.",
     "rateLimitOverridesMinTimeLabel": "Min. interval (ms)",
     "rateLimitOverridesRpmHint": "Maximaal aantal verzoeken per minuut voor deze verbinding. Overschrijft de standaardwaarde van de provider.",
@@ -6107,7 +6113,6 @@
       "glmt": "Vooraf ingesteld GLM-profiel met een hoger tokenbudget, denken ingeschakeld en een langere time-out.",
       "getgoapi": "Verbind GoAPI met een API-sleutel.",
       "groq": "Gratis abonnement: 30 RPM / 14,4K RPD — geen creditcard",
-      "hackclub": "Meld je aan met je Hack Club-account op ai.hackclub.com.",
       "haiper": "Haal de API-sleutel op via haiper.ai/haiper-api",
       "heroku": "Verbind Heroku AI met een API-sleutel.",
       "hcnsec": "Haal de API-sleutel op via api.hcnsec.cn",
@@ -12202,7 +12207,7 @@
       },
       "omni-webhooks": {
         "name": "Webhooks",
-        "description": "Registreer, toon, test en verwijder webhook-endpoints. Configureer gebeurtenisabonnementen (request.completed, provider.error, budget.exceeded, etc.) en beheer afleverpogingen."
+        "description": "__MISSING__:Register, list, test, and remove webhook endpoints. Configure event subscriptions (request.completed, request.failed, quota.exceeded, etc.) and manage delivery retries."
       },
       "omni-mcp": {
         "name": "MCP-server",

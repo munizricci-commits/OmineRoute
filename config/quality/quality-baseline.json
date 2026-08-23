@@ -197,10 +197,11 @@
       "_rebaseline_2026_08_09_v3850_release_close": "7666 -> 8045 (+379 gzip bytes, +4.9%). Release v3.8.50 close reconciliation measured twice with the real size-limit + @size-limit/file path on tip e0ce95c592. Per-entry measurements remain below their absolute budgets: omniroute.mjs 4380/15000, mcp-server.mjs 1195/5000, nodeRuntimeSupport.mjs 887/8000, reset-password.mjs 1583/6000. The growth accumulated through legitimate CLI/runtime work in this cycle, including global-install ESM alias resolution, Termux cache preparation, and MCP stdio startup hardening; no entrypoint is near its absolute ceiling. The direction:down ratchet stays blocking from this exact measured tip."
     },
     "openapiBreaking": {
-      "value": 0,
+      "value": 4,
       "direction": "down",
       "dedicatedGate": true,
-      "_note": "oasdiff breaking-change gate (Fase 9 Onda 0). Blocks any breaking change vs base spec."
+      "_note": "oasdiff breaking-change gate (Fase 9 Onda 0). Blocks any breaking change vs base spec.",
+      "_rebaseline_2026_08_22_combo_create_min1": "0 -> 4, split 3 own + 1 inherited. Docs-only alignment of components.schemas.ComboCreate with the request contract already enforced by the API since 638fc5fbd (combo create refuses an empty model list) and d5034ea52: `model`/`nodes` were phantom properties the server never accepted, and `models` (array, minItems 1) is the real required field. OWN findings (3, caused by this commit): removed `model`, removed `nodes`, added required `models` on POST /api/combos — spec-vs-server drift, not client-facing breakage, no working client could have relied on the removed shapes. INHERITED finding (1, NOT caused by this PR's code changes — pre-existing drift already present at parent d5034ea52): PATCH /api/combos/{id} request-body-added-required; that route's patch operation declares its own inline requestBody (required: true, bare object schema, docs/openapi.yaml ~2107-2118) and does not reference ComboCreate, so this finding exists independently of the ComboCreate alignment (same own-growth vs inherited-drift convention as _rebaseline_2026_07_20_aliasresolver_hook_split_7808). No code change in this PR; follow-up tracking = this change's PR description."
     },
     "mutationScore.src/sse/services/auth.ts": {
       "value": 52.57,

@@ -2218,6 +2218,10 @@
     "fullAccess": "Akses Penuh",
     "keyManagement": "Manajemen Kunci API",
     "keyManagementDesc": "Buat dan kelola kunci API untuk mengautentikasi permintaan ke titik akhir Anda",
+    "requestFlowAria": "Your app sends requests through an API key to OmniRoute",
+    "requestFlowYourApp": "Your app",
+    "requestFlowApiKey": "API key",
+    "requestFlowOmniRoute": "OmniRoute",
     "totalKeys": "Jumlah Kunci",
     "restricted": "Terbatas",
     "totalRequests": "Jumlah Permintaan",
@@ -5830,6 +5834,8 @@
     "rateLimitOverridesSection": "Override Batas Tarif",
     "rateLimitOverridesMaxConcurrentHint": "Override permintaan bersamaan maksimum untuk koneksi ini. Menimpa batas tingkat akun.",
     "rateLimitOverridesMaxConcurrentLabel": "Maks Bersamaan (Batar Tarif)",
+    "rateLimitOverridesMaxWaitMsHint": "__MISSING__:Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "Waktu minimum (ms) antar permintaan. Menimpa penundaan pembatas tarif default.",
     "rateLimitOverridesMinTimeLabel": "Interval Min (ms)",
     "rateLimitOverridesRpmHint": "Permintaan maksimum per menit untuk koneksi ini. Menimpa default penyedia.",
@@ -6107,7 +6113,6 @@
       "glmt": "Profil GLM prasetel dengan anggaran token yang lebih tinggi, proses berpikir diaktifkan, dan batas waktu yang lebih lama.",
       "getgoapi": "Hubungkan GoAPI dengan kunci API.",
       "groq": "Tingkat gratis: 30 RPM / 14,4K RPD — tanpa kartu kredit",
-      "hackclub": "Masuk dengan akun Hack Club Anda di ai.hackclub.com.",
       "haiper": "Dapatkan kunci API di haiper.ai/haiper-api",
       "heroku": "Hubungkan Heroku AI dengan kunci API.",
       "hcnsec": "Dapatkan kunci API di api.hcnsec.cn",
@@ -12202,7 +12207,7 @@
       },
       "omni-webhooks": {
         "name": "Webhook",
-        "description": "Daftarkan, cantumkan, uji, dan hapus endpoint webhook. Konfigurasikan langganan peristiwa (request.completed, provider.error, budget.exceeded, dll.) dan kelola upaya pengiriman ulang."
+        "description": "__MISSING__:Register, list, test, and remove webhook endpoints. Configure event subscriptions (request.completed, request.failed, quota.exceeded, etc.) and manage delivery retries."
       },
       "omni-mcp": {
         "name": "Server MCP",

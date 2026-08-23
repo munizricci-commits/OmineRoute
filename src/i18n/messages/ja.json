@@ -2218,6 +2218,10 @@
     "fullAccess": "フルアクセス",
     "keyManagement": "APIキー管理",
     "keyManagementDesc": "エンドポイントへのリクエストを認証するための API キーを作成および管理する",
+    "requestFlowAria": "Your app sends requests through an API key to OmniRoute",
+    "requestFlowYourApp": "Your app",
+    "requestFlowApiKey": "API key",
+    "requestFlowOmniRoute": "OmniRoute",
     "totalKeys": "キーの総数",
     "restricted": "制限付き",
     "totalRequests": "総リクエスト数",
@@ -5830,6 +5834,8 @@
     "rateLimitOverridesSection": "レート制限のオーバーライド",
     "rateLimitOverridesMaxConcurrentHint": "この接続の最大同時リクエスト数のオーバーライド。アカウントレベルの上限をオーバーライドします。",
     "rateLimitOverridesMaxConcurrentLabel": "最大同時実行数 (レート制限)",
+    "rateLimitOverridesMaxWaitMsHint": "__MISSING__:Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "リクエスト間の最小時間 (ミリ秒)。デフォルトのレートリミッター遅延をオーバーライドします。",
     "rateLimitOverridesMinTimeLabel": "最小間隔 (ミリ秒)",
     "rateLimitOverridesRpmHint": "この接続の 1 分あたりの最大リクエスト数。プロバイダーのデフォルトをオーバーライドします。",
@@ -6107,7 +6113,6 @@
       "glmt": "より大きなトークンバジェット、思考の有効化、およびより長いタイムアウトを備えたプリセットGLMプロファイル。",
       "getgoapi": "APIキーでGoAPIに接続します。",
       "groq": "無料枠: 30 RPM / 14.4K RPD — クレジットカード不要",
-      "hackclub": "ai.hackclub.com でHack Clubアカウントを使用してサインインします。",
       "haiper": "haiper.ai/haiper-api でAPIキーを取得",
       "heroku": "APIキーでHeroku AIに接続します。",
       "hcnsec": "api.hcnsec.cn でAPIキーを取得",
@@ -12202,7 +12207,7 @@
       },
       "omni-webhooks": {
         "name": "Webhook",
-        "description": "Webhookエンドポイントの登録、一覧表示、テスト、削除を行います。イベントサブスクリプション（request.completed、provider.error、budget.exceededなど）を設定し、配信の再試行を管理します。"
+        "description": "__MISSING__:Register, list, test, and remove webhook endpoints. Configure event subscriptions (request.completed, request.failed, quota.exceeded, etc.) and manage delivery retries."
       },
       "omni-mcp": {
         "name": "MCPサーバー",

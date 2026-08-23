@@ -183,15 +183,55 @@ jobs:
         env:
           DOCKER_BUILDKIT_INLINE_CACHE: 1
 
+      - name: Build and push BUN base platform image by digest
+        id: build-bun-base
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: .
+          file: Dockerfile.bun
+          target: runner-base
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,push-by-digest=true,name-canonical=true,push=true
+          tags: |
+            ${{ env.IMAGE_NAME }}
+            ${{ env.GHCR_IMAGE_NAME }}
+          cache-from: type=gha,scope=docker-bun-base-${{ matrix.arch }}
+          cache-to: type=gha,scope=docker-bun-base-${{ matrix.arch }},mode=max
+          no-cache: false
+        env:
+          DOCKER_BUILDKIT_INLINE_CACHE: 1
+
+      - name: Build and push BUN web platform image by digest
+        id: build-bun-web
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: .
+          file: Dockerfile.bun
+          target: runner-web
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,push-by-digest=true,name-canonical=true,push=true
+          tags: |
+            ${{ env.IMAGE_NAME }}
+            ${{ env.GHCR_IMAGE_NAME }}
+          cache-from: type=gha,scope=docker-bun-web-${{ matrix.arch }}
+          cache-to: type=gha,scope=docker-bun-web-${{ matrix.arch }},mode=max
+          no-cache: false
+        env:
+          DOCKER_BUILDKIT_INLINE_CACHE: 1
+
       - name: Export digests
         env:
           DIGEST_BASE: ${{ steps.build.outputs.digest }}
           DIGEST_WEB: ${{ steps.build-web.outputs.digest }}
+          DIGEST_BUN_BASE: ${{ steps.build-bun-base.outputs.digest }}
+          DIGEST_BUN_WEB: ${{ steps.build-bun-web.outputs.digest }}
         run: |
           set -euo pipefail
-          mkdir -p /tmp/digests/base /tmp/digests/web
+          mkdir -p /tmp/digests/base /tmp/digests/web /tmp/digests/bun-base /tmp/digests/bun-web
           touch "/tmp/digests/base/${DIGEST_BASE#sha256:}"
           touch "/tmp/digests/web/${DIGEST_WEB#sha256:}"
+          touch "/tmp/digests/bun-base/${DIGEST_BUN_BASE#sha256:}"
+          touch "/tmp/digests/bun-web/${DIGEST_BUN_WEB#sha256:}"
 
       - name: Upload base digests
         uses: actions/upload-artifact@v7
@@ -206,6 +246,22 @@ jobs:
         with:
           name: digests-web-${{ matrix.arch }}
           path: /tmp/digests/web/*
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload bun-base digests
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: digests-bun-base-${{ matrix.arch }}
+          path: /tmp/digests/bun-base/*
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload bun-web digests
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: digests-bun-web-${{ matrix.arch }}
+          path: /tmp/digests/bun-web/*
           if-no-files-found: error
           retention-days: 1
 
@@ -263,6 +319,20 @@ jobs:
           path: /tmp/digests/web
           merge-multiple: true
 
+      - name: Download bun-base digests
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: digests-bun-base-*
+          path: /tmp/digests/bun-base
+          merge-multiple: true
+
+      - name: Download bun-web digests
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: digests-bun-web-*
+          path: /tmp/digests/bun-web
+          merge-multiple: true
+
       - name: Create Docker Hub manifest
         run: |
           set -euo pipefail
@@ -286,6 +356,8 @@ jobs:
 
           create_manifest "${IMAGE_NAME}" "" /tmp/digests/base
           create_manifest "${IMAGE_NAME}" "-web" /tmp/digests/web
+          create_manifest "${IMAGE_NAME}" "-bun" /tmp/digests/bun-base
+          create_manifest "${IMAGE_NAME}" "-web-bun" /tmp/digests/bun-web
 
       - name: Create GHCR manifest
         run: |
@@ -310,6 +382,8 @@ jobs:
 
           create_manifest "${GHCR_IMAGE_NAME}" "" /tmp/digests/base
           create_manifest "${GHCR_IMAGE_NAME}" "-web" /tmp/digests/web
+          create_manifest "${GHCR_IMAGE_NAME}" "-bun" /tmp/digests/bun-base
+          create_manifest "${GHCR_IMAGE_NAME}" "-web-bun" /tmp/digests/bun-web
 
       - name: Inspect image
         if: needs.prepare.outputs.version != 'main'

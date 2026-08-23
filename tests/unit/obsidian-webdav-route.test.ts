@@ -114,7 +114,46 @@ test("POST with a valid temp dir → returns { username, password }, GET shows e
     const getBody = (await getRes.json()) as Record<string, unknown>;
     assert.equal(getBody.webdavEnabled, true);
     assert.ok(typeof getBody.webdavUsername === "string" && (getBody.webdavUsername as string).length > 0);
-    assert.ok(typeof getBody.webdavPassword === "string" && (getBody.webdavPassword as string).length > 0);
+    // Anonymous GET (this request carries no management credential): the plaintext
+    // password is masked (GHSA-62vw), but the set/unset flag still reflects state.
+    assert.equal(getBody.webdavPassword, null);
+    assert.equal(getBody.webdavPasswordSet, true);
+  } finally {
+    fs.rmSync(vaultDir, { recursive: true, force: true });
+  }
+});
+
+test("GET masks the WebDAV password for anonymous callers but reveals it to a management session (GHSA-62vw)", async () => {
+  const vaultDir = fs.mkdtempSync(path.join(os.tmpdir(), "omni-vault-62vw-"));
+  try {
+    // Enable WebDAV so there is a stored password to leak.
+    const enableRes = await route.POST(
+      makeRequest("http://localhost/api/settings/obsidian/webdav", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ vaultPath: vaultDir }),
+      })
+    );
+    assert.equal(enableRes.status, 200);
+
+    // Anonymous (open-mode) caller: password masked, flag still set.
+    const anonBody = (await (await route.GET(
+      makeRequest("http://localhost/api/settings/obsidian/webdav")
+    )).json()) as Record<string, unknown>;
+    assert.equal(anonBody.webdavEnabled, true);
+    assert.equal(anonBody.webdavPassword, null, "anonymous caller must not receive the plaintext password");
+    assert.equal(anonBody.webdavPasswordSet, true);
+
+    // Genuine management session: the operator's reveal-password view still works.
+    const sessionReq = (await makeManagementSessionRequest(
+      "http://localhost/api/settings/obsidian/webdav"
+    )) as unknown as NextRequest;
+    const sessionBody = (await (await route.GET(sessionReq)).json()) as Record<string, unknown>;
+    assert.ok(
+      typeof sessionBody.webdavPassword === "string" &&
+        (sessionBody.webdavPassword as string).length > 0,
+      "a management session must still receive the plaintext password"
+    );
   } finally {
     fs.rmSync(vaultDir, { recursive: true, force: true });
   }

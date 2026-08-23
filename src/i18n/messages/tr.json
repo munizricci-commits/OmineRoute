@@ -2218,6 +2218,10 @@
     "fullAccess": "Tam Erişim",
     "keyManagement": "API Anahtar Yönetimi",
     "keyManagementDesc": "Uç noktanıza yönelik isteklerin kimliğini doğrulamak için API anahtarları oluşturun ve yönetin",
+    "requestFlowAria": "Your app sends requests through an API key to OmniRoute",
+    "requestFlowYourApp": "Your app",
+    "requestFlowApiKey": "API key",
+    "requestFlowOmniRoute": "OmniRoute",
     "totalKeys": "Toplam Anahtar",
     "restricted": "Kısıtlı",
     "totalRequests": "Toplam İstek",
@@ -5830,6 +5834,8 @@
     "rateLimitOverridesSection": "Hız Sınırı Geçersiz Kılmaları",
     "rateLimitOverridesMaxConcurrentHint": "Bu bağlantı için maksimum eşzamanlı istek geçersiz kılma değeri. Hesap düzeyindeki sınırı geçersiz kılar.",
     "rateLimitOverridesMaxConcurrentLabel": "Maksimum Eşzamanlı (Hız Sınırı)",
+    "rateLimitOverridesMaxWaitMsHint": "__MISSING__:Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "İstekler arasındaki minimum süre (ms). Varsayılan hız sınırlayıcı gecikmesini geçersiz kılar.",
     "rateLimitOverridesMinTimeLabel": "Min. Aralık (ms)",
     "rateLimitOverridesRpmHint": "Bu bağlantı için dakika başına maksimum istek sayısı. Sağlayıcı varsayılanını geçersiz kılar.",
@@ -6107,7 +6113,6 @@
       "glmt": "Daha yüksek token bütçesi, düşünme etkinleştirilmiş ve daha uzun zaman aşımına sahip önceden ayarlanmış GLM profili.",
       "getgoapi": "GoAPI'yi bir API anahtarı ile bağlayın.",
       "groq": "Ücretsiz katman: 30 RPM / 14.4K RPD — kredi kartı gerekmez",
-      "hackclub": "ai.hackclub.com adresinde Hack Club hesabınızla oturum açın.",
       "haiper": "API anahtarını haiper.ai/haiper-api adresinden alın",
       "heroku": "Heroku AI'ı bir API anahtarı ile bağlayın.",
       "hcnsec": "API anahtarını api.hcnsec.cn adresinden alın",
@@ -12202,7 +12207,7 @@
       },
       "omni-webhooks": {
         "name": "Webhook'lar",
-        "description": "Webhook uç noktalarını kaydedin, listeleyin, test edin ve kaldırın. Olay aboneliklerini (request.completed, provider.error, budget.exceeded vb.) yapılandırın ve teslimat yeniden denemelerini yönetin."
+        "description": "__MISSING__:Register, list, test, and remove webhook endpoints. Configure event subscriptions (request.completed, request.failed, quota.exceeded, etc.) and manage delivery retries."
       },
       "omni-mcp": {
         "name": "MCP Sunucusu",

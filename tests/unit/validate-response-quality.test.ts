@@ -24,6 +24,20 @@ test("returns valid=true for SSE with 'data:' lines", async () => {
   assert.strictEqual(res.valid, true);
 });
 
+test("returns valid=true for SSE opening with a ':' comment line (e.g. OpenRouter keep-alive)", async () => {
+  const res = await validateResponseQuality(
+    makeResponse(': OPENROUTER PROCESSING\n\ndata: {"foo":"bar"}\n\n'),
+    false,
+    {}
+  );
+  assert.strictEqual(res.valid, true);
+});
+
+test("returns valid=true for an SSE stream with leading whitespace before the first frame", async () => {
+  const res = await validateResponseQuality(makeResponse('\n\ndata: {"foo":"bar"}\n\n'), false, {});
+  assert.strictEqual(res.valid, true);
+});
+
 test("returns valid=false for non-JSON non-SSE text", async () => {
   const res = await validateResponseQuality(makeResponse("Hello world"), false, {});
   assert.strictEqual(res.valid, false);

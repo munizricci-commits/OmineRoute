@@ -92,5 +92,9 @@
       # - x-api-key PUBLICO do Firefly web (documentado em open-sse/utils/publicCreds.ts:207);
       #   as duas ocorrencias sinalizadas estao em COMENTARIOS JSDoc, o runtime le de resolvePublicCred().
       '''omniroute-kimi-sponsor-banner-dismissed-v\d+''',
+      # CheaperInference sponsor banner localStorage key (upstream #11196 /
+      # eb5797370). Same UI-identifier pattern as the kimi banner above, not a
+      # credential; the generic-api-key rule flags the long hyphenated string.
+      '''omniroute-cheaperinference-sponsor-banner-dismissed-v\d+''',
       '''SunbreakWebUI1''',
     ]

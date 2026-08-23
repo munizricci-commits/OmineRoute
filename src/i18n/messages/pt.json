@@ -2218,6 +2218,10 @@
     "fullAccess": "Acesso total",
     "keyManagement": "Gerenciamento de chaves de API",
     "keyManagementDesc": "Crie e gerencie chaves de API para autenticar solicitações em seu endpoint",
+    "requestFlowAria": "Your app sends requests through an API key to OmniRoute",
+    "requestFlowYourApp": "Your app",
+    "requestFlowApiKey": "API key",
+    "requestFlowOmniRoute": "OmniRoute",
     "totalKeys": "Total de chaves",
     "restricted": "Restrito",
     "totalRequests": "Total de solicitações",
@@ -5830,6 +5834,8 @@
     "rateLimitOverridesSection": "Substituições de limite de taxa",
     "rateLimitOverridesMaxConcurrentHint": "Substituição de pedidos simultâneos máximos para esta ligação. Substitui o limite ao nível da conta.",
     "rateLimitOverridesMaxConcurrentLabel": "Máximo de simultâneos (limite de taxa)",
+    "rateLimitOverridesMaxWaitMsHint": "__MISSING__:Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "Tempo mínimo (ms) entre pedidos. Substitui o atraso predefinido do limitador de taxa.",
     "rateLimitOverridesMinTimeLabel": "Intervalo mín. (ms)",
     "rateLimitOverridesRpmHint": "Pedidos máximos por minuto para esta ligação. Substitui a predefinição do fornecedor.",
@@ -6107,7 +6113,6 @@
       "glmt": "Perfil predefinido do GLM com maior orçamento de tokens, raciocínio ativado e tempo limite mais longo.",
       "getgoapi": "Ligue a GoAPI com uma chave de API.",
       "groq": "Nível gratuito: 30 RPM / 14,4K RPD — sem cartão de crédito",
-      "hackclub": "Inicie sessão com a sua conta Hack Club em ai.hackclub.com.",
       "haiper": "Obtenha a chave de API em haiper.ai/haiper-api",
       "heroku": "Ligue o Heroku AI com uma chave de API.",
       "hcnsec": "Obtenha a chave de API em api.hcnsec.cn",
@@ -12202,7 +12207,7 @@
       },
       "omni-webhooks": {
         "name": "Webhooks",
-        "description": "Webhooks omni"
+        "description": "__MISSING__:Register, list, test, and remove webhook endpoints. Configure event subscriptions (request.completed, request.failed, quota.exceeded, etc.) and manage delivery retries."
       },
       "omni-mcp": {
         "name": "Servidor MCP",
@@ -13845,5 +13850,12 @@
     "toolsMismatch": "Provider does not support tool calling",
     "structuredOutputMismatch": "Provider does not support structured output",
     "contextWindowMismatch": "Request exceeds provider context window"
+  },
+  "cheaperInferenceSponsorBanner": {
+    "title": "A Cheaper Inference é uma Amiga do Código Aberto do OmniRoute",
+    "description": "Um gateway com custo ordenado que revende dezenas de modelos de fronteira num único endpoint compatível com OpenAI — roteando cada requisição ao provedor elegível mais barato, nunca acima do preço de tabela.",
+    "cta": "Obter uma Chave de API",
+    "partnerLinkNote": "Link de parceiro",
+    "dismissAriaLabel": "Dispensar"
   }
 }

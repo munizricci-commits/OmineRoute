@@ -120,7 +120,6 @@ A 50-agent web-research pass (official docs + last-7-days news, adversarially ve
 | `firecrawl`      | caution   | Cloud API ToS has no explicit personal-proxy prohibition found, but the open-source self-hosted version is AGPL-3.0 (re… |
 | `gemini`         | caution   | ToS explicitly states the free tier is for "developers building with Google AI models for professional or business purp… |
 | `groq`           | caution   | Services Agreement §6.3 prohibits reselling, sublicensing, or distributing API access; §3.2 bars reselling/leasing acco… |
-| `hackclub`       | caution   | Service is explicitly scoped to Hack Club teen members building projects/learning; no public ToS found explicitly permi… |
 | `huggingchat`    | caution   | Hugging Face ToS does not explicitly ban personal self-hosted proxies, but supplemental terms (referenced but not fully… |
 | `huggingface`    | caution   | ToS grants a limited license to access/use the service; the document does not explicitly permit or forbid a single-user… |
 | `hyperbolic`     | caution   | ToS grants API access "solely for your own personal or internal business purposes" and explicitly prohibits licensing, … |
@@ -222,7 +221,6 @@ A 50-agent web-research pass (official docs + last-7-days news, adversarially ve
 | `duckduckgo-web` | keyless       | —                | —                  | avoid     | 6      |
 | `freemodel-dev`  | keyless       | —                | —                  | unknown   | 4      |
 | `friendliai`     | keyless       | —                | —                  | avoid     | 2      |
-| `hackclub`       | keyless       | —                | —                  | caution   | 3      |
 | `iflytek`        | keyless       | —                | —                  | avoid     | 1      |
 | `inference-net`  | keyless       | —                | —                  | caution   | 3      |
 | `liquid`         | keyless       | —                | —                  | unknown   | 1      |
@@ -280,7 +278,6 @@ A 50-agent web-research pass (official docs + last-7-days news, adversarially ve
 - **`gitlawb`** — The shipped freeNote "Free tier available" is effectively stale. The original free MiMo access was removed in May 2026; the only remaining "free" option is a temporary promotional model (Nemotron 3 U…
 - **`gitlawb-gmi`** — Partially still accurate — free tier exists but is now narrowed to a single model (Nemotron 3 Ultra) after MiMo free access was revoked in late May 2026. The shipped note "Free tier available" unders…
 - **`groq`** — The shipped freeNote "30 RPM / 14.4K RPD" is accurate only for llama-3.1-8b-instant. Most other models (including llama-3.3-70b-versatile) have a much lower 1K RPD cap. The note omits model-specific …
-- **`hackclub`** — The "30+ models" count appears accurate and still matches. The core offering remains free for Hack Club members. No evidence of tightening — still "$0 ALWAYS FREE" per the homepage. The freeNote omit…
 - **`huggingchat`** — The shipped freeNote ("Free LLM chat — no subscription required. Rate limits apply.") is partially accurate but significantly understates the restrictions. The free tier now operates on a hard $0.10/…
 - **`huggingface`** — Significantly tightened. The shipped freeNote ("Free Inference API for thousands of models") implied unlimited/generous free access, but as of mid-2025 the free tier is capped at $0.10/month in recur…
 - **`hyperbolic`** — Our shipped freeNote says "$1-5 trial credits on signup" — the $1 trial credit portion is accurate, but the "$5" figure refers to the minimum deposit required to unlock GPU rental (not free credits g…

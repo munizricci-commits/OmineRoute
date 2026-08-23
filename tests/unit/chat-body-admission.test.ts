@@ -16,6 +16,7 @@ const {
   resolveSelfLoopBearer,
 } = admissionModule;
 const { withEarlyStreamKeepalive } = await import("../../open-sse/utils/earlyStreamKeepalive.ts");
+const { getActiveRequestCount } = await import("../../src/lib/gracefulShutdown.ts");
 
 /**
  * Save/restore the env-var keys that `resolveSelfLoopBearer` reads so tests can
@@ -48,6 +49,25 @@ function chatRequest(body: string, contentLength: string | null = String(body.le
     body,
   });
 }
+
+test("heavyweight leases are counted for SIGTERM drain (#11015)", () => {
+  globalThis.__omnirouteShutdown = { init: true, shuttingDown: false, activeRequests: 0 };
+  const controller = new ChatAdmissionController(2);
+  const before = getActiveRequestCount();
+  const lease = controller.tryAcquireHeavy();
+  assert.ok(lease);
+  assert.equal(getActiveRequestCount(), before + 1);
+  const headroom = controller.tryAcquireHealthyHeadroom();
+  assert.ok(headroom);
+  assert.equal(getActiveRequestCount(), before + 2);
+  lease.release();
+  assert.equal(getActiveRequestCount(), before + 1);
+  headroom.release();
+  assert.equal(getActiveRequestCount(), before);
+  lease.release();
+  headroom.release();
+  assert.equal(getActiveRequestCount(), before);
+});
 
 test("small known body is admitted without consuming heavyweight capacity", async () => {
   const controller = new ChatAdmissionController(1);

@@ -164,7 +164,12 @@ test("GlmExecutor separates OpenAI-compatible coding headers from Anthropic head
   const anthropicHeaders = executor.buildHeaders(
     {
       apiKey: "glm-key",
-      providerSpecificData: { baseUrl: "https://api.z.ai/api/anthropic/v1/messages" },
+      providerSpecificData: {
+        baseUrl: "https://api.z.ai/api/anthropic/v1/messages",
+        // Same #10798 signature change — Anthropic transport via
+        // providerSpecificData (baseUrl is anthropic-shaped anyway).
+        primaryTransport: "anthropic",
+      },
     },
     true,
     null,
@@ -191,6 +196,8 @@ test("GlmExecutor preserves extra API key rotation", () => {
       connectionId: "glm-rotation-test",
       providerSpecificData: {
         baseUrl: "https://api.z.ai/api/anthropic/v1/messages",
+        // #10798 signature change — Anthropic transport via providerSpecificData.
+        primaryTransport: "anthropic",
         extraApiKeys: ["extra-key"],
       },
     },
@@ -426,10 +433,9 @@ test("GlmExecutor falls back internally to Anthropic transport and returns OpenA
     assert.equal(calls[0].url, "https://api.z.ai/api/coding/paas/v4/chat/completions");
     assert.equal(calls[0].headers.Authorization, "Bearer glm-key");
     assert.equal(calls[1].url, "https://api.z.ai/api/anthropic/v1/messages?beta=true");
-    const fallbackKey =
-      calls[1].headers["x-api-key"] ||
-      String(calls[1].headers.Authorization || "").replace(/^Bearer\s+/i, "");
-    assert.equal(fallbackKey, "glm-key");
+    assert.equal(calls[1].headers["x-api-key"], "glm-key");
+    assert.equal(calls[1].headers.Authorization, undefined);
+    assert.equal(calls[1].headers["anthropic-version"], "2023-06-01");
     assert.equal(calls[1].body.messages[0].role, "user");
     assert.equal(calls[1].body._disableToolPrefix, undefined);
     assert.equal(result.targetFormat, "openai");

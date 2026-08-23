@@ -103,7 +103,7 @@ function getProviderSpecificString(data: JsonRecord | undefined, keys: string[])
   return "";
 }
 
-function resolveOpenCodeGoDashboardConfig(
+export function resolveOpenCodeGoDashboardConfig(
   providerSpecificData?: JsonRecord
 ): OpenCodeGoDashboardConfig {
   const workspaceId =

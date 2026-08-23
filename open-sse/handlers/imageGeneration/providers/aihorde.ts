@@ -103,11 +103,12 @@ async function fetchHordeImageBytes(
   if (value.startsWith("http://") || value.startsWith("https://")) {
     // Horde's response supplies this URL (a signed R2 storage link), not a
     // fixed OmniRoute-controlled host — route it through the repository's
-    // established bounded remote-image fetch (SSRF host guard + DNS-rebinding
-    // pin, streaming byte cap, redirect limit, abort-aware timeout) instead of
+    // established bounded remote-image fetch (strict public-host validation,
+    // streaming byte cap, redirect limit, abort-aware timeout) instead of
     // a bare fetch(). Same helper `imageGeneration.ts` already uses for other
     // providers' remote image URLs.
     const remote = await fetchRemoteImage(value, {
+      guard: "public-only",
       timeoutMs: options.timeoutMs,
       signal: options.signal ?? undefined,
       maxBytes: MAX_HORDE_IMAGE_BYTES,

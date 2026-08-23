@@ -2218,6 +2218,10 @@
     "fullAccess": "Acces complet",
     "keyManagement": "Managementul cheilor API",
     "keyManagementDesc": "Creați și gestionați cheile API pentru autentificarea solicitărilor către punctul dvs. final",
+    "requestFlowAria": "Your app sends requests through an API key to OmniRoute",
+    "requestFlowYourApp": "Your app",
+    "requestFlowApiKey": "API key",
+    "requestFlowOmniRoute": "OmniRoute",
     "totalKeys": "Total chei",
     "restricted": "Restricţionat",
     "totalRequests": "Total cereri",
@@ -5830,6 +5834,8 @@
     "rateLimitOverridesSection": "Suprascrieri ale limitelor de rată",
     "rateLimitOverridesMaxConcurrentHint": "Suprascrierea numărului maxim de solicitări concurente pentru această conexiune. Suprascrie limita la nivel de cont.",
     "rateLimitOverridesMaxConcurrentLabel": "Maxim concurente (Limită de rată)",
+    "rateLimitOverridesMaxWaitMsHint": "__MISSING__:Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "Timpul minim (ms) între solicitări. Suprascrie întârzierea implicită a limitatorului de rată.",
     "rateLimitOverridesMinTimeLabel": "Min Interval (ms)",
     "rateLimitOverridesRpmHint": "Numărul maxim de solicitări pe minut pentru această conexiune. Suprascrie valoarea implicită a furnizorului.",
@@ -6107,7 +6113,6 @@
       "glmt": "Profil GLM prestabilit cu un buget de tokenuri mai mare, gândire activată și timeout mai lung.",
       "getgoapi": "Conectați GoAPI cu o cheie API.",
       "groq": "Nivel gratuit: 30 RPM / 14.4K RPD — fără card de credit",
-      "hackclub": "Conectați-vă cu contul Hack Club la ai.hackclub.com.",
       "haiper": "Obțineți cheia API la haiper.ai/haiper-api",
       "heroku": "Conectați Heroku AI cu o cheie API.",
       "hcnsec": "Obțineți cheia API la api.hcnsec.cn",
@@ -12202,7 +12207,7 @@
       },
       "omni-webhooks": {
         "name": "Webhook-uri",
-        "description": "Înregistrează, listează, testează și elimină endpoint-uri de webhook. Configurează abonamentele la evenimente (request.completed, provider.error, budget.exceeded etc.) și gestionează reîncercările de livrare."
+        "description": "__MISSING__:Register, list, test, and remove webhook endpoints. Configure event subscriptions (request.completed, request.failed, quota.exceeded, etc.) and manage delivery retries."
       },
       "omni-mcp": {
         "name": "Server MCP",

@@ -866,21 +866,25 @@ export function openaiResponsesToOpenAIResponse(chunk, state) {
 
 function openaiResponsesToOpenAIResponseStream(chunk, state) {
   if (!chunk) {
-    if (
-      state.currentToolCallNeedsNormalization &&
-      state.currentToolCallArgsBuffer &&
-      state.currentToolCallName
-    ) {
-      const toolSchema = state.toolSchemas?.get(state.currentToolCallName);
-      const argsToEmit = stripEmptyOptionalToolArgs(
-        state.currentToolCallArgsBuffer,
-        state.currentToolCallName,
-        toolSchema
-      );
-      const argsStr =
-        typeof argsToEmit === "string" ? argsToEmit : JSON.stringify(argsToEmit ?? {});
-      state.currentToolCallArgsBuffer = "";
-      state.currentToolCallNeedsNormalization = false;
+    // Iterate every still-open call needing schema-aware normalization, not just a
+    // single one — multiple parallel calls can each be pending here if the stream
+    // ends before their output_item.done arrives.
+    const pendingNormalized: Array<{ index: number; argsStr: string }> = [];
+    if (state.toolCallByCallId instanceof Map) {
+      for (const entry of state.toolCallByCallId.values()) {
+        if (entry.needsNormalization && entry.argsBuffer) {
+          const toolSchema = state.toolSchemas?.get(entry.name);
+          const argsToEmit = stripEmptyOptionalToolArgs(entry.argsBuffer, entry.name, toolSchema);
+          pendingNormalized.push({
+            index: entry.index,
+            argsStr: typeof argsToEmit === "string" ? argsToEmit : JSON.stringify(argsToEmit ?? {}),
+          });
+          entry.argsBuffer = "";
+          entry.needsNormalization = false;
+        }
+      }
+    }
+    if (pendingNormalized.length > 0) {
       state.finishReasonSent = true;
       state.finishReason = "tool_calls";
       const common = {
@@ -889,24 +893,21 @@ function openaiResponsesToOpenAIResponseStream(chunk, state) {
         created: state.created,
         model: state.model || "gpt-4",
       };
-      return [
-        {
-          ...common,
-          choices: [
-            {
-              index: 0,
-              delta: {
-                tool_calls: [{ index: state.toolCallIndex, function: { arguments: argsStr } }],
-              },
-              finish_reason: null,
-            },
-          ],
-        },
-        {
-          ...common,
-          choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }],
-        },
-      ];
+      const chunks: Record<string, unknown>[] = pendingNormalized.map(({ index, argsStr }) => ({
+        ...common,
+        choices: [
+          {
+            index: 0,
+            delta: { tool_calls: [{ index, function: { arguments: argsStr } }] },
+            finish_reason: null,
+          },
+        ],
+      }));
+      chunks.push({
+        ...common,
+        choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }],
+      });
+      return chunks;
     }
     // Flush: send final chunk with finish_reason
     if (!state.finishReasonSent && state.started) {
@@ -952,7 +953,23 @@ function openaiResponsesToOpenAIResponseStream(chunk, state) {
     state.chatId = `chatcmpl-${Date.now()}`;
     state.created = Math.floor(Date.now() / 1000);
     state.toolCallIndex = 0;
+    // Kept for computeFinishReason (synthesizeCompletedToolCalls.ts) compatibility —
+    // that snapshot path mutates it directly and expects it to exist. In a turn with
+    // multiple parallel calls this only ever reflects the LAST one opened/closed, so
+    // it must never be used to identify a specific call — only as the "is at least
+    // one tool call in flight this turn" signal computeFinishReason needs, which
+    // toolCallIndex > 0 already covers on its own once any call has been added.
     state.currentToolCallId = null;
+    // Per-call state keyed by call_id (replaces the old singular
+    // currentToolCallId/ArgsBuffer/Name/NeedsNormalization/Deferred fields, which
+    // assumed only one function_call could ever be in flight at a time).
+    state.toolCallByCallId = new Map();
+    // response.function_call_arguments.delta carries `item_id`/`output_index`, not
+    // `call_id` — resolve either one back to the call_id key used by
+    // toolCallByCallId (two independent reverse maps, since some upstreams omit
+    // item_id on delta events but still send output_index).
+    state.toolCallItemToCallId = new Map();
+    state.toolCallOutputIndexToCallId = new Map();
   }
 
   // Text content delta
@@ -983,22 +1000,48 @@ function openaiResponsesToOpenAIResponseStream(chunk, state) {
   // Function call started
   if (eventType === "response.output_item.added" && data.item?.type === "function_call") {
     const item = data.item;
-    state.currentToolCallId = item.call_id || fallbackToolCallId();
-    state.currentToolCallArgsBuffer = ""; // reset per-call arg buffer
-    state.currentToolCallDeferred = false;
+    const callId = item.call_id || fallbackToolCallId();
+    // Kept for computeFinishReason (synthesizeCompletedToolCalls.ts) compatibility.
+    state.currentToolCallId = callId;
+
+    const toolName = normalizeToolName(item.name);
+    // Assign this call's index NOW, at .added, not at .done — two calls opened before
+    // either closes (a genuine parallel dispatch) must never share an index. Deferred
+    // (still-nameless) calls are the one exception: they don't claim an index until
+    // .done resolves a real name, so a call that never gets one never burns a slot
+    // another call could have used.
+    let index: number | null = null;
+    if (toolName) {
+      index = state.toolCallIndex ?? 0;
+      state.toolCallIndex = index + 1;
+    }
+
+    if (!(state.toolCallByCallId instanceof Map)) state.toolCallByCallId = new Map();
+    state.toolCallByCallId.set(callId, {
+      index,
+      name: toolName,
+      argsBuffer: "",
+      deferred: !toolName,
+      needsNormalization: toolName === "Agent",
+    });
+    if (!(state.toolCallItemToCallId instanceof Map)) state.toolCallItemToCallId = new Map();
+    if (item.id) state.toolCallItemToCallId.set(item.id, callId);
+    // `output_index` is a top-level field on every Responses API streamed event
+    // (response.output_item.added/.done AND function_call_arguments.delta alike) —
+    // an identifier independent of item_id, for upstreams that omit item_id on delta
+    // events.
+    if (!(state.toolCallOutputIndexToCallId instanceof Map)) {
+      state.toolCallOutputIndexToCallId = new Map();
+    }
+    if (data.output_index != null) state.toolCallOutputIndexToCallId.set(data.output_index, callId);
 
     // Track this call_id so response.completed doesn't synthesize a duplicate
     if (!state.toolCallIdsSeen) state.toolCallIdsSeen = new Set();
-    if (state.currentToolCallId) state.toolCallIdsSeen.add(state.currentToolCallId);
+    state.toolCallIdsSeen.add(callId);
 
-    const toolName = normalizeToolName(item.name);
-    state.currentToolName = toolName; // track for schema lookup at done time
-    state.currentToolCallName = toolName;
-    state.currentToolCallNeedsNormalization = toolName === "Agent";
     if (!toolName) {
       // Some Responses providers briefly emit placeholder/empty tool names.
       // Defer emission until output_item.done in case the final name is populated there.
-      state.currentToolCallDeferred = true;
       return null;
     }
 
@@ -1013,8 +1056,8 @@ function openaiResponsesToOpenAIResponseStream(chunk, state) {
           delta: {
             tool_calls: [
               {
-                index: state.toolCallIndex,
-                id: state.currentToolCallId,
+                index,
+                id: callId,
                 type: "function",
                 function: {
                   name: toolName,
@@ -1037,11 +1080,26 @@ function openaiResponsesToOpenAIResponseStream(chunk, state) {
     const argsDelta = data.delta || "";
     if (!argsDelta) return null;
 
-    state.currentToolCallArgsBuffer = (state.currentToolCallArgsBuffer || "") + argsDelta;
-    if (state.currentToolCallDeferred || state.currentToolCallNeedsNormalization) return null;
+    // Resolve which in-flight call this delta belongs to. Try item_id first (the
+    // field the Responses API documents for this event), then output_index (also a
+    // top-level field on this event, and independent of item_id — covers upstreams
+    // that omit item_id on delta events but still send output_index). Only once both
+    // identifying fields are absent/unresolved do we fall back to guessing (the
+    // single open call, or the most recently opened one as a last resort).
+    const map = state.toolCallByCallId instanceof Map ? state.toolCallByCallId : null;
+    let callId = data.item_id ? state.toolCallItemToCallId?.get(data.item_id) : undefined;
+    if (!callId && data.output_index != null) {
+      callId = state.toolCallOutputIndexToCallId?.get(data.output_index);
+    }
+    if (!callId && map) {
+      callId = map.size === 1 ? [...map.keys()][0] : state.currentToolCallId;
+    }
+    const entry = callId ? map?.get(callId) : undefined;
+    if (!entry) return null;
 
     // #9168: buffer arguments until output_item.done for schema-aware null normalization
     // Previously emitted raw null values for optional enum fields (e.g. isolation: null).
+    entry.argsBuffer = (entry.argsBuffer || "") + argsDelta;
     return null;
   }
 
@@ -1061,13 +1119,30 @@ function openaiResponsesToOpenAIResponseStream(chunk, state) {
   // carry the complete arguments only in output_item.done (no preceding delta events).
   if (eventType === "response.output_item.done" && data.item?.type === "function_call") {
     const item = data.item;
-    const buffered = state.currentToolCallArgsBuffer || "";
-    const currentIndex = state.toolCallIndex; // capture before increment
-    const callId = item.call_id || state.currentToolCallId || fallbackToolCallId();
+    const map = state.toolCallByCallId instanceof Map ? state.toolCallByCallId : null;
+    let callId = item.call_id;
+    if (!callId && item.id) callId = state.toolCallItemToCallId?.get(item.id);
+    if (!callId) callId = state.currentToolCallId || fallbackToolCallId();
+    const trackedEntry = callId ? map?.get(callId) : undefined;
+    // Some upstreams (e.g. Codex) send the complete payload only in output_item.done,
+    // with no preceding output_item.added at all — there is no tracked entry to read an
+    // index from.
+    const entry = trackedEntry || { index: null, argsBuffer: "", deferred: false };
+
+    const buffered = entry.argsBuffer || "";
     const toolName = normalizeToolName(item.name);
+
+    // Claim (and advance) this call's index now if it wasn't assigned at .added — either
+    // a deferred call whose name has just now resolved, or a Codex-style done-only
+    // payload that never had an .added at all. A deferred call whose name is STILL empty
+    // never claims an index (nothing was ever emitted for it either way).
+    if (entry.index == null && toolName) {
+      entry.index = state.toolCallIndex ?? 0;
+      state.toolCallIndex = entry.index + 1;
+    }
+    const currentIndex = entry.index;
     const toolSchema = state.toolSchemas?.get(toolName);
     const shouldNormalizeArguments = toolName === "Agent";
-    state.currentToolCallNeedsNormalization = shouldNormalizeArguments;
 
     if (toolName && state.toolCalls instanceof Map) {
       const completedArguments =
@@ -1077,6 +1152,9 @@ function openaiResponsesToOpenAIResponseStream(chunk, state) {
         toolName,
         toolSchema
       );
+      // Keyed by index, not insertion order — readers that need call order for
+      // parallel calls closed out of order should sort by this key rather than
+      // relying on Map iteration order.
       state.toolCalls.set(currentIndex, {
         id: callId,
         index: currentIndex,
@@ -1095,16 +1173,16 @@ function openaiResponsesToOpenAIResponseStream(chunk, state) {
     if (!state.toolCallIdsSeen) state.toolCallIdsSeen = new Set();
     if (callId) state.toolCallIdsSeen.add(callId);
 
-    if (state.currentToolCallDeferred) {
-      state.currentToolCallDeferred = false;
-      state.currentToolCallArgsBuffer = "";
-      state.currentToolCallId = null;
+    // This call is fully closed — remove it from the in-flight map (bounds the map
+    // to genuinely in-flight calls, and keeps the single-open-call fallback in the
+    // function_call_arguments.delta handler correct for whichever call opens next).
+    if (map && callId) map.delete(callId);
+    if (state.currentToolCallId === callId) state.currentToolCallId = null;
 
+    if (entry.deferred) {
       if (!toolName) {
         return null;
       }
-
-      state.toolCallIndex++;
 
       const terminalArguments =
         typeof item.arguments === "string"
@@ -1148,12 +1226,7 @@ function openaiResponsesToOpenAIResponseStream(chunk, state) {
       };
     }
 
-    state.toolCallIndex++;
-    state.currentToolCallArgsBuffer = ""; // reset for next tool call
-    state.currentToolCallId = null;
-    const needsNormalization = state.currentToolCallNeedsNormalization === true;
-    state.currentToolCallNeedsNormalization = false;
-    state.currentToolCallName = "";
+    const needsNormalization = shouldNormalizeArguments;
 
     // Nullable omission sentinels must be normalized before any argument bytes reach the client.
     // Other tool calls retain immediate argument streaming.

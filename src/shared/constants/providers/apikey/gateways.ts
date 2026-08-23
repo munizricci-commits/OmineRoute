@@ -83,7 +83,7 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     textIcon: "CC",
     website: "https://commandcode.ai/",
     authHint:
-      "Use a Command Code API key. Requests are sent to Command Code's /alpha/generate endpoint.",
+      "Use a Command Code API key. Requests are sent to Command Code's /provider/v1/chat/completions endpoint.",
     apiHint: "Create or copy an API key from Command Code, then paste it here as a Bearer token.",
   },
   openrouter: {
@@ -639,33 +639,6 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
       text: "Dahl auto-generates tokens via https://inference.dahl.global/tokens. No signup needed. Rate limits apply. You can also add your own API key.",
     },
   },
-  uncloseai: {
-    id: "uncloseai",
-    alias: "unc",
-    name: "UncloseAI",
-    icon: "auto_awesome",
-    color: "#8B5CF6",
-    textIcon: "UN",
-    website: "https://uncloseai.com",
-    hasFree: true,
-    freeNote: "Free forever — no signup, no credit card. OpenAI-compatible endpoints.",
-    passthroughModels: true,
-    authHint:
-      "No auth required. API accepts any non-empty string as key for identification. If older built-in models return 404, use Available Models → Import from /models or Auto-Sync; verified live model: solidrust/Hermes-3-Llama-3.1-8B-AWQ.",
-  },
-  hackclub: {
-    id: "hackclub",
-    alias: "hc",
-    name: "Hackclub AI",
-    icon: "auto_awesome",
-    color: "#FF6B00",
-    textIcon: "HC",
-    website: "https://ai.hackclub.com",
-    hasFree: true,
-    freeNote: "Free AI for Hack Club members — 30+ models, no credit card.",
-    passthroughModels: true,
-    authHint: "Sign in with your Hack Club account at ai.hackclub.com.",
-  },
   freetheai: {
     id: "freetheai",
     alias: "fta",
@@ -687,11 +660,12 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     color: "#F97316",
     textIcon: "G4F",
     website: "https://g4f.space",
-    hasFree: true,
-    freeNote: "Free no-key reverse proxy to Groq (gpt4free project) — rate-limited to 5 req/min.",
+    hasFree: false,
+    freeNote:
+      "No-key reverse proxy to Groq (gpt4free project) — the anonymous free tier is gone; keyless calls return insufficient_credits until you bake proof-of-work credits. A g4f.dev member key is required.",
     passthroughModels: true,
     authHint:
-      "No auth required. Free tier is limited to 5 requests/minute — sign up at g4f.dev/members.html for higher limits.",
+      "Anonymous use now needs proof-of-work credits baked at g4f.dev/chat — sign up at g4f.dev/members.html for a member key.",
   },
   "g4f-gemini": {
     id: "g4f-gemini",
@@ -701,11 +675,12 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     color: "#F97316",
     textIcon: "G4F",
     website: "https://g4f.space",
-    hasFree: true,
-    freeNote: "Free no-key reverse proxy to Gemini (gpt4free project) — rate-limited to 5 req/min.",
+    hasFree: false,
+    freeNote:
+      "No-key reverse proxy to Gemini (gpt4free project) — the anonymous free tier is gone; keyless calls return insufficient_credits until you bake proof-of-work credits. A g4f.dev member key is required.",
     passthroughModels: true,
     authHint:
-      "No auth required. Free tier is limited to 5 requests/minute — sign up at g4f.dev/members.html for higher limits.",
+      "Anonymous use now needs proof-of-work credits baked at g4f.dev/chat — sign up at g4f.dev/members.html for a member key.",
   },
   "g4f-pollinations": {
     id: "g4f-pollinations",
@@ -715,12 +690,12 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     color: "#F97316",
     textIcon: "G4F",
     website: "https://g4f.space",
-    hasFree: true,
+    hasFree: false,
     freeNote:
-      "Free no-key reverse proxy to Pollinations (gpt4free project) — rate-limited to 5 req/min.",
+      "No-key reverse proxy to Pollinations (gpt4free project) — the anonymous free tier is gone; keyless calls return insufficient_credits until you bake proof-of-work credits. A g4f.dev member key is required.",
     passthroughModels: true,
     authHint:
-      "No auth required. Free tier is limited to 5 requests/minute — sign up at g4f.dev/members.html for higher limits.",
+      "Anonymous use now needs proof-of-work credits baked at g4f.dev/chat — sign up at g4f.dev/members.html for a member key.",
   },
   "g4f-ollama": {
     id: "g4f-ollama",
@@ -730,11 +705,12 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     color: "#F97316",
     textIcon: "G4F",
     website: "https://g4f.space",
-    hasFree: true,
-    freeNote: "Free no-key hosted Ollama gateway (gpt4free project) — rate-limited to 5 req/min.",
+    hasFree: false,
+    freeNote:
+      "No-key hosted Ollama gateway (gpt4free project) — the anonymous free tier is gone; keyless calls return insufficient_credits until you bake proof-of-work credits. A g4f.dev member key is required.",
     passthroughModels: true,
     authHint:
-      "No auth required. Free tier is limited to 5 requests/minute — sign up at g4f.dev/members.html for higher limits.",
+      "Anonymous use now needs proof-of-work credits baked at g4f.dev/chat — sign up at g4f.dev/members.html for a member key.",
   },
   "g4f-nvidia": {
     id: "g4f-nvidia",
@@ -744,12 +720,12 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     color: "#F97316",
     textIcon: "G4F",
     website: "https://g4f.space",
-    hasFree: true,
+    hasFree: false,
     freeNote:
-      "Free no-key reverse proxy to NVIDIA NIM (gpt4free project) — rate-limited to 5 req/min.",
+      "No-key reverse proxy to NVIDIA NIM (gpt4free project) — the anonymous free tier is gone; keyless calls return insufficient_credits until you bake proof-of-work credits. A g4f.dev member key is required.",
     passthroughModels: true,
     authHint:
-      "No auth required. Free tier is limited to 5 requests/minute — sign up at g4f.dev/members.html for higher limits.",
+      "Anonymous use now needs proof-of-work credits baked at g4f.dev/chat — sign up at g4f.dev/members.html for a member key.",
   },
   "vercel-ai-gateway": {
     id: "vercel-ai-gateway",
@@ -1278,6 +1254,29 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
       "Previously circulated 3 RPM/50 RPD and no-card claims were not confirmed during the 2026-08-02 audit; current quota and billing require account verification.",
     apiHint:
       "Create a helix- key and use https://helixmind.online/v1. OpenAI requests use Bearer authentication; the Anthropic-compatible messages endpoint accepts x-api-key.",
+  },
+  // Logfare (https://logfare.ai) — free OpenAI-compatible inference, live-verified
+  // 2026-08-21 (real /v1/models catalog; 11 chat-capable models incl. kimi-k3,
+  // deepseek-v4-pro, glm-5.2, gpt-5.6-luna). Key issued instantly at /register
+  // (username/password, no email). ⚠️ Logfare logs every request in exchange for
+  // free inference (opt out at /consent) — surfaced in freeNote per the catalog
+  // convention for data-collecting free providers.
+  logfare: {
+    id: "logfare",
+    alias: "logfare",
+    name: "Logfare",
+    icon: "auto_awesome",
+    color: "#22C55E",
+    textIcon: "LF",
+    website: "https://logfare.ai",
+    hasFree: true,
+    freeNote:
+      "Free OpenAI-compatible inference — no rate limits, no card. Logfare logs every request (prompts, completions, metadata) for internal research; opt out at /consent. Read https://logfare.ai/tos and https://logfare.ai/privacy before use.",
+    authHint:
+      "Create a free account at https://logfare.ai/register (username/password, no email verification) to get an instant API key, then paste it here as a Bearer token.",
+    apiHint:
+      "Create a free API key at https://logfare.ai/register, then use https://logfare.ai/v1 as the OpenAI-compatible base URL. Note the request-logging policy: prompts, completions and metadata are logged for research (opt out at https://logfare.ai/consent).",
+    passthroughModels: true,
   },
   // TabiToken (https://tabitoken.com) — NewAPI-based Claude gateway. Its public pricing
   // endpoint lists a Claude-only catalog (Opus 5 / 4.8, each with a -thinking variant),

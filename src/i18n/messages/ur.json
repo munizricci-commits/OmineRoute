@@ -2218,6 +2218,10 @@
     "fullAccess": "Full Access",
     "keyManagement": "API Key Management",
     "keyManagementDesc": "Create and manage API keys for authenticating requests to your endpoint",
+    "requestFlowAria": "Your app sends requests through an API key to OmniRoute",
+    "requestFlowYourApp": "Your app",
+    "requestFlowApiKey": "API key",
+    "requestFlowOmniRoute": "OmniRoute",
     "totalKeys": "Total Keys",
     "restricted": "Restricted",
     "totalRequests": "Total Requests",
@@ -5830,6 +5834,8 @@
     "rateLimitOverridesSection": "ریٹ لمٹ اوور رائیڈز",
     "rateLimitOverridesMaxConcurrentHint": "اس کنکشن کے لیے زیادہ سے زیادہ ہم وقتی درخواستوں کا اوور رائیڈ۔ اکاؤنٹ کی سطح کی حد کو اوور رائیڈ کرتا ہے۔",
     "rateLimitOverridesMaxConcurrentLabel": "زیادہ سے زیادہ ہم وقتی (ریٹ لمٹ)",
+    "rateLimitOverridesMaxWaitMsHint": "__MISSING__:Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "درخواستوں کے درمیان کم از کم وقت (ms)۔ پہلے سے طے شدہ ریٹ لمیٹر تاخیر کو اوور رائیڈ کرتا ہے۔",
     "rateLimitOverridesMinTimeLabel": "کم از کم وقفہ (ms)",
     "rateLimitOverridesRpmHint": "اس کنکشن کے لیے فی منٹ زیادہ سے زیادہ درخواستیں۔ فراہم کنندہ کے پہلے سے طے شدہ کو اوور رائیڈ کرتا ہے۔",
@@ -6107,7 +6113,6 @@
       "glmt": "زیادہ ٹوکن بجٹ، تھنکنگ فعال، اور طویل ٹائم آؤٹ کے ساتھ پہلے سے سیٹ کردہ GLM پروفائل۔",
       "getgoapi": "GoAPI کو ایک API کی کے ساتھ منسلک کریں۔",
       "groq": "مفت ٹیر: 30 RPM / 14.4K RPD — کوئی کریڈٹ کارڈ نہیں",
-      "hackclub": "ai.hackclub.com پر اپنے Hack Club اکاؤنٹ کے ساتھ سائن ان کریں۔",
       "haiper": "haiper.ai/haiper-api پر API کی حاصل کریں",
       "heroku": "Heroku AI کو ایک API کی کے ساتھ منسلک کریں۔",
       "hcnsec": "api.hcnsec.cn پر API کی حاصل کریں",
@@ -12202,7 +12207,7 @@
       },
       "omni-webhooks": {
         "name": "ویب ہکس",
-        "description": "ویب ہک اینڈ پوائنٹس کو رجسٹر کریں، فہرست بنائیں، ٹیسٹ کریں اور ہٹائیں۔ ایونٹ سبسکرپشنز (request.completed، provider.error، budget.exceeded، وغیرہ) کو ترتیب دیں اور ڈیلیوری کی دوبارہ کوششوں کا نظم کریں۔"
+        "description": "__MISSING__:Register, list, test, and remove webhook endpoints. Configure event subscriptions (request.completed, request.failed, quota.exceeded, etc.) and manage delivery retries."
       },
       "omni-mcp": {
         "name": "MCP سرور",

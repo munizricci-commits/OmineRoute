@@ -87,6 +87,22 @@ export function parseAlibabaModelStudioModelsForConnection(
 export function parseQwenCloudTextModels(data: any): any[] {
   return parseCuratedDashscopeModels(data, QWEN_CLOUD_TEXT_MODELS, QWEN_CLOUD_TEXT_MODEL_IDS);
 }
+
+// Perplexity's /v1/models lists the Agent API catalog (vendor-prefixed ids like
+// "anthropic/claude-fable-5"), but chat requests always go to the classic
+// /chat/completions endpoint, which only accepts the Sonar family. Filter
+// discovery to Sonar-family ids so agent-style ids never surface as routable
+// chat models (#11060). Bounded pattern — no ReDoS-prone quantifiers.
+export function parsePerplexitySonarModels(data: any): any[] {
+  const models = Array.isArray(data?.data)
+    ? data.data
+    : Array.isArray(data?.models)
+      ? data.models
+      : [];
+  return models.filter(
+    (model: any) => typeof model?.id === "string" && /^sonar(-|$)/.test(model.id)
+  );
+}
 type ProviderModelsHeaderContext = {
   authType?: string;
   providerSpecificData?: unknown;
@@ -658,6 +674,17 @@ export const PROVIDER_MODELS_CONFIG: Record<string, ProviderModelsConfigEntry> =
     method: "GET",
     headers: { Accept: "application/json" },
     parseResponse: parseClinepassRecommendedModels,
+  },
+  // Perplexity's /v1/models lists the Agent API catalog (vendor-prefixed agent
+  // ids), but chat only accepts the Sonar family on /chat/completions. Import
+  // must keep Sonar-family ids only (#11060).
+  perplexity: {
+    url: "https://api.perplexity.ai/v1/models",
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+    authHeader: "Authorization",
+    authPrefix: "Bearer ",
+    parseResponse: parsePerplexitySonarModels,
   },
   cohere: {
     url: "https://api.cohere.com/v2/models",

@@ -96,6 +96,17 @@ function makeAnthropicPolicyRequest(apiKey) {
   });
 }
 
+// A bare `x-api-key` with NO anthropic-version header and no claude user-agent:
+// the CLIENT_API auth layer accepts it, but the gated extractApiKey() used by
+// the policy layer used to ignore it, so the key's per-key policy was skipped
+// entirely (GHSA-2phc-xp22-9f56).
+function makeBareXApiKeyPolicyRequest(apiKey) {
+  return new Request("http://localhost/v1/responses", {
+    method: "POST",
+    headers: apiKey ? { "x-api-key": apiKey } : {},
+  });
+}
+
 async function readErrorMessage(response) {
   const body = (await response.json()) as { error?: { message?: unknown } };
   return typeof body.error?.message === "string" ? body.error.message : "";
@@ -455,6 +466,29 @@ test("enforceApiKeyPolicy rejects disabled keys and blocked schedules", async ()
   const blocked = await policy.enforceApiKeyPolicy(makePolicyRequest(scheduledKey.key), null);
   assert.equal(blocked.rejection.status, 403);
   assert.match(await readErrorMessage(blocked.rejection), /Access denied outside allowed hours/);
+});
+
+test("enforceApiKeyPolicy enforces allowedModels for a bare x-api-key (GHSA-2phc-xp22-9f56)", async () => {
+  const restrictedKey = await createKeyWithPolicy({
+    allowedModels: ["openai/gpt-4.1"],
+  });
+  const policy = await loadPolicy("bare-x-api-key");
+
+  // Disallowed model via a bare x-api-key must be rejected, exactly as it is for
+  // a Bearer token — the header used to carry the key must not weaken the policy.
+  const disallowed = await policy.enforceApiKeyPolicy(
+    makeBareXApiKeyPolicyRequest(restrictedKey.key),
+    "anthropic/claude-3-7-sonnet"
+  );
+  assert.equal(disallowed.rejection.status, 403);
+  assert.match(await readErrorMessage(disallowed.rejection), /not allowed/);
+
+  // The allowed model still passes through the same header.
+  const allowed = await policy.enforceApiKeyPolicy(
+    makeBareXApiKeyPolicyRequest(restrictedKey.key),
+    "openai/gpt-4.1"
+  );
+  assert.equal(allowed.rejection, null);
 });
 
 test("enforceApiKeyPolicy rejects disallowed models and exhausted budgets", async () => {

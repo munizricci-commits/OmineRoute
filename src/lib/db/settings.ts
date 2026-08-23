@@ -238,6 +238,11 @@ export async function getSettings() {
     // (`:free` suffix, zero-price pricing, or FREE_MODEL_BUDGETS membership). Default
     // false preserves prior behaviour; opt-in only.
     hidePaidModels: false,
+    // Opt-in, default off: same shape as hidePaidModels above, but requires a
+    // live hard-stop-guaranteed quota check for non-keyless free candidates.
+    // See open-sse/services/autoCombo/strictZeroCostFilter.ts.
+    freeAccessPolicy: "off",
+    excludeTosAvoid: false,
     // #9418: Opt-in filter that hides auto/* virtual combos from the /v1/models catalog.
     // User-defined combos are unaffected; routing still works for hidden ids sent explicitly.
     hideAutoCombos: false,

@@ -90,7 +90,15 @@ test("combo create — parses --models without throwing (Commander option regist
   });
 
   await prog.parseAsync(
-    ["node", "x", "combo", "create", "my-combo", "--models", "openai/gpt-4o,anthropic/claude-3-opus"],
+    [
+      "node",
+      "x",
+      "combo",
+      "create",
+      "my-combo",
+      "--models",
+      "openai/gpt-4o,anthropic/claude-3-opus",
+    ],
     { from: "node" }
   );
 
@@ -221,4 +229,27 @@ test("combo create (HTTP) — POST /api/combos body carries the parsed models", 
     if (ORIGINAL_DATA_DIR === undefined) delete process.env.DATA_DIR;
     else process.env.DATA_DIR = ORIGINAL_DATA_DIR;
   }
+});
+
+// Regression for the follow-up of #11011: with --models available, creating
+// an empty combo is no longer a legitimate path on either transport.
+test("combo create without any model is refused before reaching a transport", async () => {
+  await withComboEnv(async () => {
+    const errors: string[] = [];
+    const originalError = console.error;
+    console.error = (msg?: unknown) => {
+      errors.push(String(msg));
+    };
+    try {
+      const mod = await import("../../bin/cli/commands/combo.mjs");
+      const rc = await mod.runComboCreateCommand("guard-test");
+      assert.equal(rc, 1);
+    } finally {
+      console.error = originalError;
+    }
+    assert.ok(
+      errors.some((m) => m.includes("--models")),
+      `stderr should name --models, got: ${errors.join(" | ")}`
+    );
+  });
 });

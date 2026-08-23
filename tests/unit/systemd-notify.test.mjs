@@ -37,8 +37,10 @@ function python3Available() {
   }
 }
 
-// Waits for the listener to emit `expected` lines (in order), then resolves
-// with everything it saw. Fails loudly on timeout or premature exit.
+// Waits for the listener to emit every `expected` line, then resolves with
+// everything it saw. The notifier spawns one process per signal, so AF_UNIX
+// datagram arrival order is not guaranteed across those processes.
+// Fails loudly on timeout or premature exit.
 // BARRIER=1 datagrams (sd_notify synchronization emitted by the systemd-notify
 // CLI after every message) are noise for this contract and are skipped.
 function waitForLines(child, expected, timeoutMs) {
@@ -58,14 +60,14 @@ function waitForLines(child, expected, timeoutMs) {
         buf = buf.slice(idx + 1);
         if (!line || line === "BARRIER=1") continue;
         seen.push(line);
-        if (seen.length === expected.length) {
+        if (expected.every((expectedLine) => seen.includes(expectedLine))) {
           clearTimeout(timer);
           resolve([...seen]);
         }
       }
     });
     child.on("exit", () => {
-      if (seen.length < expected.length) {
+      if (expected.some((expectedLine) => !seen.includes(expectedLine))) {
         clearTimeout(timer);
         reject(new Error(`listener exited early; got: ${seen.join(", ")}`));
       }
@@ -248,7 +250,7 @@ test(
       notifier.watchdog();
       notifier.stopping();
       const received = await waitForLines(listener, ["READY=1", "WATCHDOG=1", "STOPPING=1"], 10000);
-      assert.deepEqual(received, ["READY=1", "WATCHDOG=1", "STOPPING=1"]);
+      assert.deepEqual(received.toSorted(), ["READY=1", "STOPPING=1", "WATCHDOG=1"]);
       notifier.dispose();
     } finally {
       listener.kill();

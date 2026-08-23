@@ -8,7 +8,9 @@ import { isTrustedLoopbackInternalServiceRequest } from "@/lib/api/internalServi
 import { AUTHZ_HEADER_AUTH_KIND, AUTHZ_HEADER_AUTH_LABEL } from "@/server/authz/headers";
 import {
   MANAGE_SCOPE,
+  MCP_CONNECT_SCOPE,
   hasManageScope as hasManageScopeShared,
+  hasMcpConnectOrManageScope,
 } from "@/shared/constants/managementScopes";
 
 export { MANAGE_SCOPE };
@@ -26,6 +28,13 @@ export function hasManageScope(scopes: string[] = []): boolean {
 interface RequireManagementAuthOptions {
   alwaysRequireAuth?: boolean;
   invalidApiKeyStatus?: 401 | 403;
+  /**
+   * Accept the narrow `mcp:connect` scope in the API-key branch, mirroring the
+   * #9159 carve-out the central managementPolicy already applies to /api/mcp/*
+   * paths. Only the MCP transport routes (stream/sse/status/tools) may enable
+   * this — every other management route stays manage/admin-only.
+   */
+  acceptMcpConnectScope?: boolean;
 }
 
 function invalidManagementTokenResponse(options: RequireManagementAuthOptions): Response {
@@ -117,11 +126,26 @@ export async function requireManagementAuth(
       });
     }
 
-    if (meta && hasManageScope(meta.scopes)) return null;
+    // API-key branch: with acceptMcpConnectScope (MCP transport routes) the
+    // #9159 carve-out applies — hasMcpConnectOrManageScope accepts manage,
+    // admin, and mcp:connect. Without it, the guard stays manage-only. A null
+    // meta (valid key, metadata unavailable — deleted mid-request) falls
+    // through to the same 403 as the default path for every caller, keeping
+    // the error contract uniform.
+    if (
+      meta &&
+      (options.acceptMcpConnectScope
+        ? hasMcpConnectOrManageScope(meta.scopes)
+        : hasManageScope(meta.scopes))
+    ) {
+      return null;
+    }
 
     return createErrorResponse({
       status: 403,
-      message: "API key lacks 'manage' scope. Enable it in the API Keys dashboard.",
+      message: options.acceptMcpConnectScope
+        ? `API key lacks '${MCP_CONNECT_SCOPE}' (or 'manage') scope. Enable it in the API Keys dashboard.`
+        : "API key lacks 'manage' scope. Enable it in the API Keys dashboard.",
       type: "invalid_request",
     });
   }

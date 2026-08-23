@@ -50,6 +50,10 @@ test("GET /api/settings/proxies/egress adds an anonymous summary to the existing
   // Seed two codex accounts on one egress IP (persisted proxy_logs).
   proxyLogger.logProxyEvent({ status: "success", provider: "codex", targetUrl: "codex/gpt-5.5", egressIp: "100.115.194.84", account: "acc-a", connectionId: "conn-a" });
   proxyLogger.logProxyEvent({ status: "success", provider: "codex", targetUrl: "codex/gpt-5.5", egressIp: "100.115.194.84", account: "acc-b", connectionId: "conn-b" });
+  // logProxyEvent only enqueues for the 1s/100-entry background batch; the route
+  // below reads persisted proxy_logs synchronously, so flush before asserting or
+  // the rows are not yet on disk (timing-flaky otherwise).
+  proxyLogger.flushProxyLogsSync();
 
   const response = await route.GET(new Request("https://example.com/api/settings/proxies/egress", {
     headers: { authorization: `Bearer ${bearer}` },

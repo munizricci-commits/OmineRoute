@@ -280,10 +280,9 @@ function buildModelEntry(
   }
 
   // Resolve the context window. Honor an explicit user override, then fall
-  // back to the catalog. We do NOT synthesize a default — if the catalog
-  // is unaware of a model's window, the opencode.json will simply omit
-  // `limit.context` for that model and OpenCode's own heuristics apply.
-  // (OpenCode v1 defaults to 128K when `limit.context` is missing.)
+  // back to the catalog. If the catalog is unaware of a model's window, we
+  // fall back to a safe default (128K) so OpenCode's v1 provider schema
+  // validator never rejects the config with a missing key error (#11035).
   const userLimit = existing?.limit?.context;
   const catalogLimit = catalog ? resolveContextLength(catalog) : undefined;
   const context = typeof userLimit === "number" && userLimit > 0 ? userLimit : catalogLimit;
@@ -292,9 +291,6 @@ function buildModelEntry(
   // Use the catalog's max_output_tokens when available; otherwise fall
   // back to the user's existing `limit.output` and finally to a small
   // default (8K) so OpenCode never errors on a totally missing output cap.
-  // We do NOT default context — context is a property of the model and
-  // we have no business guessing. Output is a per-request setting and a
-  // small default is harmless when truly unknown.
   const userOutput = existing?.limit?.output;
   const catalogOutput =
     catalog && typeof catalog.max_output_tokens === "number" && catalog.max_output_tokens > 0
@@ -303,15 +299,18 @@ function buildModelEntry(
   const output =
     typeof userOutput === "number" && userOutput > 0 ? userOutput : (catalogOutput ?? 8_192);
 
-  // `limit.output` is REQUIRED by OpenCode's v1 provider schema regardless of
-  // whether the catalog (or the user's existing config) knows the model's
-  // context window — a model with no catalog metadata at all must still get
-  // a `limit` block, or OpenCode rejects the whole config with "Missing key
-  // provider.omniroute.models.{model}.limit.output" (#10940). `output` above
-  // already resolves to a safe fallback (8K) when nothing else is known, so
-  // we always emit it; `context`/`input` are added only when actually known.
-  const limit: { context?: number; input?: number; output?: number } = { output };
-  if (typeof context === "number") limit.context = context;
+  // Both `limit.context` and `limit.output` are REQUIRED by OpenCode's v1 provider schema
+  // regardless of whether the catalog (or the user's existing config) knows the model's
+  // context window — a model with no catalog metadata at all must still get both
+  // `limit.context` and `limit.output`, or OpenCode rejects the whole config with "Missing key
+  // provider.omniroute.models.{model}.limit.context" (#11035) or ".limit.output" (#10940, #11032).
+  // `output` above resolves to a safe fallback (8K) and `context` resolves to a safe fallback (128K)
+  // when nothing else is known, so we always emit both fields.
+  const resolvedContext = typeof context === "number" && context > 0 ? context : 128_000;
+  const limit: { context: number; input?: number; output: number } = {
+    context: resolvedContext,
+    output,
+  };
   const userInput = existing?.limit?.input;
   if (typeof userInput === "number" && userInput > 0) {
     limit.input = userInput;
@@ -408,7 +407,7 @@ export interface GenerateOpencodeOptions {
   /**
    * If `true` (default), the generator fetches the live `/v1/models` catalog
    * so every model entry has an explicit `limit.context`. The catalog is the
-   * single source of truth for context windows; we never invent defaults.
+   * primary source of truth for context windows, falling back to 128K when unknown.
    *
    * When the catalog request fails, the generator throws — opencode.json must
    * not be emitted with stale or fabricated values. The CLI can catch the
@@ -423,7 +422,7 @@ export interface GenerateOpencodeOptions {
 
 /**
  * Generate a full `opencode.json` document for OmniRoute. The catalog is the
- * single source of truth for context windows — we never hardcode values.
+ * primary source of truth for context windows, with a 128K fallback when unknown.
  *
  * Behavior:
  *  - Preserves the user's existing provider name, npm, options, and
@@ -433,8 +432,8 @@ export interface GenerateOpencodeOptions {
  *  - For each catalog model id the user did NOT have, a new entry is
  *    added with `limit.context` populated when the catalog has it.
  *  - If the catalog has no context for a model AND the user has no
- *    override, the model is emitted WITHOUT a `limit.context` field.
- *    OpenCode's own heuristic (typically 128K) applies.
+ *    override, a safe default (128K) is emitted so OpenCode's schema validator
+ *    does not reject the model.
  *  - Throws if the catalog fetch fails — the user must fix the upstream
  *    before we can generate a reliable opencode.json.
  */

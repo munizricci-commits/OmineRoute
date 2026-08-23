@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
+export const dynamic = "force-dynamic";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import { getCallLogs } from "@/lib/usageDb";
 import { getCompletedDetails, getPendingById } from "@/lib/usage/usageHistory";
-import { getProviderConnections } from "@/lib/localDb";
+import { getProviderConnections } from "@/lib/db/providers";
 import { getProviderNodes } from "@/models";
 import { matchesSearch } from "@/shared/utils/turkishText";
 
@@ -24,6 +25,66 @@ function rowPriority(row: any): number {
   if (row?.active) return 0;
   if (row?.completed) return 1;
   return 2;
+}
+
+/**
+ * Applies the active filter predicates to a single merged call-log row.
+ *
+ * `getCallLogs()` already filters the persisted DB rows server-side, but the
+ * in-memory entries (active/pending + recently-completed) are merged in by
+ * `buildCallLogListRows()` and would otherwise bypass every filter except
+ * `correlationId`. Running the same predicates over the merged rows closes that
+ * gap. It is idempotent for DB rows (they already satisfy the predicate) while
+ * correctly excluding in-memory rows that do not match.
+ */
+export function rowMatchesFilter(row: any, filter: Record<string, any>): boolean {
+  if (!filter) return true;
+
+  if (filter.status === "error") {
+    if (!(Number(row?.status) >= 400 || Boolean(row?.error))) return false;
+  } else if (filter.status === "ok") {
+    if (!(Number(row?.status) >= 200 && Number(row?.status) < 300)) return false;
+  } else if (typeof filter.status === "number" || (typeof filter.status === "string" && !isNaN(Number(filter.status)))) {
+    if (Number(row?.status) !== Number(filter.status)) return false;
+  }
+
+  if (filter.model && !matchesSearch(row?.model || "", String(filter.model))) {
+    return false;
+  }
+  if (filter.provider && !matchesSearch(row?.provider || "", String(filter.provider))) {
+    return false;
+  }
+  if (filter.account && !matchesSearch(row?.account || "", String(filter.account))) {
+    return false;
+  }
+  if (filter.apiKey && !matchesSearch(row?.apiKeyName || "", String(filter.apiKey))) {
+    return false;
+  }
+  if (filter.combo && !matchesSearch(row?.comboName || "", String(filter.combo))) {
+    return false;
+  }
+  if (filter.correlationId && !matchesSearch(row?.correlationId || "", String(filter.correlationId))) {
+    return false;
+  }
+  if (filter.search) {
+    const term = String(filter.search);
+    const haystack = [
+      row?.model,
+      row?.provider,
+      row?.providerDisplay,
+      row?.account,
+      row?.apiKeyName,
+      row?.comboName,
+      row?.correlationId,
+      row?.error,
+      row?.path,
+    ]
+      .filter(Boolean)
+      .join(" ");
+    if (!matchesSearch(haystack, term)) return false;
+  }
+
+  return true;
 }
 
 export function buildCallLogListRows({
@@ -173,15 +234,8 @@ export async function GET(request: Request) {
       completedDetails: getCompletedDetails().values(),
     });
 
-    // When correlationId filter is set, also filter in-memory entries
-    // (active + completed) that don't match — getCallLogs already filters
-    // the DB rows but activeEntries/completedEntries bypass it.
-    if (filter.correlationId) {
-      const cid = filter.correlationId;
-      return NextResponse.json(rows.filter((r: any) => matchesSearch(r.correlationId || "", cid)));
-    }
-
-    return NextResponse.json(rows);
+    const filtered = rows.filter((r: any) => rowMatchesFilter(r, filter));
+    return NextResponse.json(filtered);
   } catch (error) {
     console.error("[API ERROR] /api/usage/call-logs failed:", error);
     return NextResponse.json({ error: "Failed to fetch call logs" }, { status: 500 });

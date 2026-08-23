@@ -71,10 +71,13 @@ test("installed package contract requires sql.js metadata, entrypoint, and WASM"
     []
   );
 
-  present.delete(path.join("/pkg", "dist/node_modules/sql.js/dist/sql-wasm.wasm"));
+  // Dependency-based packaging (#11242): sql.js is a declared dependency, so the
+  // contract path is the npm-installed <packageRoot>/node_modules/sql.js location,
+  // never the old vendored dist/node_modules one (banned from the tarball).
+  present.delete(path.join("/pkg", "node_modules/sql.js/dist/sql-wasm.wasm"));
   assert.deepEqual(
     findMissingSqlJsRuntimeFiles("/pkg", (file) => present.has(file)),
-    ["dist/node_modules/sql.js/dist/sql-wasm.wasm"]
+    ["node_modules/sql.js/dist/sql-wasm.wasm"]
   );
 });
 

@@ -56,11 +56,9 @@ export async function OPTIONS() {
  * GET /v1/search — list available search providers
  */
 export async function GET() {
-  const settings = await getSettings().catch(() => ({} as any));
+  const settings = await getSettings().catch(() => ({}) as any);
   const blockedProviders = settings?.blockedProviders || [];
-  const providers = getAllSearchProviders().filter(
-    (p) => !isProviderBlockedByIdOrAlias(p.id, blockedProviders)
-  );
+  const providers = getAllSearchProviders(blockedProviders);
   const timestamp = Math.floor(Date.now() / 1000);
 
   const data = providers.map((p) => ({
@@ -141,7 +139,7 @@ async function postHandler(request: Request, context: unknown) {
   const policy = await enforceApiKeyPolicy(request, "search");
   if (policy.rejection) return policy.rejection;
 
-  const settings = await getSettings().catch(() => ({} as any));
+  const settings = await getSettings().catch(() => ({}) as any);
   const blockedProviders = settings?.blockedProviders || [];
 
   // Resolve provider and credentials
@@ -244,6 +242,34 @@ async function postHandler(request: Request, context: unknown) {
         if (altConfig && altCreds) {
           providerConfig = altConfig;
           credentials = altCreds;
+          break;
+        }
+      }
+    }
+
+    // Last resort before failing: promote a fallback-only free provider (e.g.
+    // duckduckgo-free) to the primary pick so out-of-the-box search works when
+    // no credentialed provider is configured at all.
+    if (!credentials) {
+      const fallbackProviders = Object.values(SEARCH_PROVIDERS)
+        .filter(
+          (provider) =>
+            provider.fallbackOnly &&
+            supportsSearchType(provider, body.search_type) &&
+            !isProviderBlockedByIdOrAlias(provider.id, blockedProviders)
+        )
+        .sort((a, b) => a.costPerQuery - b.costPerQuery);
+
+      for (const fallbackProvider of fallbackProviders) {
+        providerConfig = fallbackProvider;
+        if (fallbackProvider.id === "duckduckgo-free") {
+          credentials = {};
+          break;
+        }
+        const fallbackCreds = await resolveSearchCredentials(fallbackProvider.id);
+        if (isAllRateLimitedCredentials(fallbackCreds)) continue;
+        if (fallbackCreds) {
+          credentials = fallbackCreds;
           break;
         }
       }

@@ -306,6 +306,7 @@ test("runAuthzPipeline rejects new API requests during shutdown drain", async ()
 
   assert.equal(response.status, 503);
   assert.equal(body.error.code, "SERVICE_UNAVAILABLE");
+  assert.equal(response.headers.get("retry-after"), "5");
 });
 
 test("runAuthzPipeline rejects rewritten API aliases during shutdown drain", async () => {
@@ -319,6 +320,7 @@ test("runAuthzPipeline rejects rewritten API aliases during shutdown drain", asy
   assert.equal(response.status, 503);
   assert.equal(response.headers.get("x-omniroute-route-class"), "CLIENT_API");
   assert.equal(body.error.code, "SERVICE_UNAVAILABLE");
+  assert.equal(response.headers.get("retry-after"), "5");
 });
 
 test("runAuthzPipeline allows dashboard sessions to read model catalog aliases", async () => {

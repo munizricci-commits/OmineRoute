@@ -260,7 +260,7 @@ export async function validateAwsPollyProvider({ apiKey, providerSpecificData = 
 
     if (response.ok) return { valid: true, error: null };
     if (response.status === 401 || response.status === 403) {
-      return { valid: false, error: "Invalid API key" };
+      return { valid: false, error: "Invalid AWS credentials" };
     }
     return { valid: false, error: `Validation failed: ${response.status}` };
   } catch (error: any) {

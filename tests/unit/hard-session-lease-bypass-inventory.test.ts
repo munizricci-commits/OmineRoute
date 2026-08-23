@@ -86,7 +86,7 @@ const EXPECTED: Record<InventoryKind, Record<string, number>> = {
     "src/app/api/providers/client/route.ts": 1,
     "src/app/api/providers/free-onboarding/route.ts": 2,
     "src/app/api/providers/import/route.ts": 1,
-    "src/app/api/providers/route.ts": 4,
+    "src/app/api/providers/route.ts": 2,
     "src/app/api/providers/test-batch/route.ts": 2,
     "src/app/api/rate-limits/route.ts": 1,
     "src/app/api/services/dario/admin/import-from-omniroute/route.ts": 2,

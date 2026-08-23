@@ -145,6 +145,31 @@ const eslintConfig = [
       "react-hooks/rules-of-hooks": "off",
     },
   },
+  // Ratchet: bar NEW unused vars/args/catches outside the `_` escape hatch.
+  // Pre-existing violations are frozen via config/quality/eslint-suppressions.json
+  // (same pattern as #7879 toNumber); only genuinely NEW unused bindings fail
+  // lint. `args: "all"` (not `after-used`) so a leading unused param is never
+  // silently skipped, e.g. `function handle(req, _opts, next)` must flag `req`.
+  {
+    files: ["src/**/*.{ts,tsx,js,jsx}", "open-sse/**/*.ts", "tests/**/*.{ts,tsx,mjs}"],
+    plugins: {
+      "@typescript-eslint": tseslint.plugin,
+    },
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          args: "all",
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrors: "all",
+          caughtErrorsIgnorePattern: "^_",
+          destructuredArrayIgnorePattern: "^_",
+          ignoreRestSiblings: true,
+        },
+      ],
+    },
+  },
   // Global ignores — keep ESLint scoped to source files only
   {
     ignores: [

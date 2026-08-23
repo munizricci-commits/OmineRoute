@@ -1311,16 +1311,16 @@
         "Authorization": "Bearer <TOK>",
         "Content-Type": "application/json",
         "Openai-Beta": "responses=experimental",
-        "User-Agent": "codex-cli/0.146.0 (<OS>; <ARCH>)",
-        "Version": "0.146.0",
+        "User-Agent": "codex-cli/0.149.0 (<OS>; <ARCH>)",
+        "Version": "0.149.0",
         "X-Codex-Beta-Features": "responses_websockets"
       },
       "nonStream": {
         "Authorization": "Bearer <TOK>",
         "Content-Type": "application/json",
         "Openai-Beta": "responses=experimental",
-        "User-Agent": "codex-cli/0.146.0 (<OS>; <ARCH>)",
-        "Version": "0.146.0",
+        "User-Agent": "codex-cli/0.149.0 (<OS>; <ARCH>)",
+        "Version": "0.149.0",
         "X-Codex-Beta-Features": "responses_websockets"
       },
       "oauth": {
@@ -1328,14 +1328,37 @@
         "Authorization": "Bearer <TOK>",
         "Content-Type": "application/json",
         "Openai-Beta": "responses=experimental",
-        "User-Agent": "codex-cli/0.146.0 (<OS>; <ARCH>)",
-        "Version": "0.146.0",
+        "User-Agent": "codex-cli/0.149.0 (<OS>; <ARCH>)",
+        "Version": "0.149.0",
         "X-Codex-Beta-Features": "responses_websockets"
       }
     },
     "url": {
       "nonStream": "https://chatgpt.com/backend-api/codex/responses",
       "stream": "https://chatgpt.com/backend-api/codex/responses"
+    }
+  },
+  "codex-app-server": {
+    "format": "openai-responses",
+    "headers": {
+      "apiKey": {
+        "Accept": "text/event-stream",
+        "Authorization": "Bearer <TOK>",
+        "Content-Type": "application/json"
+      },
+      "nonStream": {
+        "Authorization": "Bearer <TOK>",
+        "Content-Type": "application/json"
+      },
+      "oauth": {
+        "Accept": "text/event-stream",
+        "Authorization": "Bearer <TOK>",
+        "Content-Type": "application/json"
+      }
+    },
+    "url": {
+      "nonStream": "codex-app-server://cli/websocket",
+      "stream": "codex-app-server://cli/websocket"
     }
   },
   "cohere": {
@@ -1812,8 +1835,8 @@
       }
     },
     "url": {
-      "nonStream": "https://api.dify.ai/v1/chat/completions",
-      "stream": "https://api.dify.ai/v1/chat/completions"
+      "nonStream": "https://api.dify.ai",
+      "stream": "https://api.dify.ai"
     }
   },
   "digitalocean": {
@@ -2445,39 +2468,42 @@
         "Authorization": "Bearer <TOK>",
         "Content-Type": "application/json",
         "X-Initiator": "user",
-        "copilot-integration-id": "vscode-chat",
-        "editor-plugin-version": "copilot-chat/0.54.0",
-        "editor-version": "vscode/1.126.0",
-        "openai-intent": "conversation-panel",
-        "user-agent": "GitHubCopilotChat/0.54.0",
-        "x-github-api-version": "2026-06-01",
-        "x-vscode-user-agent-library-version": "electron-fetch"
+        "copilot-harness-id": "copilot-sdk",
+        "copilot-integration-id": "copilot-developer-cli",
+        "editor-version": "copilot/1.0.81-6",
+        "openai-intent": "conversation-agent",
+        "user-agent": "copilot/1.0.81-6",
+        "x-client-machine-id": "<UUID>",
+        "x-github-api-version": "2026-08-01",
+        "x-interaction-type": "conversation-user"
       },
       "nonStream": {
         "Accept": "application/json",
         "Authorization": "Bearer <TOK>",
         "Content-Type": "application/json",
         "X-Initiator": "user",
-        "copilot-integration-id": "vscode-chat",
-        "editor-plugin-version": "copilot-chat/0.54.0",
-        "editor-version": "vscode/1.126.0",
-        "openai-intent": "conversation-panel",
-        "user-agent": "GitHubCopilotChat/0.54.0",
-        "x-github-api-version": "2026-06-01",
-        "x-vscode-user-agent-library-version": "electron-fetch"
+        "copilot-harness-id": "copilot-sdk",
+        "copilot-integration-id": "copilot-developer-cli",
+        "editor-version": "copilot/1.0.81-6",
+        "openai-intent": "conversation-agent",
+        "user-agent": "copilot/1.0.81-6",
+        "x-client-machine-id": "<UUID>",
+        "x-github-api-version": "2026-08-01",
+        "x-interaction-type": "conversation-user"
       },
       "oauth": {
         "Accept": "text/event-stream",
         "Authorization": "Bearer <TOK>",
         "Content-Type": "application/json",
         "X-Initiator": "user",
-        "copilot-integration-id": "vscode-chat",
-        "editor-plugin-version": "copilot-chat/0.54.0",
-        "editor-version": "vscode/1.126.0",
-        "openai-intent": "conversation-panel",
-        "user-agent": "GitHubCopilotChat/0.54.0",
-        "x-github-api-version": "2026-06-01",
-        "x-vscode-user-agent-library-version": "electron-fetch"
+        "copilot-harness-id": "copilot-sdk",
+        "copilot-integration-id": "copilot-developer-cli",
+        "editor-version": "copilot/1.0.81-6",
+        "openai-intent": "conversation-agent",
+        "user-agent": "copilot/1.0.81-6",
+        "x-client-machine-id": "<UUID>",
+        "x-github-api-version": "2026-08-01",
+        "x-interaction-type": "conversation-user"
       }
     },
     "url": {
@@ -2516,42 +2542,45 @@
         "Authorization": "Bearer <TOK>",
         "Content-Type": "application/json",
         "X-Initiator": "user",
-        "copilot-integration-id": "vscode-chat",
-        "editor-plugin-version": "copilot-chat/0.54.0",
-        "editor-version": "vscode/1.126.0",
-        "openai-intent": "conversation-panel",
-        "user-agent": "GitHubCopilotChat/0.54.0",
-        "x-github-api-version": "2026-06-01",
-        "x-request-id": "<UUID>",
-        "x-vscode-user-agent-library-version": "electron-fetch"
+        "copilot-harness-id": "copilot-sdk",
+        "copilot-integration-id": "copilot-developer-cli",
+        "editor-version": "copilot/1.0.81-6",
+        "openai-intent": "conversation-agent",
+        "user-agent": "copilot/1.0.81-6",
+        "x-client-machine-id": "<UUID>",
+        "x-github-api-version": "2026-08-01",
+        "x-interaction-type": "conversation-user",
+        "x-request-id": "<UUID>"
       },
       "nonStream": {
         "Accept": "application/json",
         "Authorization": "Bearer <TOK>",
         "Content-Type": "application/json",
         "X-Initiator": "user",
-        "copilot-integration-id": "vscode-chat",
-        "editor-plugin-version": "copilot-chat/0.54.0",
-        "editor-version": "vscode/1.126.0",
-        "openai-intent": "conversation-panel",
-        "user-agent": "GitHubCopilotChat/0.54.0",
-        "x-github-api-version": "2026-06-01",
-        "x-request-id": "<UUID>",
-        "x-vscode-user-agent-library-version": "electron-fetch"
+        "copilot-harness-id": "copilot-sdk",
+        "copilot-integration-id": "copilot-developer-cli",
+        "editor-version": "copilot/1.0.81-6",
+        "openai-intent": "conversation-agent",
+        "user-agent": "copilot/1.0.81-6",
+        "x-client-machine-id": "<UUID>",
+        "x-github-api-version": "2026-08-01",
+        "x-interaction-type": "conversation-user",
+        "x-request-id": "<UUID>"
       },
       "oauth": {
         "Accept": "text/event-stream",
         "Authorization": "Bearer <TOK>",
         "Content-Type": "application/json",
         "X-Initiator": "user",
-        "copilot-integration-id": "vscode-chat",
-        "editor-plugin-version": "copilot-chat/0.54.0",
-        "editor-version": "vscode/1.126.0",
-        "openai-intent": "conversation-panel",
-        "user-agent": "GitHubCopilotChat/0.54.0",
-        "x-github-api-version": "2026-06-01",
-        "x-request-id": "<UUID>",
-        "x-vscode-user-agent-library-version": "electron-fetch"
+        "copilot-harness-id": "copilot-sdk",
+        "copilot-integration-id": "copilot-developer-cli",
+        "editor-version": "copilot/1.0.81-6",
+        "openai-intent": "conversation-agent",
+        "user-agent": "copilot/1.0.81-6",
+        "x-client-machine-id": "<UUID>",
+        "x-github-api-version": "2026-08-01",
+        "x-interaction-type": "conversation-user",
+        "x-request-id": "<UUID>"
       }
     },
     "url": {
@@ -2784,29 +2813,6 @@
       "stream": "https://api.groq.com/openai/v1/chat/completions"
     }
   },
-  "hackclub": {
-    "format": "openai",
-    "headers": {
-      "apiKey": {
-        "Accept": "text/event-stream",
-        "Authorization": "Bearer <TOK>",
-        "Content-Type": "application/json"
-      },
-      "nonStream": {
-        "Authorization": "Bearer <TOK>",
-        "Content-Type": "application/json"
-      },
-      "oauth": {
-        "Accept": "text/event-stream",
-        "Authorization": "Bearer <TOK>",
-        "Content-Type": "application/json"
-      }
-    },
-    "url": {
-      "nonStream": "https://ai.hackclub.com/proxy/v1/chat/completions",
-      "stream": "https://ai.hackclub.com/proxy/v1/chat/completions"
-    }
-  },
   "hailuo-web": {
     "format": "openai",
     "headers": {
@@ -2826,8 +2832,8 @@
       }
     },
     "url": {
-      "nonStream": "https://www.hailuo.ai",
-      "stream": "https://www.hailuo.ai"
+      "nonStream": "https://chat.minimax.io",
+      "stream": "https://chat.minimax.io"
     }
   },
   "haiper": {
@@ -3364,8 +3370,8 @@
       }
     },
     "url": {
-      "nonStream": "https://www.kimi.com",
-      "stream": "https://www.kimi.com"
+      "nonStream": "https://www.kimi.ai",
+      "stream": "https://www.kimi.ai"
     }
   },
   "kiro": {
@@ -3606,6 +3612,29 @@
     "url": {
       "nonStream": "https://arena.ai/nextjs-api/stream/create-evaluation",
       "stream": "https://arena.ai/nextjs-api/stream/create-evaluation"
+    }
+  },
+  "logfare": {
+    "format": "openai",
+    "headers": {
+      "apiKey": {
+        "Accept": "text/event-stream",
+        "Authorization": "Bearer <TOK>",
+        "Content-Type": "application/json"
+      },
+      "nonStream": {
+        "Authorization": "Bearer <TOK>",
+        "Content-Type": "application/json"
+      },
+      "oauth": {
+        "Accept": "text/event-stream",
+        "Authorization": "Bearer <TOK>",
+        "Content-Type": "application/json"
+      }
+    },
+    "url": {
+      "nonStream": "https://logfare.ai/v1/chat/completions",
+      "stream": "https://logfare.ai/v1/chat/completions"
     }
   },
   "longcat": {

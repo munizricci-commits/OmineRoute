@@ -35,6 +35,36 @@ test("normalizes JSON strings before log protection and redacts sensitive keys",
   });
 });
 
+test("redacts web-impersonation body credentials but preserves non-secret 'capability' diagnostics", () => {
+  const protectedPayload = protectPayloadForLog(
+    JSON.stringify({
+      // real browser-storage credentials that can land in a body field
+      cookie: "ecto_1_sess=abc123",
+      storageState: "{...}",
+      runtimeKey: "rk_live_secret",
+      // non-secret diagnostic fields that happen to be named 'capability' /
+      // 'capabilities' — must survive so call-log artifacts stay useful (#10952
+      // review: do not blanket-redact the generic word 'capability').
+      capability: "Reduced capability (fallback active)",
+      model: {
+        id: "claude-opus-4.8",
+        capabilities: { type: "chat", supports: { vision: true } },
+      },
+    })
+  );
+
+  assert.deepEqual(protectedPayload, {
+    cookie: "[REDACTED]",
+    storageState: "[REDACTED]",
+    runtimeKey: "[REDACTED]",
+    capability: "Reduced capability (fallback active)",
+    model: {
+      id: "claude-opus-4.8",
+      capabilities: { type: "chat", supports: { vision: true } },
+    },
+  });
+});
+
 test("omits encrypted reasoning values from structured log payloads", () => {
   const encryptedContent = "encrypted".repeat(128);
   const payload = {

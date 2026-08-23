@@ -31,18 +31,11 @@ const memorySettings = await import("../../src/lib/memory/settings.ts");
 
 // ── Route imports ──
 const qdrantSettingsRoute = await import("../../src/app/api/settings/qdrant/route.ts");
-const qdrantHealthRoute = await import(
-  "../../src/app/api/settings/qdrant/health/route.ts"
-);
-const qdrantSearchRoute = await import(
-  "../../src/app/api/settings/qdrant/search/route.ts"
-);
-const qdrantCleanupRoute = await import(
-  "../../src/app/api/settings/qdrant/cleanup/route.ts"
-);
-const qdrantEmbeddingModelsRoute = await import(
-  "../../src/app/api/settings/qdrant/embedding-models/route.ts"
-);
+const qdrantHealthRoute = await import("../../src/app/api/settings/qdrant/health/route.ts");
+const qdrantSearchRoute = await import("../../src/app/api/settings/qdrant/search/route.ts");
+const qdrantCleanupRoute = await import("../../src/app/api/settings/qdrant/cleanup/route.ts");
+const qdrantEmbeddingModelsRoute =
+  await import("../../src/app/api/settings/qdrant/embedding-models/route.ts");
 
 // ── Helpers ──
 
@@ -55,11 +48,7 @@ async function resetStorage() {
   memorySettings.invalidateMemorySettingsCache();
 }
 
-async function makeAuthRequest(
-  method: "GET" | "POST" | "PUT",
-  url: string,
-  body?: unknown
-) {
+async function makeAuthRequest(method: "GET" | "POST" | "PUT", url: string, body?: unknown) {
   return makeManagementSessionRequest(url, { method, body });
 }
 
@@ -278,6 +267,45 @@ test("GET /api/settings/qdrant/health — returns health result shape (qdrant di
   assert.strictEqual(body.ok, false, "ok should be false when qdrant not configured");
 });
 
+test("GET /api/settings/qdrant/health — reports named collection vector metadata", async () => {
+  await localDb.updateSettings({
+    qdrantEnabled: true,
+    qdrantHost: "http://qdrant.test",
+    qdrantCollection: "omniroute_memory",
+  });
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    if (String(url).endsWith("/readyz")) return new Response("ready", { status: 200 });
+    if (String(url).endsWith("/collections/omniroute_memory")) {
+      return Response.json({
+        result: {
+          config: {
+            params: {
+              vectors: { omniao: { size: 2048, distance: "Cosine" } },
+            },
+          },
+        },
+      });
+    }
+    return new Response("not found", { status: 404 });
+  };
+
+  try {
+    const req = await makeAuthRequest("GET", "http://localhost/api/settings/qdrant/health");
+    const res = await qdrantHealthRoute.GET(req as any);
+    const body = await res.json();
+
+    assert.strictEqual(res.status, 200);
+    assert.deepStrictEqual(body.collection, {
+      exists: true,
+      vectorSize: 2048,
+      vectorName: "omniao",
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("GET /api/settings/qdrant/health — 401 without auth", async () => {
   await setRequireLogin(true);
   const req = makeUnauthRequest("GET", "http://localhost/api/settings/qdrant/health");
@@ -342,10 +370,31 @@ test("GET /api/settings/qdrant/embedding-models — returns models array", async
   assert.strictEqual(res.status, 200);
   const body = await res.json();
   assert.ok(Array.isArray(body.models), "should have models array");
-  // Should have at least the default fallback model
-  assert.ok(body.models.length > 0, "should have at least one model");
+  assert.strictEqual(body.models.length, 0, "should not list models without a configured provider");
+});
+
+test("GET /api/settings/qdrant/embedding-models — lists only configured providers", async () => {
+  await localDb.createProviderConnection({
+    provider: "openai",
+    authType: "apikey",
+    name: "embedding-test-openai",
+    apiKey: "sk-test-embedding",
+  });
+
+  const headers = await createManagementSessionHeaders();
+  const req = new Request("http://localhost/api/settings/qdrant/embedding-models", {
+    method: "GET",
+    headers: Object.fromEntries(headers.entries()),
+  });
+
+  const res = await qdrantEmbeddingModelsRoute.GET(req as any);
+  assert.strictEqual(res.status, 200);
+  const body = await res.json();
+  assert.ok(body.models.length > 0, "should list models for configured provider");
+  assert.ok(body.models.every((model: any) => model.value.startsWith("openai/")));
+  assert.ok(body.models.some((model: any) => model.value === "openai/text-embedding-3-small"));
   const defaultModel = body.models.find((m: any) => m.value === "openai/text-embedding-3-small");
-  assert.ok(defaultModel, "should include openai/text-embedding-3-small as default");
+  assert.match(defaultModel.label, /1536d/);
 });
 
 test("GET /api/settings/qdrant/embedding-models — 401 without auth", async () => {

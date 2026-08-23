@@ -30,17 +30,45 @@ export const HANDSHAKE_REQUEST = { protocol: "json", version: 1 } as const;
 export const KEEPALIVE_PING = { type: 6 } as const;
 
 /**
- * Allowed message types observed in the 2026-08 recapture of the working
- * `m365.cloud.microsoft/chat` client (#10718). The old 11-entry list is no longer
- * seen on the wire — the stale shape gets closed immediately after the type:4.
+ * Allowed message types observed in a 2026-08-21 live capture of a working
+ * `m365.cloud.microsoft/chat` session (issue: "Stream ended before producing a
+ * non-ping SSE event" on every individual/consumer M365 Copilot call). The
+ * #10718 6-entry shape above no longer produces a `type:1 target:"update"`
+ * frame at all — the socket only replies with SignalR keepalive pings and then
+ * closes, which is exactly what surfaces client-side as that generic stream
+ * error. 30 entries, up from 6.
  */
 export const ALLOWED_MESSAGE_TYPES = [
   "Chat",
   "Suggestion",
+  "InternalSearchQuery",
   "Disengaged",
-  "Progress",
-  "EndOfRequest",
   "InternalLoaderMessage",
+  "Progress",
+  "GeneratedCode",
+  "RenderCardRequest",
+  "AdsQuery",
+  "SemanticSerp",
+  "GenerateContentQuery",
+  "GenerateGraphicArt",
+  "SearchQuery",
+  "ConfirmationCard",
+  "AuthError",
+  "DeveloperLogs",
+  "TriggerPlugin",
+  "HintInvocation",
+  "MemoryUpdate",
+  "EndOfRequest",
+  "TriggerConfirmation",
+  "ResumeInvokeAction",
+  "ResumeUserInputRequest",
+  "TriggerUserInputRequest",
+  "EscapeHatch",
+  "TriggerPluginAuth",
+  "ResumePluginAuth",
+  "SideBySide",
+  "ReferencesListComplete",
+  "SwitchRespondingEndpoint",
 ] as const;
 
 /**
@@ -78,19 +106,26 @@ export const M365_ENTERPRISE_EXTRA_MESSAGE_TYPES = [
 ] as const;
 
 /**
- * Individual / EDU option sets from the 2026-08 recapture (#10718) — 14 entries.
- * The previous 25-entry consumer/MSA set (enable_msa_user, pdnascan, cwc_code_*,
- * …) is no longer observed on the wire and belongs to the shape the substrate
- * now drops silently.
+ * Individual / EDU option sets from a 2026-08-21 live capture — 34 entries, up
+ * from the #10718 14-entry shape (which itself superseded an earlier 25-entry
+ * shape). Each recapture so far has been additive/reshuffled rather than a
+ * wholesale replacement — treat this as the protocol continuing to drift, not
+ * a one-time fix; a future capture may again need to update this list.
  */
 export const M365_DEFAULT_OPTION_SETS = [
   "search_result_progress_messages_with_search_queries",
   "update_textdoc_response_after_streaming",
   "deepleo_networking_timeout_10minutes_canmore",
   "cwc_flux_image",
+  "cwc_code_interpreter",
+  "cwc_code_interpreter_amsfix",
   "cwcfluxgptv",
   "flux_v3_gptv_enable_upload_multi_image_in_turn_wo_ch",
   "gptvnorm2048",
+  "cwc_code_interpreter_citation_fix",
+  "code_interpreter_interactive_charts",
+  "cwc_code_interpreter_interactive_charts_inline_image",
+  "code_interpreter_matplotlib_patching",
   "cwc_fileupload_odb",
   "update_memory_plugin",
   "add_custom_instructions",
@@ -98,6 +133,20 @@ export const M365_DEFAULT_OPTION_SETS = [
   "flux_v3_progress_messages",
   "enable_batch_token_processing",
   "enable_gg_gpt",
+  "async_client_interaction",
+  "flux_v3_references",
+  "flux_v3_references_entities",
+  "flux_v3_references_ci",
+  "add_filestore_filetype",
+  "cwc_code_interpreter_citation_sourceannotations",
+  "cdxcwc_code_interpreter_hallucinated_url_filter",
+  "flux_v3_image_gen_enable_dimensions",
+  "flux_v3_image_gen_enable_non_watermarked_storage",
+  "flux_v3_image_gen_enable_icon_dimensions",
+  "flux_v3_image_gen_enable_system_text_with_params",
+  "flux_v3_image_gen_enable_designer_dimensions_meta_prompting_in_system_prompts",
+  "flux_v3_image_gen_enable_story",
+  "rich_responses",
 ] as const;
 
 /** Append the record separator to a JSON-serializable frame. */
@@ -433,12 +482,14 @@ export function resolveChatInvocationOverrides(tier: string | undefined): {
   }
   return {
     optionsSets: [...M365_DEFAULT_OPTION_SETS],
-    // #10718 — the 2026-08 recapture sends tone:"magic" (lowercase) on the
-    // individual/EDU surface; the old "" default is part of the dropped shape.
-    tone: "magic",
+    // 2026-08-21 capture — the individual/consumer surface now sends "Magic"
+    // (capitalized), matching the enterprise tone literal. The #10718
+    // lowercase "magic" is part of the shape that gets silently dropped.
+    tone: "Magic",
     allowedMessageTypes: ALLOWED_MESSAGE_TYPES,
-    // Omitted entirely on the individual/EDU wire (see ChatInvocationOptions).
-    disconnectBehavior: undefined,
+    // 2026-08-21 capture — disconnectBehavior:"continue" is now present on the
+    // individual/consumer wire too, not just enterprise (see ChatInvocationOptions).
+    disconnectBehavior: "continue",
   };
 }
 
@@ -467,16 +518,33 @@ export function resolveToneForModel(model: string | undefined): string | undefin
 
 /**
  * Build the `type:4` chat invocation frame body (not yet `\x1e`-terminated).
- * Mirrors the argument shape recaptured from a working `m365.cloud.microsoft/chat`
- * client in 2026-08 (#10718). Notable differences from the pre-#10718 shape: a
- * populated `clientInfo` + `productThreadType:"Office"`, a `conversationId`
- * matching the WS URL query, a rich `message` object, and no
- * `spokenTextMode` / `extraExtensionParameters` / `isSbsSupported` /
- * `renderReferencesBehindEOS` / `disconnectBehavior` — none of those are still
- * observed on the wire, and the stale shape gets closed immediately after the
- * invocation.
+ * Base shape from the #10718 recapture (populated `clientInfo` +
+ * `productThreadType:"Office"`, a `conversationId` matching the WS URL query, a
+ * rich `message` object), extended per a 2026-08-21 live capture that found the
+ * #10718 shape alone no longer produces a `type:1 target:"update"` frame — the
+ * socket only replies with keepalive pings and closes. The additions below
+ * (richer `clientInfo`, non-empty `plugins`, `extraExtensionParameters`,
+ * `isSbsSupported`, `renderReferencesBehindEOS`,
+ * `message.connectedFederatedConnections`, and `disconnectBehavior` on every
+ * tier) are exactly the fields the 2026-08-21 capture had that this shape was
+ * missing; the #10718 fields (`conversationId`, `productThreadType`,
+ * `toolChoice`, `message.attachments`) are kept as-is since removing them was
+ * not verified against a live socket.
  */
 export function buildChatInvocation(opts: ChatInvocationOptions): Record<string, unknown> {
+  const clientInfo = {
+    clientAppName: "Office",
+    clientPlatform: "mcmcopilot-web",
+    clientEntrypoint: "mcmcopilot-officeweb",
+    clientSessionId: opts.sessionId,
+    ProductCategory: "Chat",
+    clientAppType: "Web",
+    productEntryPoint: "ChatPanel",
+    deviceOS: "Windows",
+    deviceType: "Desktop",
+    clientPlatformVersion: "10",
+  };
+
   return {
     type: 4,
     target: "chat",
@@ -487,17 +555,17 @@ export function buildChatInvocation(opts: ChatInvocationOptions): Record<string,
           ? [...opts.allowedMessageTypes]
           : [...ALLOWED_MESSAGE_TYPES],
         clientCorrelationId: opts.clientCorrelationId ?? opts.traceId,
-        clientInfo: {
-          clientAppName: "Office",
-          clientPlatform: "mcmcopilot-web",
-        },
+        clientInfo,
         conversationId: opts.conversationId,
+        extraExtensionParameters: {},
         isStartOfSession: opts.isStartOfSession ?? true,
         message: {
           adaptiveCards: [],
           attachments: null,
           author: "user",
+          clientInfo,
           clientPreferences: {},
+          connectedFederatedConnections: ["dummyId"],
           entityAnnotationTypes: ["People", "File", "Event", "Email", "TeamsMessage"],
           experienceType: "Default",
           inputMethod: "Keyboard",
@@ -510,22 +578,27 @@ export function buildChatInvocation(opts: ChatInvocationOptions): Record<string,
           requestId: opts.requestId,
           text: opts.text,
         },
+        isSbsSupported: true,
         options: {},
         optionsSets: opts.optionsSets ?? [...M365_DEFAULT_OPTION_SETS],
-        plugins: opts.plugins ?? [],
+        // 2026-08-21 capture (#11069): BingWebSearch is now the universal
+        // BuiltIn plugin on individual/consumer tier; keep an opt-out override.
+        plugins: opts.plugins ?? [{ Id: "BingWebSearch", Source: "BuiltIn" }],
         ...(opts.customInstructions ? { customInstructions: opts.customInstructions } : {}),
         productThreadType: "Office",
+        renderReferencesBehindEOS: true,
         sessionId: opts.sessionId,
         sliceIds: [],
         source: "officeweb",
         streamingMode: "ConciseWithPadding",
         threadLevelGptId: {},
-        tone: opts.tone ?? "magic",
+        // 2026-08-21 capture (#11069): tone is now capitalized "Magic" on both tiers.
+        tone: opts.tone ?? "Magic",
         toolChoice: opts.toolChoice ?? null,
         traceId: opts.traceId,
-        // #8971 keeps "continue" for the enterprise tier; the individual/EDU wire
-        // omits the key, so only include it when actually set (#10718).
-        ...(opts.disconnectBehavior ? { disconnectBehavior: opts.disconnectBehavior } : {}),
+        // 2026-08-21 capture — disconnectBehavior:"continue" is sent on every
+        // tier now, not gated to enterprise as the #8971 comment described.
+        disconnectBehavior: opts.disconnectBehavior ?? "continue",
       },
     ],
   };

@@ -627,15 +627,26 @@ export async function createProviderConnection(data: JsonRecord) {
   // to no-overrides) keeps the field present on the returned object so the
   // UI can tell "field was read, no overrides" apart from "field absent."
   if ("quotaWindowThresholds" in connection) {
-    connection.quotaWindowThresholds = sanitizeQuotaWindowThresholds(
-      connection.quotaWindowThresholds
-    );
+    const result = sanitizeQuotaWindowThresholds(connection.quotaWindowThresholds);
+    if (result.rejected.length > 0) {
+      throw new Error(
+        `Refusing to persist quotaWindowThresholds with rejected keys: ${result.rejected.join(", ")}`
+      );
+    }
+    connection.quotaWindowThresholds = result.sanitized;
   }
 
   // Same sanitization for rateLimitOverrides — keep in-memory representation
-  // in sync with what gets persisted.
+  // in sync with what gets persisted. Reject (don't silently drop) invalid
+  // keys/values so a direct DB writer can't lose operator intent.
   if ("rateLimitOverrides" in connection) {
-    connection.rateLimitOverrides = sanitizeRateLimitOverrides(connection.rateLimitOverrides);
+    const result = sanitizeRateLimitOverrides(connection.rateLimitOverrides);
+    if (result.rejected.length > 0) {
+      throw new Error(
+        `Refusing to persist rateLimitOverrides with rejected keys: ${result.rejected.join(", ")}`
+      );
+    }
+    connection.rateLimitOverrides = result.sanitized;
   }
 
   _insertConnectionRow(db, encryptConnectionFields({ ...connection }));
@@ -849,13 +860,24 @@ export async function updateProviderConnection(id: string, data: JsonRecord) {
   // Mirror the sanitization the create path applies — keep the returned
   // object in lockstep with what we persist.
   if ("quotaWindowThresholds" in merged) {
-    const sanitized = sanitizeQuotaWindowThresholds(merged.quotaWindowThresholds);
+    const result = sanitizeQuotaWindowThresholds(merged.quotaWindowThresholds);
+    if (result.rejected.length > 0) {
+      throw new Error(
+        `Refusing to persist quotaWindowThresholds with rejected keys: ${result.rejected.join(", ")}`
+      );
+    }
     // For updates we always carry the key forward (even as null) so the read
-    // path surfaces the cleared state to callers that just patched it.
-    merged.quotaWindowThresholds = sanitized;
+    // path surfaces the cleared state to callers that merged it.
+    merged.quotaWindowThresholds = result.sanitized;
   }
   if ("rateLimitOverrides" in merged) {
-    merged.rateLimitOverrides = sanitizeRateLimitOverrides(merged.rateLimitOverrides);
+    const result = sanitizeRateLimitOverrides(merged.rateLimitOverrides);
+    if (result.rejected.length > 0) {
+      throw new Error(
+        `Refusing to persist rateLimitOverrides with rejected keys: ${result.rejected.join(", ")}`
+      );
+    }
+    merged.rateLimitOverrides = result.sanitized;
   }
   const existingRecord = toRecord(existing);
 

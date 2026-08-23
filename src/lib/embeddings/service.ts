@@ -249,11 +249,14 @@ export async function createEmbeddingResponse(
         `[${provider}] All ${credentials.expiredCount || 1} connection(s) authentication expired — please reconnect in the dashboard`
       );
     }
-  } else if (provider === "ollama-local") {
-    // Ollama is keyless, but a configured connection can still provide a
-    // custom local host. Hydrate that optional connection without imposing an
-    // authentication requirement, then keep the static localhost default when
-    // no connection exists.
+  } else if (provider === "ollama-local" || provider === "lmstudio") {
+    // Ollama and LM Studio are keyless, but a configured connection can still
+    // provide a custom local host. Hydrate that optional connection without
+    // imposing an authentication requirement, then keep the static localhost
+    // default when no connection exists. getProviderCredentials("lmstudio")
+    // resolves the dashboard's hyphenated "lm-studio" connection via the
+    // provider search pool/alias (#11233); a selection or rate-limit failure
+    // must not break the flow — proceed without credentials.
     const localCredentials = await getProviderCredentials(credentialsProviderId);
     if (
       localCredentials &&
@@ -329,7 +332,7 @@ export async function createEmbeddingResponse(
   const responseHeaders = new Headers(result.headers);
 
   if (result.success) {
-    if (credentials) await clearRecoveredProviderState(credentials);
+    if (credentials) await clearRecoveredProviderState(credentials as Record<string, unknown>);
     responseHeaders.set("Content-Type", "application/json");
     const usage = (result.data as { usage?: Record<string, number> })?.usage ?? null;
     const costUsd = usage ? await calculateCost(provider, effectiveModel ?? "", usage) : 0;

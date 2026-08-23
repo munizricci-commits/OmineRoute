@@ -85,6 +85,14 @@ function seedProxyLog(connectionId: string, egressIp: string, provider: string =
     egressIp,
     connectionId,
   });
+  // logProxyEvent only ENQUEUES the row for the 1s/100-entry background batch
+  // (proxyLogger.ts:enqueueProxyLog). The egress-lock lookup that follows reads
+  // proxy_logs synchronously, so without an explicit flush the row is not yet on
+  // disk and the sibling-egress-IP resolution finds nothing — a timing race that
+  // makes the whole suite flaky (it happens to pass only when the batch timer
+  // fires in the gap). Flush synchronously so the seeded egress IP is durable
+  // before markAccountUnavailable() reads it.
+  proxyLogger.flushProxyLogsSync();
 }
 
 test.after(() => {

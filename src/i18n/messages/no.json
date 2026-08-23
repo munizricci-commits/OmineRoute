@@ -2218,6 +2218,10 @@
     "fullAccess": "Full tilgang",
     "keyManagement": "API Key Management",
     "keyManagementDesc": "Opprett og administrer API-nøkler for autentisering av forespørsler til endepunktet ditt",
+    "requestFlowAria": "Your app sends requests through an API key to OmniRoute",
+    "requestFlowYourApp": "Your app",
+    "requestFlowApiKey": "API key",
+    "requestFlowOmniRoute": "OmniRoute",
     "totalKeys": "Totalnøkler",
     "restricted": "Begrenset",
     "totalRequests": "Totalt antall forespørsler",
@@ -5830,6 +5834,8 @@
     "rateLimitOverridesSection": "Overstyringer av hastighetsgrense",
     "rateLimitOverridesMaxConcurrentHint": "Overstyring av maks samtidige forespørsler for denne tilkoblingen. Overstyrer grensen på kontonivå.",
     "rateLimitOverridesMaxConcurrentLabel": "Maks samtidige (hastighetsgrense)",
+    "rateLimitOverridesMaxWaitMsHint": "__MISSING__:Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "Minimumstid (ms) mellom forespørsler. Overstyrer standardforsinkelsen for hastighetsbegrenseren.",
     "rateLimitOverridesMinTimeLabel": "Min. intervall (ms)",
     "rateLimitOverridesRpmHint": "Maks forespørsler per minutt for denne tilkoblingen. Overstyrer leverandørstandarden.",
@@ -6107,7 +6113,6 @@
       "glmt": "Forhåndsinnstilt GLM-profil med høyere token-budsjett, tenkning aktivert og lengre tidsavbrudd.",
       "getgoapi": "Koble til GoAPI med en API-nøkkel.",
       "groq": "Gratisnivå: 30 RPM / 14,4K RPD — uten kredittkort",
-      "hackclub": "Logg inn med Hack Club-kontoen din på ai.hackclub.com.",
       "haiper": "Hent API-nøkkel på haiper.ai/haiper-api",
       "heroku": "Koble til Heroku AI med en API-nøkkel.",
       "hcnsec": "Hent API-nøkkel på api.hcnsec.cn",
@@ -12202,7 +12207,7 @@
       },
       "omni-webhooks": {
         "name": "Webhooks",
-        "description": "Registrer, list opp, test og fjern webhook-endepunkter. Konfigurer hendelsesabonnementer (request.completed, provider.error, budget.exceeded osv.) og administrer leveringsforsøk."
+        "description": "__MISSING__:Register, list, test, and remove webhook endpoints. Configure event subscriptions (request.completed, request.failed, quota.exceeded, etc.) and manage delivery retries."
       },
       "omni-mcp": {
         "name": "MCP-server",

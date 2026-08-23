@@ -67,6 +67,11 @@ test("modalityBridgeVisionMaxChars=120 caps the description with a … suffix", 
       }),
       callVisionModel: async (_imageDataUri: string, _config: VisionModelConfig) =>
         LONG_DESCRIPTION,
+      // #10859 made the reroute heuristic try a live vision-capable model for
+      // not-combo text-only models, which would hijack the request before the
+      // describe path. Pin credentials to definitively-unusable (false) so the
+      // reroute is excluded and the describe path under test runs.
+      hasUsableCredentials: async () => false,
     },
   });
 
@@ -93,6 +98,8 @@ test("no modalityBridgeVisionMaxChars key: description is passed through in full
       }),
       callVisionModel: async (_imageDataUri: string, _config: VisionModelConfig) =>
         LONG_DESCRIPTION,
+      // Same #10859 reroute guard as above — keep the describe path under test.
+      hasUsableCredentials: async () => false,
     },
   });
 
@@ -125,6 +132,8 @@ test("updateSettingsSchema accepts an explicit modalityBridgeVisionMaxChars: 0 t
       }),
       callVisionModel: async (_imageDataUri: string, _config: VisionModelConfig) =>
         LONG_DESCRIPTION,
+      // Same #10859 reroute guard as above — keep the describe path under test.
+      hasUsableCredentials: async () => false,
     },
   });
 

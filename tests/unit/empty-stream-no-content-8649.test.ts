@@ -252,3 +252,68 @@ test("#8649 buildStreamErrorChunks-shaped error must not be rewritten as empty c
   assert.match(text, /AI Model Not Found/);
   assert.doesNotMatch(text, /Provider returned empty content/);
 });
+
+test("#8649 a Responses compaction-only stream is real output, not empty content", async () => {
+  // Codex remote compaction V2: POST /v1/responses with a compaction_trigger
+  // input item completes with output = [{type:"compaction", encrypted_content}]
+  // and no assistant text. The watcher's content keys do not include
+  // encrypted_content, so the healthy stream was followed by a synthetic
+  // response.failed ("Provider returned empty content") — which strict
+  // Responses clients reject even after response.completed.
+  const text = await runClientStream(
+    [
+      `data: {"type":"response.in_progress"}\n\n`,
+      `event: response.created\ndata: ${JSON.stringify({
+        type: "response.created",
+        response: { id: "resp_cmp", status: "in_progress", output: [] },
+      })}\n\n`,
+      `event: response.completed\ndata: ${JSON.stringify({
+        type: "response.completed",
+        response: {
+          id: "resp_cmp",
+          status: "completed",
+          output: [
+            { id: "cmp_1", type: "compaction", encrypted_content: "gAAAAABencryptedpayload" },
+          ],
+        },
+      })}\n\n`,
+    ],
+    FORMATS.OPENAI_RESPONSES
+  );
+
+  assert.match(text, /"type":"compaction"/);
+  assert.doesNotMatch(
+    text,
+    /Provider returned empty content|response\.failed/,
+    "a completed compaction response must not be followed by a synthetic failure frame"
+  );
+});
+
+test("#8649 an encrypted-reasoning-only stream is still empty content", async () => {
+  // Inverse of the compaction carve-out: an encrypted reasoning item is not
+  // user-visible output. A turn that produces only a reasoning trace and no
+  // message/tool call is the fake-success shape this guard exists to catch.
+  const text = await runClientStream(
+    [
+      `event: response.created\ndata: ${JSON.stringify({
+        type: "response.created",
+        response: { id: "resp_r", status: "in_progress", output: [] },
+      })}\n\n`,
+      `event: response.completed\ndata: ${JSON.stringify({
+        type: "response.completed",
+        response: {
+          id: "resp_r",
+          status: "completed",
+          output: [{ id: "rs_1", type: "reasoning", encrypted_content: "gAAAAABencryptedtrace" }],
+        },
+      })}\n\n`,
+    ],
+    FORMATS.OPENAI_RESPONSES
+  );
+
+  assert.match(
+    text,
+    /response\.failed|Provider returned empty content/,
+    "a reasoning-only turn must keep tripping the empty-content guard"
+  );
+});

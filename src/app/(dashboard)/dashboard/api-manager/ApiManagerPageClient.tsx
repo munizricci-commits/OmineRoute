@@ -959,6 +959,44 @@ export default function ApiManagerPageClient() {
         </div>
       )}
 
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-3">
+          <div>
+            <h1 className="text-3xl font-bold text-text-main">{t("keyManagement")}</h1>
+            <p className="mt-1 text-text-muted">{t("keyManagementDesc")}</p>
+          </div>
+          <div
+            className="flex flex-wrap items-center gap-2 text-sm text-text-secondary"
+            aria-label={t("requestFlowAria")}
+          >
+            <span className="rounded-control border border-border bg-surface px-3 py-1.5 font-medium">
+              {t("requestFlowYourApp")}
+            </span>
+            <span
+              className="material-symbols-outlined text-base text-text-muted"
+              aria-hidden="true"
+            >
+              arrow_forward
+            </span>
+            <span className="rounded-control border border-border bg-surface px-3 py-1.5 font-medium">
+              {t("requestFlowApiKey")}
+            </span>
+            <span
+              className="material-symbols-outlined text-base text-text-muted"
+              aria-hidden="true"
+            >
+              arrow_forward
+            </span>
+            <span className="rounded-control border border-border bg-surface px-3 py-1.5 font-medium">
+              {t("requestFlowOmniRoute")}
+            </span>
+          </div>
+        </div>
+        <Button onClick={() => setShowAddModal(true)} icon="add" className="shrink-0">
+          {t("createKey")}
+        </Button>
+      </div>
+
       {/* Filter Bar — shown when there are keys */}
       {keys.length > 0 && (
         <ApiKeyFilterBar

@@ -128,6 +128,75 @@ function tryParseJson(raw: string): unknown {
   }
 }
 
+/**
+ * Splits a tool_call `arguments` string that is actually multiple back-to-back JSON
+ * objects glued together with no separator, into its individual object substrings.
+ *
+ * Root cause (observed on opencode/muse-spark-1.2-contributor-free via the zen
+ * provider): some upstreams never vary `index`/`id` across a 2nd/3rd/… tool_call of
+ * the SAME name emitted in one turn, so every delta in `buildOpenAISummary` above
+ * resolves to the same accumulator key and `arguments` ends up as N JSON objects
+ * concatenated with no delimiter — invalid as a single JSON value, but each object is
+ * individually well-formed. Structural, not provider-specific: applies to whichever
+ * upstream exhibits the same index-collision streaming bug.
+ *
+ * Returns `null` when `raw` is empty, already valid single JSON, or does not scan as
+ * ≥2 back-to-back valid JSON values — callers must leave `arguments` untouched in
+ * that case (never regress a value that used to reach the client as-is).
+ */
+export function splitConcatenatedToolCallArguments(raw: string): string[] | null {
+  if (!raw) return null;
+  try {
+    JSON.parse(raw);
+    return null; // Already a single valid JSON value — nothing to split.
+  } catch {
+    // Fall through to the multi-value scan below.
+  }
+
+  const parts: string[] = [];
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  let start = -1;
+
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i];
+    if (start === -1) {
+      if (ch === " " || ch === "\n" || ch === "\r" || ch === "\t") continue;
+      if (ch !== "{" && ch !== "[") return null; // Not a value boundary — bail, leave untouched.
+      start = i;
+    }
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+    if (ch === "{" || ch === "[") depth++;
+    else if (ch === "}" || ch === "]") {
+      depth--;
+      if (depth === 0) {
+        parts.push(raw.slice(start, i + 1));
+        start = -1;
+      }
+    }
+  }
+  if (start !== -1 || depth !== 0 || parts.length < 2) return null;
+
+  for (const part of parts) {
+    try {
+      JSON.parse(part);
+    } catch {
+      return null; // One of the scanned segments isn't valid JSON — bail entirely.
+    }
+  }
+  return parts;
+}
+
 // ─── Per-format live reducers ────────────────────────────────────────────────
 // Each reducer mirrors the corresponding build*Summary()'s original for-loop
 // body exactly (ingest = one loop iteration, finalize = the post-loop return),
@@ -262,7 +331,28 @@ function createOpenAIReducer(fallbackModel?: string | null): SummaryReducer {
         message.reasoning_content = joinedReasoning;
       }
 
-      const finalToolCalls = [...toolCalls.values()].sort((a, b) => a.index - b.index);
+      const mergedToolCalls = [...toolCalls.values()].sort((a, b) => a.index - b.index);
+      // Expand any entry whose accumulated `arguments` turned out to be multiple
+      // concatenated JSON objects (upstream never varied index/id across repeated
+      // same-name tool_calls) into its own separate tool_calls entries.
+      const finalToolCalls: ToolCall[] = [];
+      let nextIndex = 0;
+      // Normalize tool_call indexes to contiguous 0-based (OpenAI contract).
+      for (const tc of mergedToolCalls) {
+        const splitArgs = splitConcatenatedToolCallArguments(tc.function.arguments);
+        if (!splitArgs) {
+          finalToolCalls.push({ ...tc, index: nextIndex++ });
+          continue;
+        }
+        for (const [i, args] of splitArgs.entries()) {
+          finalToolCalls.push({
+            id: tc.id ? `${tc.id}_split${i}` : null,
+            index: nextIndex++,
+            type: tc.type,
+            function: { name: tc.function.name, arguments: args },
+          });
+        }
+      }
       if (finalToolCalls.length > 0) {
         finishReason = "tool_calls";
         message.tool_calls = finalToolCalls;

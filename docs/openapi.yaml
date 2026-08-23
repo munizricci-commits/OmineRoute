@@ -8893,12 +8893,20 @@ components:
 
     ComboCreate:
       type: object
-      required: [name, model]
+      required: [name, models]
       properties:
         name:
           type: string
-        model:
-          type: string
+        models:
+          type: array
+          minItems: 1
+          items:
+            oneOf:
+              - type: string
+                description: "provider/model reference"
+              - type: object
+                description: "structured combo step (provider, model, weight, ...)"
+                additionalProperties: true
         strategy:
           type: string
           enum:
@@ -8920,14 +8928,3 @@ components:
             - context-optimized
             - fusion
           default: priority
-        nodes:
-          type: array
-          items:
-            type: object
-            properties:
-              connectionId:
-                type: string
-              weight:
-                type: integer
-              priority:
-                type: integer

@@ -2218,6 +2218,10 @@
     "fullAccess": "Full Access",
     "keyManagement": "API Key Management",
     "keyManagementDesc": "Create and manage API keys for authenticating requests to your endpoint",
+    "requestFlowAria": "Your app sends requests through an API key to OmniRoute",
+    "requestFlowYourApp": "Your app",
+    "requestFlowApiKey": "API key",
+    "requestFlowOmniRoute": "OmniRoute",
     "totalKeys": "Total Keys",
     "restricted": "Restricted",
     "totalRequests": "Total Requests",
@@ -5830,6 +5834,8 @@
     "rateLimitOverridesSection": "Sorğu Limiti Üstələmələri",
     "rateLimitOverridesMaxConcurrentHint": "Bu bağlantı üçün maksimum eyni vaxtda olan sorğuların üstələnməsi. Hesab səviyyəsindəki limiti üstələyir.",
     "rateLimitOverridesMaxConcurrentLabel": "Maksimum Eyni Vaxtda (Sorğu Limiti)",
+    "rateLimitOverridesMaxWaitMsHint": "__MISSING__:Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "Sorğular arasındakı minimum vaxt (ms). Standart sorğu limiti gecikməsini üstələyir.",
     "rateLimitOverridesMinTimeLabel": "Min İnterval (ms)",
     "rateLimitOverridesRpmHint": "Bu bağlantı üçün dəqiqədə maksimum sorğu sayı. Provayderin standart dəyərini üstələyir.",
@@ -6107,7 +6113,6 @@
       "glmt": "Daha yüksək token büdcəsi, düşünmə aktivləşdirilmiş və daha uzun vaxt aşımı olan hazır GLM profili.",
       "getgoapi": "GoAPI-ni API açarı ilə qoşun.",
       "groq": "Pulsuz tarif: 30 RPM / 14.4K RPD — kredit kartı tələb olunmur",
-      "hackclub": "ai.hackclub.com ünvanında Hack Club hesabınızla daxil olun.",
       "haiper": "API açarını haiper.ai/haiper-api ünvanından əldə edin",
       "heroku": "Heroku AI-ı API açarı ilə qoşun.",
       "hcnsec": "API açarını api.hcnsec.cn ünvanından əldə edin",
@@ -12202,7 +12207,7 @@
       },
       "omni-webhooks": {
         "name": "Vebhuklar",
-        "description": "Vebhuk son nöqtələrini qeydiyyatdan keçirin, siyahıya alın, sınaqdan keçirin və silin. Hadisə abunəliklərini (request.completed, provider.error, budget.exceeded və s.) konfiqurasiya edin və çatdırılmanın təkrar cəhdlərini idarə edin."
+        "description": "__MISSING__:Register, list, test, and remove webhook endpoints. Configure event subscriptions (request.completed, request.failed, quota.exceeded, etc.) and manage delivery retries."
       },
       "omni-mcp": {
         "name": "MCP Serveri",

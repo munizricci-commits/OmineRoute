@@ -1,11 +1,11 @@
 /**
- * HailuoWebExecutor — Hailuo AI (MiniMax) web chat via www.hailuo.ai.
+ * HailuoWebExecutor — Hailuo AI (MiniMax) web chat via chat.minimax.io.
  *
  * Distinct from the paid API-key `minimax`/`minimax-cn` providers
  * (open-sse/config/providers/registry/minimax/) — this targets the free
- * consumer chat product at hailuo.ai / chat.minimax.io.
+ * consumer chat product at chat.minimax.io.
  *
- * Endpoint: POST https://www.hailuo.ai/v4/api/chat/msg?<fingerprint query>
+ * Endpoint: POST https://chat.minimax.io/v4/api/chat/msg?<fingerprint query>
  * Auth:     `token` header — value read from the site's `_token` localStorage
  *           entry, plus a per-request `yy` signature header.
  * Body:     multipart/form-data — characterID, msgContent, chatID, searchMode.
@@ -33,7 +33,7 @@ import { createHash } from "node:crypto";
 import { BaseExecutor, type ExecuteInput } from "./base.ts";
 import { makeExecutorErrorResult as makeErrorResult, sanitizeErrorMessage } from "../utils/error.ts";
 
-const BASE_URL = "https://www.hailuo.ai";
+const BASE_URL = "https://chat.minimax.io";
 const API_PATH = "/v4/api/chat/msg";
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36";

@@ -1,3 +1,5 @@
+import { isValidResponsesItemId } from "./responsesItemId.ts";
+
 type JsonRecord = Record<string, unknown>;
 type SanitizeResponsesInputOptions = {
   dropInternalAssistantMessages?: boolean;
@@ -40,7 +42,12 @@ function sanitizeFunctionName(name: string): string {
 }
 
 function sanitizeInputItemId(record: JsonRecord): JsonRecord {
-  if (typeof record.id !== "string") return record;
+  if (record.id === undefined) return record;
+  if (!isValidResponsesItemId(record.id)) {
+    const next = { ...record };
+    delete next.id;
+    return next;
+  }
 
   const type = typeof record.type === "string" ? record.type : "";
   const expectedPrefix = SERVER_ITEM_ID_PREFIX_BY_TYPE[type];

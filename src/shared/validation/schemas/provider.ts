@@ -420,6 +420,22 @@ export const providerNodeValidateSchema = z.object({
   modelId: z.string().trim().max(200).optional().or(z.literal("")),
 });
 
+// rate-limit override numeric fields must reject operator intent loss.
+// `z.coerce.number()` silently turns "" into 0 and "60abc" into NaN, which
+// would drop or distort the value instead of rejecting it. Preprocess first so
+// an empty/non-numeric string fails validation (surfaced as a 400), while still
+// coercing legit numeric strings like "60".
+function rateLimitOverrideNumber(max: number) {
+  return z.preprocess((raw) => {
+    if (typeof raw === "string") {
+      if (raw.trim() === "") return NaN;
+      const parsed = Number(raw);
+      return Number.isNaN(parsed) ? raw : parsed;
+    }
+    return raw;
+  }, z.coerce.number().int().min(0).max(max));
+}
+
 export const updateProviderConnectionSchema = z
   .object({
     name: z.string().max(200).optional(),
@@ -468,17 +484,25 @@ export const updateProviderConnectionSchema = z
     projectId: z.union([z.string(), z.null()]).optional(),
     // Per-connection rate limit overrides — overrides the global RequestQueueSettings
     // for this connection. Set to null to clear all overrides.
+    // Per-connection rate limit overrides — overrides the global
+    // RequestQueueSettings for this connection. Set to null to clear all
+    // overrides. `.strict()` rejects unknown keys (e.g. a typo'd `tmp`) with a
+    // 400 instead of silently stripping them: the operator's intent is
+    // never dropped without an error. `.nullable()` (rather than a
+    // `z.union([z.null(), …])`) keeps the `unrecognized_keys` issue at the top
+    // level so the rejected key name survives into the 400 response.
     rateLimitOverrides: z
-      .union([
-        z.null(),
-        z.object({
-          rpm: z.coerce.number().int().min(0).max(1_000_000).optional(),
-          tpm: z.coerce.number().int().min(0).max(100_000_000).optional(),
-          tpd: z.coerce.number().int().min(0).max(10_000_000_000).optional(),
-          minTime: z.coerce.number().int().min(0).max(60_000).optional(),
-          maxConcurrent: z.coerce.number().int().min(0).max(10_000).optional(),
-        }),
-      ])
+      .object({
+        rpm: rateLimitOverrideNumber(1_000_000).optional(),
+        tpm: rateLimitOverrideNumber(100_000_000).optional(),
+        tpd: rateLimitOverrideNumber(10_000_000_000).optional(),
+        minTime: rateLimitOverrideNumber(60_000).optional(),
+        maxConcurrent: rateLimitOverrideNumber(10_000).optional(),
+        maxWaitMs: rateLimitOverrideNumber(120_000).optional(),
+      })
+      .partial()
+      .strict()
+      .nullable()
       .optional(),
     proxyEnabled: z.boolean().optional(),
     perKeyProxyEnabled: z.boolean().optional(),
@@ -609,6 +633,8 @@ export const validateProviderApiKeySchema = z
     customUserAgent: z.string().trim().max(500).optional(),
     baseUrl: z.string().trim().url().optional(),
     region: z.string().trim().max(64).optional(),
+    accessKeyId: z.string().trim().max(500).optional(),
+    sessionToken: z.string().trim().max(5000).optional(),
     cx: z.string().trim().max(500).optional(),
     runtimeKey: z.string().trim().max(65_536).optional(),
     tunnelId: z.string().trim().max(128).optional(),

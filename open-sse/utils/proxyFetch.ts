@@ -858,6 +858,12 @@ async function patchedFetch(
           msg.includes("fetch failed") ||
           errCode === "ECONNREFUSED" ||
           msg.includes("ECONNREFUSED") ||
+          errCode === "EAI_AGAIN" ||
+          msg.includes("EAI_AGAIN") ||
+          errCode === "ENOTFOUND" ||
+          msg.includes("ENOTFOUND") ||
+          errCode === "ETIMEDOUT" ||
+          msg.includes("ETIMEDOUT") ||
           (typeof errCode === "string" && errCode.startsWith("UND_ERR")) ||
           msg.includes("UND_ERR")
         ) {

@@ -2218,6 +2218,10 @@
     "fullAccess": "Plný přístup",
     "keyManagement": "Správa API Klíčů",
     "keyManagementDesc": "Vytvářejte a spravujte API klíče pro ověřování požadavků na váš koncový bod",
+    "requestFlowAria": "Your app sends requests through an API key to OmniRoute",
+    "requestFlowYourApp": "Your app",
+    "requestFlowApiKey": "API key",
+    "requestFlowOmniRoute": "OmniRoute",
     "totalKeys": "Celkem Klíčů",
     "restricted": "Omezený",
     "totalRequests": "Celkově žádostí",
@@ -5830,6 +5834,8 @@
     "rateLimitOverridesSection": "Přepsání limitů četnosti",
     "rateLimitOverridesMaxConcurrentHint": "Přepsání maximálního počtu souběžných požadavků pro toto připojení. Přepisuje limit na úrovni účtu.",
     "rateLimitOverridesMaxConcurrentLabel": "Max. souběžných (limit četnosti)",
+    "rateLimitOverridesMaxWaitMsHint": "__MISSING__:Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "Minimální doba (ms) mezi požadavky. Přepisuje výchozí prodlevu omezovače četnosti.",
     "rateLimitOverridesMinTimeLabel": "Min. interval (ms)",
     "rateLimitOverridesRpmHint": "Maximální počet požadavků za minutu pro toto připojení. Přepisuje výchozí hodnotu poskytovatele.",
@@ -6107,7 +6113,6 @@
       "glmt": "Přednastavený profil GLM s vyšším rozpočtem tokenů, povoleným přemýšlením a delším časovým limitem.",
       "getgoapi": "Připojte GoAPI pomocí API klíče.",
       "groq": "Bezplatná úroveň: 30 RPM / 14,4K RPD – bez platební karty",
-      "hackclub": "Přihlaste se pomocí svého účtu Hack Club na ai.hackclub.com.",
       "haiper": "Získejte API klíč na haiper.ai/haiper-api",
       "heroku": "Připojte Heroku AI pomocí API klíče.",
       "hcnsec": "Získejte API klíč na api.hcnsec.cn",
@@ -12202,7 +12207,7 @@
       },
       "omni-webhooks": {
         "name": "Webhooky",
-        "description": "Registrujte, zobrazujte, testujte a odebírejte koncové body webhooků. Konfigurujte odběry událostí (request.completed, provider.error, budget.exceeded atd.) a spravujte opakování doručení."
+        "description": "__MISSING__:Register, list, test, and remove webhook endpoints. Configure event subscriptions (request.completed, request.failed, quota.exceeded, etc.) and manage delivery retries."
       },
       "omni-mcp": {
         "name": "MCP server",

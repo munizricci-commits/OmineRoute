@@ -19,7 +19,7 @@ import {
 } from "../utils";
 import QuotaMiniBar from "../QuotaMiniBar";
 import { translateUsageOrFallback, type UsageTranslationValues } from "../i18nFallback";
-import { hasFixedQuotaOrder } from "../quotaParsing";
+import { hasFixedQuotaOrder, hasCanonicalWindowOrder, sortQuotasByWindow } from "../quotaParsing";
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
   USD: "$",
@@ -92,9 +92,17 @@ export function sortQuotasByRemaining(quotas: any[]): any[] {
  * parseQuotaData() already established. Every other provider still gets the
  * remaining-percentage sort. Fixes #6687 (bars re-sorted by % undid the fixed
  * session/weekly order).
+ *
+ * #7764 residual: providers outside that whitelist which nonetheless report
+ * rolling time windows (claude, minimax, zai, command-code, ...) are ordered
+ * chronologically via `hasCanonicalWindowOrder`/`sortQuotasByWindow`, so the
+ * expanded card agrees with the collapsed card (`topQuotas`) and with sibling
+ * accounts of the same provider.
  */
 export function resolveQuotaDisplayOrder(providerId: string | undefined, quotas: any[]): any[] {
-  return hasFixedQuotaOrder(providerId) ? [...quotas] : sortQuotasByRemaining(quotas);
+  if (hasFixedQuotaOrder(providerId)) return [...quotas];
+  if (hasCanonicalWindowOrder(quotas)) return sortQuotasByWindow(quotas);
+  return sortQuotasByRemaining(quotas);
 }
 
 /** Pure helper — slices the sorted quotas down to the visible window. */

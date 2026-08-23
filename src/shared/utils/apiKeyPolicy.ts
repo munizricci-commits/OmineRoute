@@ -645,13 +645,37 @@ async function validateRateLimitAndThrottle(context: PolicyContext): Promise<Res
   return null;
 }
 
+/**
+ * A bare `x-api-key` / `x-goog-api-key` (no anthropic-version, no claude
+ * user-agent) is accepted by the CLIENT_API auth layer (clientApi.ts
+ * `extractBearer`) but ignored by the Issue-#2225-gated `extractApiKey()` used
+ * for policy resolution — so a genuine key sent that way passed auth while
+ * skipping its own allowedModels / budget / rate-limit policy
+ * (GHSA-2phc-xp22-9f56). Resolve those headers here so the policy layer sees the
+ * same key auth accepted. Bearer, URL-token and anthropic-gated paths are already
+ * covered by `extractApiKey()`; unknown keys still fail open downstream, so this
+ * only tightens enforcement for real keys.
+ */
+function extractUngatedClientApiKey(request: Request): string | null {
+  const xApiKey = request.headers.get("x-api-key") ?? request.headers.get("X-Api-Key");
+  if (xApiKey && xApiKey.trim()) return xApiKey.trim();
+  const xGoog = request.headers.get("x-goog-api-key") ?? request.headers.get("X-Goog-Api-Key");
+  if (xGoog && xGoog.trim()) return xGoog.trim();
+  return null;
+}
+
 export async function enforceApiKeyPolicy(
   request: Request,
   modelStr: string | null
 ): Promise<ApiKeyPolicyResult> {
-  // A real bearer key wins; otherwise an authenticated dashboard playground may
-  // test a specific key's policy by id (resolved server-side, secret never sent).
-  const apiKey = extractApiKey(request) || (await resolvePlaygroundTestKey(request));
+  // A real bearer key wins; then a bare x-api-key/x-goog-api-key that auth
+  // accepted but extractApiKey() gates out; otherwise an authenticated dashboard
+  // playground may test a specific key's policy by id (resolved server-side,
+  // secret never sent).
+  const apiKey =
+    extractApiKey(request) ||
+    extractUngatedClientApiKey(request) ||
+    (await resolvePlaygroundTestKey(request));
 
   // No API key = local/session mode, skip policy checks
   if (!apiKey) {

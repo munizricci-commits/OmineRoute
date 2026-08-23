@@ -2218,6 +2218,10 @@
     "fullAccess": "Acceso completo",
     "keyManagement": "Gestión de claves API",
     "keyManagementDesc": "Cree y administre claves API para autenticar solicitudes en su punto final",
+    "requestFlowAria": "Your app sends requests through an API key to OmniRoute",
+    "requestFlowYourApp": "Your app",
+    "requestFlowApiKey": "API key",
+    "requestFlowOmniRoute": "OmniRoute",
     "totalKeys": "Claves totales",
     "restricted": "Restringido",
     "totalRequests": "Solicitudes totales",
@@ -5830,6 +5834,8 @@
     "rateLimitOverridesSection": "Rate Limit Overrides",
     "rateLimitOverridesMaxConcurrentHint": "Max concurrent requests override for this connection. Overrides the account-level cap.",
     "rateLimitOverridesMaxConcurrentLabel": "Max Concurrent (Rate Limit)",
+    "rateLimitOverridesMaxWaitMsHint": "__MISSING__:Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "Minimum time (ms) between requests. Overrides the default rate limiter delay.",
     "rateLimitOverridesMinTimeLabel": "Min Interval (ms)",
     "rateLimitOverridesRpmHint": "Max requests per minute for this connection. Overrides the provider default.",
@@ -6107,7 +6113,6 @@
       "glmt": "Preset GLM profile with higher token budget, thinking enabled, and longer timeout.",
       "getgoapi": "Connect GoAPI with an API key.",
       "groq": "Free tier: 30 RPM / 14.4K RPD — no credit card",
-      "hackclub": "Sign in with your Hack Club account at ai.hackclub.com.",
       "haiper": "Get API key at haiper.ai/haiper-api",
       "heroku": "Connect Heroku AI with an API key.",
       "hcnsec": "Get API key at api.hcnsec.cn",
@@ -12202,7 +12207,7 @@
       },
       "omni-webhooks": {
         "name": "Webhooks",
-        "description": "Register, list, test, and remove webhook endpoints. Configure event subscriptions (request.completed, provider.error, budget.exceeded, etc.) and manage delivery retries."
+        "description": "__MISSING__:Register, list, test, and remove webhook endpoints. Configure event subscriptions (request.completed, request.failed, quota.exceeded, etc.) and manage delivery retries."
       },
       "omni-mcp": {
         "name": "MCP Server",

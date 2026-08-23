@@ -1,4 +1,10 @@
-import { isIP } from "node:net";
+import { ipVersion, isPrivateHost, normalizeHost } from "./privateHost";
+
+// #11122: the host classification lives in `./privateHost.ts` because
+// `open-sse/config/providerRegistry.ts` imports it from a module reachable by a browser
+// bundle, and `node:net` cannot be resolved there. Re-exported so every existing caller of
+// `isPrivateHost` from this module keeps working unchanged.
+export { isPrivateHost };
 
 export const PROVIDER_URL_BLOCKED_MESSAGE = "Blocked private or local provider URL";
 export const CLOUD_METADATA_BLOCKED_MESSAGE = "Blocked cloud-metadata endpoint";
@@ -29,61 +35,6 @@ export class OutboundUrlGuardError extends Error {
   }
 }
 
-function normalizeHost(hostname: string) {
-  const normalized = hostname.trim().toLowerCase();
-  if (normalized.startsWith("[") && normalized.endsWith("]")) {
-    return normalized.slice(1, -1);
-  }
-  return normalized;
-}
-
-export function isPrivateHost(hostname: string) {
-  const normalized = normalizeHost(hostname);
-  if (!normalized) return true;
-
-  if (
-    normalized === "localhost" ||
-    normalized === "0.0.0.0" ||
-    // `::` is the IPv6 twin of `0.0.0.0`: connecting to it reaches a service bound
-    // to the IPv6 loopback, so it has to be refused alongside its IPv4 spelling.
-    normalized === "::" ||
-    normalized === "127.0.0.1" ||
-    normalized === "::1" ||
-    normalized.endsWith(".localhost") ||
-    normalized.endsWith(".local") ||
-    // `.internal` is reserved for private use (ICANN-style) and is the
-    // hostname suffix used by GCP/Azure metadata probes
-    // (e.g. `metadata.google.internal`).
-    normalized.endsWith(".internal") ||
-    normalized.startsWith("::ffff:")
-  ) {
-    return true;
-  }
-
-  if (isIP(normalized) === 4) {
-    const octets = normalized.split(".").map((segment) => parseInt(segment, 10));
-    const [a, b] = octets;
-
-    if (a === 0 || a === 10 || a === 127) return true;
-    if (a === 169 && b === 254) return true;
-    if (a === 192 && b === 168) return true;
-    if (a === 172 && b >= 16 && b <= 31) return true;
-    if (a === 100 && b >= 64 && b <= 127) return true;
-    return false;
-  }
-
-  if (isIP(normalized) === 6) {
-    return (
-      normalized === "::1" ||
-      normalized.startsWith("fc") ||
-      normalized.startsWith("fd") ||
-      normalized.startsWith("fe80:")
-    );
-  }
-
-  return false;
-}
-
 // WHATWG URL serialises an IPv4-mapped IPv6 address as hextets, so
 // `http://[::ffff:169.254.169.254]/` reaches these helpers as `::ffff:a9fe:a9fe`.
 // Matching the dotted spelling alone therefore misses every mapped address that
@@ -92,7 +43,7 @@ function mappedIpv4Host(hostname: string): string | null {
   const normalized = normalizeHost(hostname);
   if (!normalized.startsWith("::ffff:")) return null;
   const embedded = normalized.slice("::ffff:".length);
-  if (isIP(embedded) === 4) return embedded;
+  if (ipVersion(embedded) === 4) return embedded;
   const hextets = embedded.split(":");
   if (hextets.length !== 2) return null;
   const [high, low] = hextets.map((part) =>
@@ -202,3 +153,4 @@ export function parseAndValidateNonMetadataUrl(input: string | URL) {
 // opencode.ts) where no `tsconfig.json` is present to resolve the `@/*` path alias. Keeping
 // this module free of ANY `@/`-aliased import is what makes it safe to load from the CLI.
 // Do not add a `@/`-aliased import here — see docs/security/… (packaging) and #7682.
+// The same rule binds `./privateHost.ts`, which this module re-exports from.

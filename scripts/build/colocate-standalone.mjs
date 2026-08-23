@@ -18,8 +18,8 @@
  */
 import { cpSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { execFileSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { runBuildTool } from "./buildToolRunner.mjs";
 import { computeDependencyClosure } from "./colocateOptionals.mjs";
 
 const ROOT = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
@@ -89,8 +89,12 @@ function main() {
 
   const callLogWorkerDest = join(STANDALONE, CALL_LOG_WORKER_REL);
   mkdirSync(dirname(callLogWorkerDest), { recursive: true });
-  execFileSync(
-    join(ROOT, "node_modules", ".bin", "esbuild"),
+  // Never spawn `node_modules/.bin/esbuild` directly: that extensionless path is
+  // a POSIX shell script and does not exist on Windows (ENOENT), which failed
+  // `npm run build` right after a successful `next build`. See buildToolRunner.mjs.
+  runBuildTool(
+    "esbuild",
+    "esbuild",
     [
       CALL_LOG_WORKER_SRC,
       "--bundle",
@@ -120,8 +124,9 @@ function main() {
   if (!existsSync(workerDest)) {
     mkdirSync(dirname(workerDest), { recursive: true });
     try {
-      execFileSync(
-        join(ROOT, "node_modules", ".bin", "esbuild"),
+      runBuildTool(
+        "esbuild",
+        "esbuild",
         [
           join(
             ROOT,

@@ -2218,6 +2218,10 @@
     "fullAccess": "完全訪問",
     "keyManagement": "API 金鑰管理",
     "keyManagementDesc": "建立和管理用於訪問端點的 API 金鑰",
+    "requestFlowAria": "Your app sends requests through an API key to OmniRoute",
+    "requestFlowYourApp": "Your app",
+    "requestFlowApiKey": "API key",
+    "requestFlowOmniRoute": "OmniRoute",
     "totalKeys": "金鑰總數",
     "restricted": "受限",
     "totalRequests": "請求總數",
@@ -5830,6 +5834,8 @@
     "rateLimitOverridesSection": "速率限制覆蓋",
     "rateLimitOverridesMaxConcurrentHint": "此連線的最大併發請求覆蓋。覆蓋帳戶級別的上限。",
     "rateLimitOverridesMaxConcurrentLabel": "最大併發（速率限制）",
+    "rateLimitOverridesMaxWaitMsHint": "__MISSING__:Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "請求之間的最小時間（毫秒）。覆蓋預設速率限制器延遲。",
     "rateLimitOverridesMinTimeLabel": "最小間隔（毫秒）",
     "rateLimitOverridesRpmHint": "此連線的每分鐘最大請求數。覆蓋提供者預設值。",
@@ -6107,7 +6113,6 @@
       "glmt": "預設 GLM 設定檔，具有較高的 token 預算、啟用思考功能，以及更長的超時時間。",
       "getgoapi": "使用 API 金鑰連線 GoAPI。",
       "groq": "免費方案：每分鐘 30 次 / 每天 14,400 次請求 — 無需信用卡",
-      "hackclub": "在 ai.hackclub.com 使用你的 Hack Club 帳號登入。",
       "haiper": "在 haiper.ai/haiper-api 取得 API 金鑰",
       "heroku": "使用 API 金鑰連線 Heroku AI。",
       "hcnsec": "在 api.hcnsec.cn 取得 API 金鑰",
@@ -12202,7 +12207,7 @@
       },
       "omni-webhooks": {
         "name": "Webhook",
-        "description": "註冊、列出、測試和移除 Webhook 端點。設定事件訂閱（request.completed、provider.error、budget.exceeded 等）並管理傳遞重試。"
+        "description": "__MISSING__:Register, list, test, and remove webhook endpoints. Configure event subscriptions (request.completed, request.failed, quota.exceeded, etc.) and manage delivery retries."
       },
       "omni-mcp": {
         "name": "MCP 伺服器",

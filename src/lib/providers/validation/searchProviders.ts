@@ -77,6 +77,13 @@ export const SEARCH_VALIDATOR_CONFIGS: Record<
       body: JSON.stringify({ query: "test", max_results: 1 }),
     },
   }),
+  context7: (apiKey) => ({
+    url: "https://context7.com/api/v1/search?query=test",
+    init: {
+      method: "GET",
+      headers: { Accept: "application/json", Authorization: `Bearer ${apiKey}` },
+    },
+  }),
   "google-pse-search": (apiKey, providerSpecificData = {}) => {
     const cx = providerSpecificData?.cx;
     if (!cx || typeof cx !== "string") {

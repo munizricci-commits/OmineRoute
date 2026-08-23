@@ -1,4 +1,5 @@
 import type { RegistryEntry } from "../../../shared.ts";
+import { OPENCODE_ZEN_GO_SHARED_MODELS } from "../../../shared.ts";
 
 export const opencode_goProvider: RegistryEntry = {
   id: "opencode-go",
@@ -23,9 +24,13 @@ export const opencode_goProvider: RegistryEntry = {
     { id: "glm-5.2", name: "GLM-5.2", supportsReasoning: true },
     { id: "glm-5.2-high", name: "GLM-5.2 (high effort)", supportsReasoning: true },
     { id: "glm-5.2-max", name: "GLM-5.2 (max effort)", supportsReasoning: true },
+
+    ...OPENCODE_ZEN_GO_SHARED_MODELS,
+    // models[0] (glm-5.2) is the dashboard default (LlmChatCard/ProviderTestSlideOver take models[0]).
+
     { id: "glm-5.1", name: "GLM-5.1" },
     { id: "glm-5", name: "GLM-5" },
-    { id: "kimi-k2.7-code", name: "Kimi K2.7 Code" },
+    // kimi-k2.7-code declared identically on opencode-zen — see OPENCODE_ZEN_GO_SHARED_MODELS.
     { id: "kimi-k2.6", name: "Kimi K2.6" },
     { id: "kimi-k2.5", name: "Kimi K2.5" },
     // #8353: Kimi K3 base + max-effort alias from the OpenCode Go registry.
@@ -89,7 +94,8 @@ export const opencode_goProvider: RegistryEntry = {
       supportsVision: false,
       supportsReasoning: true,
     },
-    { id: "qwen3.6-plus", name: "Qwen3.6 Plus", targetFormat: "claude", supportsVision: false },
+    // qwen3.6-plus / qwen3.5-plus base ids declared identically on opencode-zen — see
+    // OPENCODE_ZEN_GO_SHARED_MODELS.
     {
       id: "qwen3.6-plus-high",
       name: "Qwen3.6 Plus (high effort)",
@@ -104,7 +110,6 @@ export const opencode_goProvider: RegistryEntry = {
       supportsVision: false,
       supportsReasoning: true,
     },
-    { id: "qwen3.5-plus", name: "Qwen3.5 Plus", targetFormat: "claude", supportsVision: false },
     // #8353: hy3 is the Go-tier base id (distinct from hy3-preview / hy3-free).
     { id: "hy3", name: "Hunyuan3", contextLength: 256000, supportsReasoning: true },
     {
@@ -138,6 +143,7 @@ export const opencode_goProvider: RegistryEntry = {
       supportsVision: true,
       supportsAudio: true,
       supportsVideo: true,
+      targetFormat: "openai-responses",
     },
     {
       id: "muse-spark-1.2-contributor-minimal",
@@ -148,6 +154,7 @@ export const opencode_goProvider: RegistryEntry = {
       supportsVision: true,
       supportsAudio: true,
       supportsVideo: true,
+      targetFormat: "openai-responses",
     },
     {
       id: "muse-spark-1.2-contributor-low",
@@ -158,6 +165,7 @@ export const opencode_goProvider: RegistryEntry = {
       supportsVision: true,
       supportsAudio: true,
       supportsVideo: true,
+      targetFormat: "openai-responses",
     },
     {
       id: "muse-spark-1.2-contributor-medium",
@@ -168,6 +176,7 @@ export const opencode_goProvider: RegistryEntry = {
       supportsVision: true,
       supportsAudio: true,
       supportsVideo: true,
+      targetFormat: "openai-responses",
     },
     {
       id: "muse-spark-1.2-contributor-high",
@@ -178,6 +187,7 @@ export const opencode_goProvider: RegistryEntry = {
       supportsVision: true,
       supportsAudio: true,
       supportsVideo: true,
+      targetFormat: "openai-responses",
     },
     {
       id: "muse-spark-1.2-contributor-xhigh",
@@ -188,6 +198,7 @@ export const opencode_goProvider: RegistryEntry = {
       supportsVision: true,
       supportsAudio: true,
       supportsVideo: true,
+      targetFormat: "openai-responses",
     },
     // #8353: Grok 4.5 + effort tiers from the OpenCode Go registry.
     { id: "grok-4.5", name: "Grok 4.5", supportsReasoning: true },

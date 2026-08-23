@@ -7,6 +7,7 @@ import { GheCopilotExecutor } from "./ghe-copilot.ts";
 import { QoderExecutor } from "./qoder.ts";
 import { KiroExecutor } from "./kiro.ts";
 import { CodexExecutor } from "./codex.ts";
+import { CodexAppServerExecutor } from "./codex-app-server.ts";
 import { CursorExecutor } from "./cursor.ts";
 import { TraeExecutor } from "./trae.ts";
 import { DefaultExecutor } from "./default.ts";
@@ -97,6 +98,7 @@ const executors = {
   "amazon-q": new KiroExecutor("amazon-q"),
   bedrock: new BedrockExecutor(),
   codex: new CodexExecutor(),
+  "codex-app-server": new CodexAppServerExecutor({}, "codex-app-server"),
   "chatgpt-web-codex": new ChatGptWebCodexExecutor(),
   "cgpt-codex": new ChatGptWebCodexExecutor(),
   cursor: new CursorExecutor(),

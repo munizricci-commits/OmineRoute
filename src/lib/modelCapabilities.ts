@@ -254,6 +254,39 @@ function leafModelId(modelId: string | null | undefined): string | null {
   return leaf && leaf !== modelId ? leaf : null;
 }
 
+/**
+ * Effort suffixes the catalog synthesizes as `<base>-<tier>` variant ids from a
+ * base model's `supportedThinkingEfforts` (mirrors REGISTERED_EFFORT_SUFFIXES
+ * in open-sse/utils/registeredEffortVariants.ts, plus `minimal` for muse).
+ */
+const EFFORT_VARIANT_SUFFIXES = [
+  "none",
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+] as const;
+
+/**
+ * Strip a trailing effort-tier suffix off a model id (e.g.
+ * `deepseek-v4-flash-max` → `deepseek-v4-flash`). Longest token first so
+ * `xhigh` is matched before `high`. Returns null when no known suffix matches
+ * or the id would be left empty.
+ */
+function stripKnownEffortSuffix(modelId: string): string | null {
+  const normalized = String(modelId || "").trim();
+  if (!normalized) return null;
+  for (const suffix of EFFORT_VARIANT_SUFFIXES) {
+    const token = `-${suffix}`;
+    if (normalized.length > token.length && normalized.endsWith(token)) {
+      return normalized.slice(0, -token.length);
+    }
+  }
+  return null;
+}
+
 function getStaticSpec(modelId: string | null, rawModel: string | null): ModelSpec | undefined {
   if (modelId) {
     const byCanonical = getModelSpec(modelId);
@@ -704,14 +737,37 @@ export function getResolvedModelCapabilities(
   // persisted override never feeds back into the comparison that (re)writes it.
   const usePersistedOverrides = options?.persistedOverrides !== false;
   const resolved = resolveCapabilityInput(input);
-  const spec = getStaticSpec(resolved.model, resolved.rawModel);
-  const registryModel = getRegistryModel(resolved.provider, resolved.model);
-  const synced = getSyncedCapabilityForResolved(
+  let spec = getStaticSpec(resolved.model, resolved.rawModel);
+  let registryModel = getRegistryModel(resolved.provider, resolved.model);
+  let synced = getSyncedCapabilityForResolved(
     resolved.provider,
     resolved.model,
     resolved.rawModel,
     snapshot
   );
+
+  // Effort-suffixed variants (e.g. command-code `deepseek-v4-flash-max`,
+  // `meta/muse-spark-1.2-contributor-xhigh`) are synthesized in the catalog
+  // from the base model's `supportedThinkingEfforts`; they have no registry
+  // row, synced row, or static spec of their own. Without a base-model
+  // fallback the variant resolves with NULL tool/vision/context capabilities,
+  // so a tool-bearing combo request treats the target as incompatible and
+  // silently reorders it behind models with confirmed capabilities. Resolve
+  // the variant's capabilities from its base model when every direct source
+  // misses.
+  if (!spec && !registryModel && !synced && resolved.provider && resolved.model) {
+    const baseModelId = stripKnownEffortSuffix(resolved.model);
+    if (baseModelId && baseModelId !== resolved.model) {
+      spec = getStaticSpec(baseModelId, resolved.rawModel);
+      registryModel = getRegistryModel(resolved.provider, baseModelId);
+      synced = getSyncedCapabilityForResolved(
+        resolved.provider,
+        baseModelId,
+        resolved.rawModel,
+        snapshot
+      );
+    }
+  }
 
   const modalitiesInput = parseModalities(synced?.modalities_input);
   const modalitiesOutput = parseModalities(synced?.modalities_output);

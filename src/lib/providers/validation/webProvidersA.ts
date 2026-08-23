@@ -13,11 +13,14 @@ import {
   normalizeSessionCookieHeader,
 } from "@/lib/providers/webCookieAuth";
 
-// kimi-web uses the international `www.kimi.com` Connect-RPC API. The legacy
-// `kimi.moonshot.cn` domain now 307-redirects every non-CN visitor, and even
-// if you bypass the redirect the old `/api/chat` REST endpoint is gone. The
-// SPA exposes a profile probe at `GET /api/user` that returns the user object
-// at the top level when the `Authorization: Bearer <access_token>` header is valid.
+// kimi-web uses the international (west-facing) `www.kimi.ai` Connect-RPC API by
+// default. `www.kimi.com` is the China-region endpoint — it serves China users but
+// the China region is not reliably reachable from outside CN, so it is not the
+// default. The legacy `kimi.moonshot.cn` domain now 307-redirects every non-CN
+// visitor, and even if you bypass the redirect the old `/api/chat` REST endpoint is
+// gone. The SPA exposes a profile probe at `GET /api/user` that returns the user
+// object at the top level when the `Authorization: Bearer <access_token>` header is
+// valid. Override the endpoint with KIMI_WEB_BASE_URL (opt-in).
 export async function validateKimiWebProvider({ apiKey }: any) {
   const rawCred = String(apiKey ?? "").trim();
   if (!rawCred) {

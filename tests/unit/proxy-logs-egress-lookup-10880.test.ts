@@ -42,6 +42,7 @@ test("returns the LAST known egress IP of the connection in the window", () => {
     egressIp: "203.0.113.9",
     connectionId: "conn-a",
   });
+  proxyLogger.flushProxyLogsSync(); // persist the enqueued batch before the DB-backed lookup
   const got = getRecentEgressIpForConnection("conn-a", new Date(Date.now() - 24 * 3600_000).toISOString());
   assert.deepEqual(got, { egressIp: "203.0.113.9", at: got!.at });
 });

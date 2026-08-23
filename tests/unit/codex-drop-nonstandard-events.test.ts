@@ -17,6 +17,19 @@ function sseResponse(body: string): Response {
   });
 }
 
+function chunkedSseResponse(chunks: string[]): Response {
+  const encoder = new TextEncoder();
+  return new Response(
+    new ReadableStream({
+      start(controller) {
+        for (const chunk of chunks) controller.enqueue(encoder.encode(chunk));
+        controller.close();
+      },
+    }),
+    { status: 200, headers: { "content-type": "text/event-stream" } }
+  );
+}
+
 async function readAll(res: Response): Promise<string> {
   return await res.text();
 }
@@ -61,10 +74,10 @@ describe("codexDropNonstandardEvents (#11014)", () => {
 describe("filterNonstandardCodexSse (#4715)", () => {
   it("drops codex.* event blocks but keeps standard response.* events", async () => {
     const stream =
-      "event: response.created\ndata: {\"type\":\"response.created\"}\n\n" +
+      'event: response.created\ndata: {"type":"response.created"}\n\n' +
       "event: codex.rate_limits\n\n" +
-      "event: response.output_text.delta\ndata: {\"delta\":\"hi\"}\n\n" +
-      "event: response.completed\ndata: {\"type\":\"response.completed\"}\n\n";
+      'event: response.output_text.delta\ndata: {"delta":"hi"}\n\n' +
+      'event: response.completed\ndata: {"type":"response.completed"}\n\n';
     const out = await readAll(filterNonstandardCodexSse(sseResponse(stream)));
     assert.ok(!out.includes("codex.rate_limits"), "codex.* frame must be stripped");
     assert.ok(out.includes("response.created"), "standard events preserved");
@@ -72,18 +85,31 @@ describe("filterNonstandardCodexSse (#4715)", () => {
     assert.ok(out.includes("response.completed"), "terminal event preserved");
   });
 
+  it("filters CRLF-framed events split across transport chunks", async () => {
+    const response = chunkedSseResponse([
+      'event: response.created\r\ndata: {"type":"response.created"}\r\n\r',
+      "\nevent: codex.rate_limits\r\n\r\n",
+      'event: response.completed\r\ndata: {"type":"response.completed"}\r\n\r\n',
+    ]);
+
+    const out = await readAll(filterNonstandardCodexSse(response));
+
+    assert.ok(!out.includes("codex.rate_limits"), "codex.* frame must be stripped");
+    assert.ok(out.includes("response.created"), "standard events preserved");
+    assert.ok(out.includes("response.completed"), "terminal event preserved");
+  });
+
   it("passes through non-SSE responses untouched", async () => {
-    const json = new Response("{\"ok\":true}", {
+    const json = new Response('{"ok":true}', {
       status: 200,
       headers: { "content-type": "application/json" },
     });
     const out = filterNonstandardCodexSse(json);
-    assert.equal(await out.text(), "{\"ok\":true}");
+    assert.equal(await out.text(), '{"ok":true}');
   });
 
   it("drops a trailing codex.* block with no double-newline terminator (flush path)", async () => {
-    const stream =
-      "event: response.created\ndata: {}\n\n" + "event: codex.token_count\ndata: {}";
+    const stream = "event: response.created\ndata: {}\n\n" + "event: codex.token_count\ndata: {}";
     const out = await readAll(filterNonstandardCodexSse(sseResponse(stream)));
     assert.ok(out.includes("response.created"));
     assert.ok(!out.includes("codex.token_count"));

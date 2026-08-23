@@ -27,7 +27,7 @@ export const clineProvider: RegistryEntry = {
   // the official free bucket and text-output models advertised as zero-cost.
   models: [
     {
-      id: "zai/glm-5.2",
+      id: "z-ai/glm-5.2",
       name: "GLM 5.2",
       toolCalling: true,
       supportsReasoning: true,

@@ -205,6 +205,7 @@ function drainingResponse(requestId: string): NextResponse {
     { status: 503 }
   );
   response.headers.set(AUTHZ_HEADER_REQUEST_ID, requestId);
+  response.headers.set("Retry-After", "5");
   return response;
 }
 

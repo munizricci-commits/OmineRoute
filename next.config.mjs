@@ -138,6 +138,10 @@ const nextConfig = {
       // the stub to every npm/Electron/VPS artifact and broke Agent Bridge
       // start for all non-Docker users (#6344). See scripts/build/mitm-stub-flag.mjs.
       ...mitmManagerAliasFor(process.env),
+      // Build-time stub so the bundler never traces the native better-sqlite3
+      // addon into a build worker (SIGABRT at worker teardown). Runtime still
+      // uses the real package via serverExternalPackages. (#10060)
+      "better-sqlite3": "./src/lib/db/better-sqlite3.stub.js",
       ...minimalBuildAliases,
     },
     // src/lib/agentSkills/generator.ts builds its fs base path from a runtime

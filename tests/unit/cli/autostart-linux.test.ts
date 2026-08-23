@@ -75,7 +75,8 @@ test("resolveCliPath finds omniroute.mjs from argv", async () => {
 
   if (existsSync(desktopPath)) {
     const desktop = readFileSync(desktopPath, "utf8");
-    assert.match(desktop, /Exec=.*serve --no-open/);
+    assert.match(desktop, /Exec=.*serve --no-open --tray/);
+    assert.match(desktop, /Terminal=false/);
   }
 
   disable();

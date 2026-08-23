@@ -1,6 +1,11 @@
-import { BaseExecutor, type ExecuteInput, type ProviderCredentials } from "./base.ts";
+import {
+  BaseExecutor,
+  type ExecuteInput,
+  type ExecutorExecuteResult,
+  type ProviderCredentials,
+} from "./base.ts";
 import { PROVIDERS } from "../config/constants.ts";
-import { getModelTargetFormat } from "../config/providerModels.ts";
+import { getModelTargetFormat, PROVIDER_ID_TO_ALIAS } from "../config/providerModels.ts";
 import {
   injectReasoningContentForThinkingModel,
   isThinkingMessageModel,
@@ -15,6 +20,8 @@ import {
   markSuccess as markAccountSuccess,
   maskAccountId,
   isNetworkErrorRotatable,
+  isEmptyUpstreamRejection,
+  extractChatcmplId,
 } from "./accountRotation.ts";
 import { isNetworkRotationSharedEgressGuardEnabled } from "@/shared/utils/featureFlags";
 
@@ -125,6 +132,119 @@ export function isPremiumOpencodeModel(model: string, provider: string): boolean
   return !OPENCODE_FREE_MODELS.has(model);
 }
 
+/**
+ * Resolves the registry `targetFormat` for a model, aliasing `provider` first.
+ *
+ * `PROVIDER_MODELS` is keyed by the provider's public ALIAS (e.g. `"oc"`), not its
+ * raw registry id (e.g. `"opencode"`) — mirrors `resolveChatCoreTargetFormat()`
+ * (`handlers/chatCore/targetFormat.ts`), which already aliases before calling
+ * `getModelTargetFormat()`. Calling it with the raw id here made every entry miss
+ * silently (fell through to `"openai"`), while chatCore's own request-body
+ * translation (correctly aliased) still switched to the Responses API shape for
+ * `targetFormat:"openai-responses"` models — sending a Responses-shaped body to
+ * the `/chat/completions` URL this executor's own `buildUrl()` kept selecting.
+ * Exported for testability.
+ */
+export function resolveOpencodeTargetFormat(provider: string, model: string): string {
+  const alias = PROVIDER_ID_TO_ALIAS[provider] || provider;
+  return getModelTargetFormat(alias, model) || "openai";
+}
+
+/**
+ * muse-spark (opencode-go) burns its entire output budget on invisible
+ * server-side reasoning before emitting any content. With small caller-set
+ * budgets the upstream answers HTTP 200 with an empty message
+ * (`{"message":{"role":"assistant"},"finish_reason":null}` and
+ * `completion_tokens == max_tokens`) — chatCore then flags the fake success as
+ * "Provider returned empty content" / 502 and burns a fallback attempt.
+ *
+ * Verified live 2026-08-23: max_tokens=64/100 → empty content;
+ * 256/512/1024 → content present (hidden reasoning consumed 196–253 of it).
+ *
+ * Floor raised budgets only — explicit large budgets and non-muse-spark models
+ * are untouched, and no budget is synthesized when the caller set none.
+ */
+export const MUSE_SPARK_MIN_OUTPUT_TOKENS = 512;
+
+export function applyMuseSparkMinOutputTokens(model: string, body: Record<string, unknown>): void {
+  if (!model.startsWith("muse-spark")) return;
+  const current = body.max_tokens;
+  if (typeof current !== "number" || !Number.isFinite(current)) return;
+  if (current >= MUSE_SPARK_MIN_OUTPUT_TOKENS) return;
+  body.max_tokens = MUSE_SPARK_MIN_OUTPUT_TOKENS;
+}
+
+/**
+ * muse-spark's gateway reports `finish_reason:"length"` whenever its hidden
+ * reasoning consumed part of the output budget — even when the visible
+ * completion is tiny relative to the requested budget (observed: ~270
+ * completion tokens on a 128000-token request). OpenAI-protocol clients map a
+ * "length" stop onto the caller's own max-tokens cap, so Claude Code aborts a
+ * fully-delivered answer with "response exceeded the 128000 output token
+ * maximum".
+ *
+ * Rewrite `length` → `stop` when the reported completion count proves the real
+ * token limit was never reached (<90% of the caller's budget). Genuine
+ * truncations at the budget are preserved. Streaming frames carry usage before
+ * the terminal finish frame, so the completion count is known in time.
+ */
+export function normalizeMuseSparkFinishReason(
+  payload: Record<string, unknown>,
+  requestedBudget: number | null,
+  /** Streaming: usage arrives in an earlier frame than the finish frame — caller passes the tracked count here. */
+  completionOverride?: number | null
+): void {
+  const choices = Array.isArray(payload.choices) ? payload.choices : [];
+  for (const choice of choices) {
+    if (!choice || typeof choice !== "object") continue;
+    const record = choice as Record<string, unknown>;
+    if (record.finish_reason !== "length") continue;
+    if (requestedBudget === null || requestedBudget === undefined) continue;
+    const usage = payload.usage as Record<string, unknown> | undefined;
+    const completion =
+      typeof completionOverride === "number"
+        ? completionOverride
+        : typeof usage?.completion_tokens === "number"
+          ? usage.completion_tokens
+          : null;
+    if (completion === null) continue;
+    if (completion < Math.floor(requestedBudget * 0.9)) {
+      record.finish_reason = "stop";
+    }
+  }
+}
+
+/** SSE line normalizer for muse-spark streams: tracks usage, rewrites finish frames. */
+export function createMuseSparkStreamFinishNormalizer(
+  requestedBudget: number | null
+): (dataLine: string) => string {
+  let completionTokens: number | null = null;
+  return (line: string): string => {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("data:") || trimmed.includes("[DONE]")) return line;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(trimmed.slice(5).trim());
+    } catch {
+      return line;
+    }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return line;
+    const payload = parsed as Record<string, unknown>;
+    const usage = payload.usage as Record<string, unknown> | undefined;
+    if (usage && typeof usage.completion_tokens === "number") {
+      completionTokens = usage.completion_tokens;
+    }
+    const hadFinish = Array.isArray(payload.choices)
+      ? (payload.choices as Array<Record<string, unknown>>).some(
+          (c) => c && c.finish_reason === "length"
+        )
+      : false;
+    if (!hadFinish) return line;
+    normalizeMuseSparkFinishReason(payload, requestedBudget, completionTokens);
+    return `data: ${JSON.stringify(payload)}`;
+  };
+}
+
 export class OpencodeExecutor extends BaseExecutor {
   /** Delegates to `isPremiumOpencodeModel`. Exported for testability. */
   static isPremiumModel(model: string, provider: string): boolean {
@@ -193,7 +313,10 @@ export class OpencodeExecutor extends BaseExecutor {
     return pickRotatableAccount(this.accounts, this);
   }
 
-  private markCooldown(account: OpencodeAccountState, kind: "transient" | "terminal" = "transient"): void {
+  private markCooldown(
+    account: OpencodeAccountState,
+    kind: "transient" | "terminal" = "transient"
+  ): void {
     markAccountCooldown(account, kind);
   }
 
@@ -201,8 +324,99 @@ export class OpencodeExecutor extends BaseExecutor {
     markAccountSuccess(account);
   }
 
+  /**
+   * Rewrite muse-spark's bogus `finish_reason:"length"` (see the
+   * normalizeMuseSparkFinishReason note) to `"stop"` on both streaming and
+   * non-streaming success responses. Non-muse-spark models pass through
+   * untouched.
+   */
+  private normalizeMuseSparkResponse(
+    input: ExecuteInput,
+    result: ExecutorExecuteResult
+  ): ExecutorExecuteResult {
+    const model = String(input.model ?? "");
+    if (!model.startsWith("muse-spark")) return result;
+    if (!("response" in result) || !result.response?.ok || !result.response.body) return result;
+    const bodyObj =
+      input.body && typeof input.body === "object" && !Array.isArray(input.body)
+        ? (input.body as Record<string, unknown>)
+        : null;
+    const rawBudget = bodyObj?.max_tokens;
+    const budget = typeof rawBudget === "number" && Number.isFinite(rawBudget) ? rawBudget : null;
+    const response = result.response;
+    const isSse = response.headers.get("content-type")?.includes("event-stream") ?? false;
+
+    if (!isSse) {
+      // Non-streaming JSON: rewrite in a buffered pass.
+      const stream = new ReadableStream<Uint8Array>({
+        async start(controller) {
+          try {
+            const text = await response.clone().text();
+            let out = text;
+            try {
+              const parsed = JSON.parse(text) as Record<string, unknown>;
+              normalizeMuseSparkFinishReason(parsed, budget);
+              out = JSON.stringify(parsed);
+            } catch {
+              /* not JSON — forward verbatim */
+            }
+            controller.enqueue(new TextEncoder().encode(out));
+          } catch (err) {
+            controller.error(err);
+            return;
+          }
+          controller.close();
+        },
+      });
+      return {
+        ...result,
+        response: new Response(stream, {
+          status: response.status,
+          statusText: response.statusText,
+          headers: response.headers,
+        }),
+      };
+    }
+
+    // Streaming SSE: line-buffered passthrough with finish_reason rewriting.
+    const normalizer = createMuseSparkStreamFinishNormalizer(budget);
+    const decoder = new TextDecoder();
+    const encoder = new TextEncoder();
+    let buffer = "";
+    const reader = response.body.getReader();
+    const stream = new ReadableStream<Uint8Array>({
+      async pull(controller) {
+        try {
+          const { done, value } = await reader.read();
+          if (done) {
+            if (buffer.length > 0) controller.enqueue(encoder.encode(normalizer(buffer)));
+            controller.close();
+            return;
+          }
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+          for (const line of lines) controller.enqueue(encoder.encode(normalizer(line) + "\n"));
+        } catch (err) {
+          controller.error(err);
+        }
+      },
+      cancel(reason) {
+        reader.cancel(reason).catch(() => undefined);
+      },
+    });
+    return {
+      ...result,
+      response: new Response(stream, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers,
+      }),
+    };
+  }
+
   async execute(input: ExecuteInput) {
-    this._requestFormat = getModelTargetFormat(this.provider, input.model) || "openai";
+    this._requestFormat = resolveOpencodeTargetFormat(this.provider, input.model);
 
     // #8681: Gate premium opencode models behind a usable API key.
     // When the connection is keyless (no apiKey, no accessToken) and the model
@@ -231,15 +445,50 @@ export class OpencodeExecutor extends BaseExecutor {
     }
 
     try {
-      this.syncAccountsFromCredentials(input.credentials);
-
-      const hasProxies = this.accounts.some((a) => a.proxy !== null);
-      // Fast path: no multi-account proxy wiring configured → original behavior.
-      if (this.accounts.length === 1 && !hasProxies) {
-        return await super.execute(input);
+      // muse-spark reasoning models consume the entire output budget on hidden
+      // server-side reasoning; small caller budgets come back as empty-message
+      // 200s ("Provider returned empty content"). Raise tiny budgets to the
+      // floor before dispatch (see MUSE_SPARK_MIN_OUTPUT_TOKENS).
+      if (input.body && typeof input.body === "object" && !Array.isArray(input.body)) {
+        applyMuseSparkMinOutputTokens(String(input.model ?? ""), input.body as Record<string, unknown>);
       }
 
+      this.syncAccountsFromCredentials(input.credentials);
       const { log } = input;
+
+      const hasProxies = this.accounts.some((a) => a.proxy !== null);
+      // Fast path: no multi-account proxy wiring configured → original behavior,
+      // plus exactly ONE bounded retry when the upstream answers a 400 empty
+      // rejection (same predicate and logging as the rotation loop). Everything
+      // else passes untouched: this path deliberately preserves BaseExecutor's
+      // intra-URL 429 retries (no skipUpstreamRetry here).
+      if (this.accounts.length === 1 && !hasProxies) {
+        const single = (await super.execute(input)) as HttpExecuteResult;
+        if (single.response.status === 400) {
+          let bodyText: string | null = null;
+          try {
+            bodyText = await single.response.clone().text();
+          } catch {
+            log?.debug?.("OPENCODE", "body read failed on direct account");
+          }
+          if (bodyText !== null) {
+            if (isEmptyUpstreamRejection(400, bodyText)) {
+              const chatcmplId = extractChatcmplId(bodyText);
+              log?.warn?.(
+                "OPENCODE",
+                `upstream empty rejection on direct account (${chatcmplId}), retrying once…`
+              );
+              return this.normalizeMuseSparkResponse(input, await super.execute(input));
+            }
+            log?.debug?.(
+              "OPENCODE",
+              "400 without error field, signature not matched on direct account — observing"
+            );
+          }
+        }
+        return this.normalizeMuseSparkResponse(input, single);
+      }
+
       // This loop only ever dispatches through super.execute() (the HTTP request
       // path), which always resolves the object-shaped arm of ExecutorExecuteResult
       // — the bare-Response arm belongs to web/scraping executors only (base.ts:290).
@@ -256,8 +505,13 @@ export class OpencodeExecutor extends BaseExecutor {
       // network call, but proxied accounts (independent egress) are still
       // tried normally.
       let sharedEgressDown = false;
+      // Bounded extra attempts for empty upstream rejections: +1 for a single
+      // account (retry the same one), none for a multi-account fleet (rotation
+      // through the accounts is the retry). Avoids an unbounded loop on a
+      // persistently malformed upstream.
+      const emptyRejectionBudget = this.accounts.length === 1 ? 1 : 0;
 
-      for (let attempt = 0; attempt < this.accounts.length; attempt++) {
+      for (let attempt = 0; attempt < this.accounts.length + emptyRejectionBudget; attempt++) {
         const account = this.pickAccount();
         const masked = maskAccountId(account.fingerprint);
 
@@ -333,8 +587,36 @@ export class OpencodeExecutor extends BaseExecutor {
           continue;
         }
 
+        // Empty upstream rejection (malformed 400: no error field, no real
+        // content, finish_reason null — see isEmptyUpstreamRejection). Rotate/
+        // retry instead of propagating it as a fatal success: the observed
+        // envelope was marking subagent sessions as failed. Read the body ONLY
+        // for a 400 (never a 200/streaming — that would buffer the good path);
+        // classify, log, and continue. Neitheries markCooldown nor markSuccess:
+        // the failure is upstream's, not this account's.
+        if (status === 400) {
+          let bodyText: string | null = null;
+          try {
+            bodyText = await result.response.clone().text();
+          } catch {
+            log?.debug?.("OPENCODE", "body read failed on empty rejection check");
+          }
+          if (bodyText !== null && isEmptyUpstreamRejection(400, bodyText)) {
+            const chatcmplId = extractChatcmplId(bodyText);
+            log?.warn?.(
+              "OPENCODE",
+              `upstream empty rejection on account ${masked} (${chatcmplId}), rotating to next…`
+            );
+            continue;
+          }
+          // A 400 carrying a real error (or non-empty content): propagate
+          // immediately, untouched — same as before this change.
+          this.markSuccess(account);
+          return result;
+        }
+
         this.markSuccess(account);
-        return result;
+        return this.normalizeMuseSparkResponse(input, result);
       }
 
       // The loop exhausted without a result. If it's because every remaining
@@ -348,7 +630,10 @@ export class OpencodeExecutor extends BaseExecutor {
       }
 
       // All accounts returned 429 (or errored) — surface the last response.
-      return lastResult ?? (await super.execute(input));
+      return this.normalizeMuseSparkResponse(
+        input,
+        lastResult ?? (await super.execute(input))
+      );
     } finally {
       this._requestFormat = null;
     }

@@ -128,6 +128,16 @@ export const updateSettingsSchema = z.object({
   blockedProviders: z.array(z.string().max(100)).optional(),
   noAuthFallbackDisabledProviders: z.array(z.string().max(100)).optional(),
   hidePaidModels: z.boolean().optional(),
+  // STRICT_ZERO_COST (opt-in, default "off"): stricter than hidePaidModels — a
+  // candidate must be keyless (no credential exists, so no request against it
+  // can ever be billed) OR pass a live, fresh, hard-stop-guaranteed quota
+  // check, per candidate, before ranking/dispatch. See
+  // open-sse/services/autoCombo/strictZeroCostFilter.ts.
+  freeAccessPolicy: z.enum(["off", "strict"]).optional(),
+  // Separate from freeAccessPolicy on purpose: excludes candidates whose
+  // curated `tos` verdict is "avoid" (proxy/self-hosted use conflicts with the
+  // provider's own terms) — a contractual concern, not an economic one.
+  excludeTosAvoid: z.boolean().optional(),
   hideHealthCheckLogs: z.boolean().optional(),
   hideEndpointCloudflaredTunnel: z.boolean().optional(),
   hideEndpointTailscaleFunnel: z.boolean().optional(),
@@ -249,6 +259,48 @@ export const updateSettingsSchema = z.object({
       })
     )
     .optional(),
+  /**
+   * Operator-declared per-provider error rules. Consulted BEFORE the built-in
+   * `providerRuleRegistry` in open-sse/config/providerErrorRules.ts so an
+   * operator can add a scope/cooldown/reason override for a provider without
+   * editing the catalog. Matches are plain case-insensitive SUBSTRINGS of the
+   * error body (never RegExp) to keep the classification hot path ReDoS-safe.
+   * Bounded to 50 rules total so a misconfigured setting cannot blow up the
+   * matcher.
+   */
+  providerErrorRules: z
+    .record(
+      z.string().trim().min(1).max(100),
+      z.array(
+        z.object({
+          status: z.number().int().min(100).max(599),
+          match: z.string().min(1).max(200),
+          scope: z.enum(["model", "provider", "connection"]),
+          reason: z
+            .enum([
+              "auth_error",
+              "quota_exhausted",
+              "rate_limit_exceeded",
+              "model_capacity",
+              "server_error",
+              "unknown",
+            ])
+            .optional(),
+          cooldownMs: z.number().int().min(0).max(86_400_000).optional(),
+        })
+      )
+    )
+    .optional()
+    .superRefine((value, ctx) => {
+      if (!value) return;
+      const total = Object.values(value).reduce((n, rules) => n + rules.length, 0);
+      if (total > 50) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `providerErrorRules: at most 50 rules total, got ${total}`,
+        });
+      }
+    }),
   // #6168: global session-stickiness opt-out (per-combo config overrides this).
   disableSessionStickiness: z.boolean().optional(),
   /** Keep eligible combo targets close to the provider-side prompt cache. */

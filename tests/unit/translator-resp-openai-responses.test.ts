@@ -423,6 +423,52 @@ test("Responses -> OpenAI: preserves non-object Read JSON-string arguments", () 
   assert.equal(done.choices[0].delta.tool_calls[0].function.arguments, "null");
 });
 
+test("Responses -> OpenAI: mixed plaintext + encrypted_content reasoning replays its plaintext (#10949)", () => {
+  const state = {};
+  const done = openaiResponsesToOpenAIResponse(
+    {
+      type: "response.output_item.done",
+      item: {
+        type: "reasoning",
+        id: "rs_mixed",
+        content: [
+          {
+            type: "reasoning_text",
+            text: "Let me start by reading the directory to understand the structure of the corpus.",
+          },
+        ],
+        encrypted_content: "<opaque state>",
+        summary: [],
+      },
+    },
+    state
+  );
+
+  assert.ok(done, "mixed reasoning item must surface a delta");
+  assert.equal(
+    done.choices[0].delta.reasoning_content,
+    "Let me start by reading the directory to understand the structure of the corpus."
+  );
+});
+
+test("Responses -> OpenAI: opaque-only reasoning still emits no fabricated plaintext", () => {
+  const state = {};
+  const done = openaiResponsesToOpenAIResponse(
+    {
+      type: "response.output_item.done",
+      item: {
+        type: "reasoning",
+        id: "rs_opaque_only",
+        encrypted_content: "<opaque state>",
+        summary: [],
+      },
+    },
+    state
+  );
+
+  assert.equal(done, null);
+});
+
 test("Responses -> OpenAI: strips empty optional args from JSON-string output_item.done arguments", () => {
   const state = {};
   openaiResponsesToOpenAIResponse(

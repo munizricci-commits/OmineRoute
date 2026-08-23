@@ -307,6 +307,12 @@ export async function runComboCreateCommand(name, strategy = "priority", opts = 
   }
 
   const models = Array.isArray(opts.models) ? opts.models : [];
+  if (!models.length) {
+    console.error(
+      "combo create requires at least one target. Pass --models <provider/model,...> and/or repeat --model <provider/model>."
+    );
+    return 1;
+  }
 
   try {
     return await withRuntime(async ({ kind, api, db }) => {

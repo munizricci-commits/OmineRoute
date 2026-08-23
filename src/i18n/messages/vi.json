@@ -974,7 +974,14 @@
     "batchFileUsedByCount": "{count, plural, one {# batch} other {# batch}}",
     "batchFilePreview": "Bản xem trước",
     "batchFilePreviewTruncated": "Hiển thị {shown} dòng đầu tiên (tổng cộng {total} dòng)",
-    "batchFileDownloadFull": "Tải xuống toàn bộ tệp"
+    "batchFileDownloadFull": "Tải xuống toàn bộ tệp",
+    "batchHeaderSubtitle": "Chạy nhiều yêu cầu như một job duy nhất",
+    "batchStep1": "1 · Tải lên JSONL",
+    "batchStep1Desc": "Thêm yêu cầu",
+    "batchStep2": "2 · Tạo batch",
+    "batchStep2Desc": "Chạy job",
+    "batchStep3": "3 · Nhận kết quả",
+    "batchStep3Desc": "Tải xuống đầu ra"
   },
   "disabled": "Đã tắt",
   "featureFlagOmnirouteEmergencyFallbackDescription": "Định tuyến các yêu cầu đã hết ngân sách đến nhà cung cấp/mô hình dự phòng khẩn cấp miễn phí.",
@@ -1293,7 +1300,13 @@
       "open": "mở",
       "close": "đóng"
     },
-    "noResults": "Không có kết quả"
+    "noResults": "Không có kết quả",
+    "healthVerdictReady": "OmniRoute đã sẵn sàng",
+    "healthVerdictActionRequired": "Cần hành động để khôi phục hoạt động đầy đủ",
+    "healthVerdictCoolingDown": "Đang nguội sau các thay đổi gần đây",
+    "advancedDiagnosticsTitle": "Chẩn đoán nâng cao",
+    "hide": "Ẩn",
+    "show": "Hiện"
   },
   "webhooks": {
     "title": "Webhook",
@@ -2223,6 +2236,10 @@
     "fullAccess": "Toàn quyền truy cập",
     "keyManagement": "Quản lý khóa API",
     "keyManagementDesc": "Tạo và quản lý khóa API để xác thực các yêu cầu tới endpoint của bạn",
+    "requestFlowAria": "Ứng dụng của bạn gửi yêu cầu qua một API key tới OmniRoute",
+    "requestFlowYourApp": "Ứng dụng của bạn",
+    "requestFlowApiKey": "API key",
+    "requestFlowOmniRoute": "OmniRoute",
     "totalKeys": "Tổng số khóa",
     "restricted": "Bị hạn chế",
     "totalRequests": "Tổng số yêu cầu",
@@ -4134,7 +4151,10 @@
     "notionIntegrationHelp": "Tạo một Tích hợp nội bộ tại",
     "notionIntegrationToken": "Token tích hợp nội bộ Notion",
     "notionNotConnected": "Chưa kết nối",
-    "notionTokenConfigured": "Đã cấu hình token. Các công cụ Notion khả dụng qua MCP."
+    "notionTokenConfigured": "Đã cấu hình token. Các công cụ Notion khả dụng qua MCP.",
+    "subtitle": "Dùng endpoint tương thích OpenAI với hầu hết SDK và công cụ.",
+    "testEndpoint": "Kiểm tra endpoint →",
+    "advancedProtocols": "Giao thức nâng cao"
   },
   "endpoints": {
     "tabProxy": "Endpoint Proxy",
@@ -5835,6 +5855,8 @@
     "rateLimitOverridesSection": "Ghi đè giới hạn tốc độ",
     "rateLimitOverridesMaxConcurrentHint": "Ghi đè số yêu cầu đồng thời tối đa cho kết nối này. Ghi đè giới hạn ở cấp tài khoản.",
     "rateLimitOverridesMaxConcurrentLabel": "Đồng thời tối đa (Giới hạn tốc độ)",
+    "rateLimitOverridesMaxWaitMsHint": "Thời gian tối đa (ms) một yêu cầu có thể chờ để có suất giới hạn tốc độ trước khi thất bại. Ghi đè cài đặt Resilience toàn cục chỉ cho kết nối này.",
+    "rateLimitOverridesMaxWaitMsLabel": "Thời gian chờ hàng đợi tối đa (ms)",
     "rateLimitOverridesMinTimeHint": "Thời gian tối thiểu (ms) giữa các yêu cầu. Ghi đè độ trễ bộ giới hạn tốc độ mặc định.",
     "rateLimitOverridesMinTimeLabel": "Khoảng thời gian tối thiểu (ms)",
     "rateLimitOverridesRpmHint": "Số yêu cầu tối đa mỗi phút cho kết nối này. Ghi đè giá trị mặc định của nhà cung cấp.",
@@ -6112,7 +6134,6 @@
       "glmt": "Hồ sơ GLM đặt sẵn với ngân sách token cao hơn, bật thinking và thời gian chờ dài hơn.",
       "getgoapi": "Kết nối GoAPI bằng khóa API.",
       "groq": "Gói miễn phí: 30 RPM / 14,4 nghìn RPD — không cần thẻ tín dụng",
-      "hackclub": "Đăng nhập bằng tài khoản Hack Club tại ai.hackclub.com.",
       "haiper": "Lấy khóa API tại haiper.ai/haiper-api",
       "heroku": "Kết nối Heroku AI bằng khóa API.",
       "hcnsec": "Lấy khóa API tại api.hcnsec.cn",
@@ -6269,6 +6290,20 @@
     "webSessionGuideStep3": "Sao chép thông tin xác thực được yêu cầu từ tên miền riêng của nhà cung cấp. Đối với cookie, chỉ sao chép giá trị tiêu đề Cookie và bỏ qua Cookie:.",
     "webSessionGuideStep3Manual": "Cách thủ công: mở công cụ dành cho nhà phát triển của trình duyệt (F12 → Network), tải lại trang, mở một yêu cầu đã xác thực và sao chép giá trị tiêu đề Cookie trong Request Headers — bỏ tiền tố Cookie:.",
     "webSessionGuideStep4": "Dán vào đây và kiểm tra kết nối. Nếu nó ngừng hoạt động, hãy đăng nhập lại và thay thế bằng một giá trị mới.",
+    "harImportButtonLabel": "Nhập tệp .har",
+    "harImportButtonBusy": "Đang nhập…",
+    "harImportButtonHint": "Xuất từ thẻ Network của DevTools sau khi gửi ít nhất một tin nhắn chat.",
+    "harImportStatusValid": "Đã nhập — hợp lệ trong ~{minutes} phút.",
+    "harImportStatusExpiringSoon": "Đã nhập — chỉ còn hợp lệ ~{minutes} phút nữa.",
+    "harImportStatusExpired": "Đã nhập, nhưng token này đã hết hạn ({minutes} phút trước) — hãy xuất một HAR mới.",
+    "harImportStatusUnknownExpiry": "Đã nhập. Không đọc được thời hạn.",
+    "harImportErrorNotJson": "Tệp đó không phải JSON hợp lệ — có đúng là bản xuất .har không?",
+    "harImportErrorNoEntries": "HAR này không có mục network nào được ghi lại.",
+    "harImportErrorNoChathubUrl": "Không tìm thấy kết nối Copilot chat trong HAR này. Hãy gửi ít nhất một tin nhắn chat trong m365.cloud.microsoft trước khi xuất.",
+    "harImportErrorUnparsableUrl": "Tìm thấy kết nối chat, nhưng không đọc được URL của nó.",
+    "harImportErrorMissingFields": "Tìm thấy kết nối chat, nhưng token bị thiếu trong đó.",
+    "harImportErrorReadFailed": "Không đọc được tệp đó.",
+    "harImportErrorUnknown": "Không trích xuất được thông tin xác thực từ tệp HAR đó.",
     "webSessionSecurityHint": "Hãy coi đây như mật khẩu: nó có thể truy cập vào tài khoản web đã đăng nhập của bạn cho đến khi hết hạn hoặc bị thu hồi.",
     "webNoAuthGuideTitle": "Không yêu cầu thông tin xác thực",
     "webNoAuthGuideBody": "{provider} không cần khóa API hoặc cookie. Lưu kết nối để sử dụng endpoint web miễn phí của nó.",
@@ -12017,7 +12052,8 @@
         "title": "Các tác nhân ACP",
         "phrase": "Các CLI mà OmniRoute khởi chạy làm phần phụ trợ thực thi (luồng ngược)",
         "flow": "Ứng dụng khách → OmniRoute → khởi chạy CLI (stdio/ACP) → phản hồi",
-        "seeOther": "See →"
+        "seeOther": "See →",
+        "warning": "Hầu hết người dùng có thể bỏ qua — chỉ dùng khi một tích hợp yêu cầu."
       }
     },
     "comparison": {
@@ -12207,7 +12243,7 @@
       },
       "omni-webhooks": {
         "name": "Webhook",
-        "description": "Đăng ký, liệt kê, kiểm tra và xóa endpoint webhook. Cấu hình đăng ký sự kiện như request.completed, provider.error, budget.exceeded và quản lý thử gửi lại."
+        "description": "Đăng ký, liệt kê, kiểm thử và xoá các endpoint webhook. Cấu hình đăng ký sự kiện (request.completed, request.failed, quota.exceeded, v.v.) và quản lý thử lại giao hàng."
       },
       "omni-mcp": {
         "name": "Máy chủ MCP",
@@ -13417,6 +13453,13 @@
         "modelLockouts": "Khóa Mô Hình",
         "count": "Số Lượng Kết Nối"
       }
+    },
+    "reassuranceTitle": "Kết nối của bạn tự khôi phục",
+    "reassuranceDetail": "Thường không cần hành động. OmniRoute tạm cho kết nối nghỉ sau lỗi, rồi thử lại an toàn.",
+    "plainStates": {
+      "healthy": "Có thể gửi yêu cầu",
+      "coolingDown": "Sắp thử lại",
+      "lockedOut": "Cần bạn xử lý"
     }
   },
   "featureFlagCapabilityFilterEnabledDescription": "Từ chối yêu cầu trước khi gửi đi khi mô hình đích thiếu các khả năng bắt buộc (thị giác, công cụ, đầu ra có cấu trúc, cửa sổ ngữ cảnh). Bảo vệ các yêu cầu trực tiếp đến một nhà cung cấp khi chúng bỏ qua bộ lọc tương thích của combo.",
@@ -13855,5 +13898,12 @@
     "toolsMismatch": "Nhà cung cấp không hỗ trợ gọi công cụ",
     "structuredOutputMismatch": "Nhà cung cấp không hỗ trợ đầu ra có cấu trúc",
     "contextWindowMismatch": "Yêu cầu vượt quá cửa sổ ngữ cảnh của nhà cung cấp"
+  },
+  "cheaperInferenceSponsorBanner": {
+    "title": "Cheaper Inference là Đối tác Mã nguồn Mở của OmniRoute",
+    "description": "Một cổng xếp hạng theo chi phí, bán lại hàng chục mô hình tiên phong sau một endpoint tương thích OpenAI — định tuyến mỗi yêu cầu đến nhà cung cấp đủ điều kiện rẻ nhất, không bao giờ vượt giá niêm yết.",
+    "cta": "Lấy khóa API",
+    "partnerLinkNote": "Liên kết đối tác",
+    "dismissAriaLabel": "Đóng"
   }
 }

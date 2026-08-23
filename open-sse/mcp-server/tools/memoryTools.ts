@@ -10,16 +10,24 @@ import {
 import { resolveMcpCallerApiKeyId } from "../mcpCallerIdentity.ts";
 
 /**
- * Resolve the memory owner id for an MCP tool call:
- * explicit arg wins, otherwise fall back to the authenticated caller's
- * principal id (HTTP auth headers on SSE/Streamable HTTP transports,
- * OMNIROUTE_API_KEY env var on stdio). Keeps MCP-stored memories under
- * the same owner id that chat-context memory uses, so retrieval in the
- * chat pipeline finds entries written via MCP.
+ * Resolve the memory owner id for an MCP tool call.
+ *
+ * The authenticated caller's principal ALWAYS wins over a caller-supplied
+ * `apiKeyId` — otherwise any MCP caller could read, write, or delete another
+ * principal's memories by putting a different id in the tool arguments
+ * (GHSA-cpv3-xr7r-xf8q, IDOR). The caller is resolved from the per-request HTTP
+ * auth headers on SSE / Streamable HTTP transports, or from OMNIROUTE_API_KEY on
+ * stdio. The explicit argument is only honored as a fallback when no caller can
+ * be resolved (a bare local stdio process with no configured key — already
+ * trusted), preserving the local-tooling flow. Keeps MCP-stored memories under
+ * the same owner id that chat-context memory uses, so retrieval in the chat
+ * pipeline finds entries written via MCP.
  */
 async function resolveMemoryOwnerId(explicit?: string): Promise<string> {
+  const caller = await resolveMcpCallerApiKeyId().catch(() => undefined);
+  if (caller) return caller;
   if (explicit && explicit.trim() !== "") return explicit.trim();
-  return (await resolveMcpCallerApiKeyId().catch(() => undefined)) || "mcp";
+  return "mcp";
 }
 
 export const MemorySearchSchema = z.object({

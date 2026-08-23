@@ -7,6 +7,7 @@ import {
   resolveModelFromTargetOptions,
   runCliTarget,
 } from "../../../bin/cli/commands/run.mjs";
+import { logicalArgs } from "./_helpers/shellArgs.mjs";
 
 test("resolveRunTarget resolves aliases", () => {
   assert.equal(resolveRunTarget("claude"), "claude");
@@ -39,7 +40,7 @@ test("buildRunPlan for claude includes env diff and model injection", async () =
   assert.equal(plan.target, "claude");
   assert.equal(plan.baseUrl, "http://localhost:20128");
   assert.equal(plan.model, "gpt-5");
-  assert.equal(plan.args.includes("--help"), true);
+  assert.equal(logicalArgs(plan.args).includes("--help"), true);
   assert.equal(plan.envDiff.changedOrAdded.includes("ANTHROPIC_AUTH_TOKEN"), true);
   assert.equal(plan.authSource, "option");
   assert.equal(plan.command.includes("claude"), true);
@@ -54,9 +55,9 @@ test("buildRunPlan for codex injects model into provider args", async () => {
   assert.equal(plan.target, "codex");
   assert.equal(plan.baseUrl, "http://localhost:20128");
   assert.equal(plan.model, "glm/glm-4.5");
-  assert.equal(plan.args.includes("--help"), true);
+  assert.equal(logicalArgs(plan.args).includes("--help"), true);
   assert.equal(
-    plan.args.some((a) => String(a).includes("model_providers.omniroute.model")),
+    logicalArgs(plan.args).some((a) => a.includes("model_providers.omniroute.model")),
     true
   );
   assert.equal(plan.authSource, "option");
@@ -70,7 +71,7 @@ test("buildRunPlan for Aider uses its OpenAI-compatible root endpoint", async ()
   );
   assert.equal(plan.target, "aider");
   assert.equal(plan.baseUrl, "https://relay.example.test");
-  assert.deepEqual(plan.args.slice(0, 2), ["--model", "openai/glm/glm-5.2"]);
+  assert.deepEqual(logicalArgs(plan.args).slice(0, 2), ["--model", "openai/glm/glm-5.2"]);
   assert.equal(plan.envDiff.changedOrAdded.includes("OPENAI_API_BASE"), true);
   assert.equal(plan.envDiff.changedOrAdded.includes("OPENAI_API_KEY"), true);
 });
@@ -82,7 +83,7 @@ test("buildRunPlan for Goose injects provider and model without writing config",
     ["session"]
   );
   assert.equal(plan.target, "goose");
-  assert.deepEqual(plan.args, ["session"]);
+  assert.deepEqual(logicalArgs(plan.args), ["session"]);
   assert.equal(plan.envDiff.changedOrAdded.includes("GOOSE_PROVIDER"), true);
   assert.equal(plan.envDiff.changedOrAdded.includes("GOOSE_MODEL"), true);
   assert.equal(plan.envDiff.changedOrAdded.includes("OPENAI_HOST"), true);
@@ -95,7 +96,7 @@ test("buildRunPlan for OpenCode uses an ephemeral compatible config", async () =
     ["run", "reply OK"]
   );
   assert.equal(plan.target, "opencode");
-  assert.deepEqual(plan.args.slice(0, 2), ["--model", "omniroute/glm/glm-5.2"]);
+  assert.deepEqual(logicalArgs(plan.args).slice(0, 2), ["--model", "omniroute/glm/glm-5.2"]);
   assert.equal(plan.envDiff.changedOrAdded.includes("OPENCODE_CONFIG_CONTENT"), true);
   assert.equal(plan.envDiff.changedOrAdded.includes("OMNIROUTE_API_KEY"), true);
   assert.equal(plan.configOverlay, "OPENCODE_CONFIG_CONTENT (process environment only)");
@@ -109,7 +110,7 @@ test("buildRunPlan for Qwen requires a deterministic model and injects only env 
     ["-p", "reply OK"]
   );
   assert.equal(plan.target, "qwen");
-  assert.deepEqual(plan.args.slice(0, 2), ["--model", "glm/glm-5.2"]);
+  assert.deepEqual(logicalArgs(plan.args).slice(0, 2), ["--model", "glm/glm-5.2"]);
   assert.equal(plan.envDiff.changedOrAdded.includes("OMNIROUTE_API_KEY"), true);
   assert.equal(plan.configOverlay, "temporary QWEN_HOME (removed after exit)");
   await assert.rejects(
@@ -126,7 +127,7 @@ test("buildRunPlan for Gemini points the CLI at the /v1beta surface via env", as
   );
   assert.equal(plan.target, "gemini");
   assert.equal(plan.baseUrl, "https://relay.example.test");
-  assert.deepEqual(plan.args.slice(0, 2), ["--model", "glm/glm-5.2"]);
+  assert.deepEqual(logicalArgs(plan.args).slice(0, 2), ["--model", "glm/glm-5.2"]);
   assert.equal(plan.envDiff.changedOrAdded.includes("GOOGLE_GEMINI_BASE_URL"), true);
   assert.equal(plan.envDiff.changedOrAdded.includes("GEMINI_API_KEY"), true);
   assert.equal(plan.envDiff.changedOrAdded.includes("GEMINI_DEFAULT_AUTH_TYPE"), true);

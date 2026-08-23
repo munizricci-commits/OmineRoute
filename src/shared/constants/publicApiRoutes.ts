@@ -87,7 +87,26 @@ function isPublicCloudApiRoute(pathname: string, method: string): boolean {
   );
 }
 
+// OAuth "auto-import" routes read host-local credential files (Cursor / Kiro /
+// Raycast tokens). The broad `/api/oauth/` PUBLIC prefix would classify them
+// PUBLIC, which skips the LOCAL_ONLY tier entirely (GHSA-wgwc-crjm-pmwv) and
+// exposes the host credential to a remote caller (GHSA-gxv4-955v-v6cm). Exclude
+// them so they fall through to MANAGEMENT and reach the loopback-only gate.
+const LOCAL_ONLY_OAUTH_IMPORT_ROUTES = [
+  "/api/oauth/cursor/auto-import",
+  "/api/oauth/kiro/auto-import",
+  "/api/oauth/raycast/auto-import",
+];
+
 export function isPublicApiRoute(pathname: string, method = "GET"): boolean {
+  if (
+    LOCAL_ONLY_OAUTH_IMPORT_ROUTES.some(
+      (route) => pathname === route || pathname.startsWith(`${route}/`)
+    )
+  ) {
+    return false;
+  }
+
   if (isPublicExactMethodRoute(pathname, method)) {
     return true;
   }

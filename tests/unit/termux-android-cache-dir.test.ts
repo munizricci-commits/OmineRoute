@@ -166,6 +166,19 @@ test("isFatalInstrumentationHookFailure: matches Next.js android + hook errors",
   assert.equal(isFatalInstrumentationHookFailure(""), false);
 });
 
+test("isFatalInstrumentationHookFailure: BUG #10028 — generic non-Android instrumentation failure is not Android/Termux", () => {
+  // Next.js wraps ANY throw inside instrumentation.register() with the generic
+  // "An error occurred while loading instrumentation hook:" prefix, on every
+  // platform. Without an actual Android/"Unsupported platform:" signal, that
+  // generic wrapper must NOT be diagnosed as the Android/Termux cache-dir bug,
+  // or a plain win32/desktop failure gets a useless `mkdir -p ~/.cache` hint
+  // and the real cause is hidden.
+  const genericWindowsFailure =
+    "Error: An error occurred while loading instrumentation hook: " +
+    "Cannot find module 'C:\\Users\\dev\\.omniroute\\config.json'";
+  assert.equal(isFatalInstrumentationHookFailure(genericWindowsFailure), false);
+});
+
 test("formatAndroidInstrumentationFailureHint: names the cache dir and TERMUX_GUIDE", () => {
   const hint = formatAndroidInstrumentationFailureHint("/data/home/.cache");
   assert.match(hint, /\/data\/home\/\.cache/);

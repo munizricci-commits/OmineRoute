@@ -110,7 +110,7 @@ async function run(
 }
 
 test("quota classifier rejects terminal-looking evidence on ineligible statuses", async () => {
-  for (const status of [400, 401, 403, 404, 408, 409, 422, 500, 502, 503, 504]) {
+  for (const status of [400, 401, 404, 408, 409, 422, 500, 502, 503, 504]) {
     for (const terminal of ["insufficient_quota", "quota_exhausted", "credits_exhausted"]) {
       assert.equal(
         await isQuotaExhaustionResponse(

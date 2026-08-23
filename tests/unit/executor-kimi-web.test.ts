@@ -1,7 +1,7 @@
-// Tests for the international Kimi web executor (www.kimi.com Connect-RPC API).
+// Tests for the international Kimi web executor (www.kimi.ai Connect-RPC API).
 //
 // Previously this provider targeted kimi.moonshot.cn; that domain now redirects
-// every non-CN visitor to www.kimi.com, which uses a Connect-RPC streaming API.
+// every non-CN visitor to www.kimi.ai, which uses a Connect-RPC streaming API.
 // These tests pin the parser behavior of the Connect envelope framing and the
 // JSON event-delta extractor.
 
@@ -31,7 +31,7 @@ describe("KimiWebExecutor", () => {
     assert.match(body.error.code, /HTTP_400|400/);
   });
 
-  it("execute targets www.kimi.com (not kimi.moonshot.cn)", async () => {
+  it("execute targets www.kimi.ai (not kimi.moonshot.cn)", async () => {
     const executor = new mod.KimiWebExecutor();
     let capturedUrl = "";
     const originalFetch = globalThis.fetch;

@@ -664,6 +664,7 @@ describe("Reasoning Replay Cache — Translator Replay", () => {
       {
         type: "reasoning",
         content: [{ type: "reasoning_text", text: "Cached Chat continuation reasoning" }],
+        summary: [],
       }
     );
   });
@@ -751,47 +752,70 @@ describe("Reasoning Replay Cache — Translator Replay", () => {
     assert.equal(lookupReasoning(callId), "Authentic provider reasoning");
   });
 
-  it("should never cache Responses summaries or opaque plaintext companions", () => {
-    for (const [suffix, reasoningItem] of [
-      [
-        "summary",
-        {
-          type: "reasoning",
-          summary: [{ type: "summary_text", text: "Display-only summary" }],
-        },
-      ],
-      [
-        "mixed",
-        {
-          type: "reasoning",
-          encrypted_content: "opaque-provider-state",
-          content: [{ type: "reasoning_text", text: "Unsafe plaintext companion" }],
-          summary: [{ type: "summary_text", text: "Display-only mixed summary" }],
-        },
-      ],
-    ] as const) {
-      clearReasoningCacheAll();
-      const callId = `call_nonstream_${suffix}_reasoning`;
-      const translated = translateNonStreamingResponse(
-        {
-          object: "response",
-          model: "deepseek-v4-flash",
-          output: [
-            reasoningItem,
-            { type: "function_call", call_id: callId, name: "read_file", arguments: "{}" },
-          ],
-        },
-        FORMATS.OPENAI_RESPONSES,
-        FORMATS.OPENAI
-      ) as { choices?: Array<{ message?: Record<string, unknown> }> };
-      const message = translated.choices?.[0]?.message;
+  it("preserves plaintext reasoning from a mixed plaintext + encrypted_content item (#10949)", () => {
+    clearReasoningCacheAll();
+    const callId = "call_nonstream_mixed_reasoning";
+    const translated = translateNonStreamingResponse(
+      {
+        object: "response",
+        model: "deepseek-v4-flash",
+        output: [
+          {
+            type: "reasoning",
+            content: [
+              {
+                type: "reasoning_text",
+                text: "Let me start by reading the directory to understand the structure of the corpus.",
+              },
+            ],
+            encrypted_content: "<opaque state>",
+            summary: [],
+          },
+          { type: "function_call", call_id: callId, name: "read_file", arguments: "{}" },
+        ],
+      },
+      FORMATS.OPENAI_RESPONSES,
+      FORMATS.OPENAI
+    ) as { choices?: Array<{ message?: Record<string, unknown> }> };
+    const message = translated.choices?.[0]?.message;
 
-      assert.ok(message);
-      assert.equal(message.reasoning_content, undefined);
-      assert.ok(Array.isArray(message.reasoning_summary));
-      assert.equal(cacheReasoningFromAssistantMessage(message, "deepseek", "deepseek-v4-flash"), 0);
-      assert.equal(lookupReasoning(callId), null);
-    }
+    assert.ok(message);
+    assert.equal(
+      message.reasoning_content,
+      "Let me start by reading the directory to understand the structure of the corpus."
+    );
+    assert.equal(cacheReasoningFromAssistantMessage(message, "deepseek", "deepseek-v4-flash"), 1);
+    assert.equal(
+      lookupReasoning(callId),
+      "Let me start by reading the directory to understand the structure of the corpus."
+    );
+  });
+
+  it("should never cache summary-only Responses reasoning", () => {
+    clearReasoningCacheAll();
+    const callId = "call_nonstream_summary_reasoning";
+    const translated = translateNonStreamingResponse(
+      {
+        object: "response",
+        model: "deepseek-v4-flash",
+        output: [
+          {
+            type: "reasoning",
+            summary: [{ type: "summary_text", text: "Display-only summary" }],
+          },
+          { type: "function_call", call_id: callId, name: "read_file", arguments: "{}" },
+        ],
+      },
+      FORMATS.OPENAI_RESPONSES,
+      FORMATS.OPENAI
+    ) as { choices?: Array<{ message?: Record<string, unknown> }> };
+    const message = translated.choices?.[0]?.message;
+
+    assert.ok(message);
+    assert.equal(message.reasoning_content, undefined);
+    assert.ok(Array.isArray(message.reasoning_summary));
+    assert.equal(cacheReasoningFromAssistantMessage(message, "deepseek", "deepseek-v4-flash"), 0);
+    assert.equal(lookupReasoning(callId), null);
   });
 
   it("should preserve client-provided reasoning content", () => {

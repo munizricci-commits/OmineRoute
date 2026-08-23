@@ -175,6 +175,49 @@ export const NOAUTH_PROVIDERS = {
       text: "ZCode runs locally through its native app-server. OmniRoute never receives or stores the Z.ai credential.",
     },
   },
+  "codex-app-server": {
+    id: "codex-app-server",
+    alias: "cxa",
+    name: "OpenAI Codex (App-Server)",
+    icon: "code",
+    color: "#10A37F",
+    textIcon: "CA",
+    website: "https://developers.openai.com/codex/cli",
+    noAuth: true,
+    hasFree: false,
+    serviceKinds: ["llm"],
+    isLocalCli: true,
+    // No subscriptionRisk / riskNoticeVariant: unlike the `codex` provider (which
+    // replays your ChatGPT/OpenAI session token to the API), this transport drives
+    // the Codex CLI's own `codex app-server` over JSON-RPC/WebSocket. The CLI owns
+    // and self-refreshes its OAuth (~/.codex/auth.json) exactly like an interactive
+    // `codex` session — OmniRoute never replays a token to the API — so the
+    // "official session not authorized for proxy use" caveat does not apply.
+    authHint:
+      "No token stored by OmniRoute. The Codex CLI app-server manages its own ChatGPT sign-in (~/.codex/auth.json, auto-refreshed). Use \u201cSign in with ChatGPT\u201d if the CLI is not yet authenticated.",
+    notice: {
+      text: "OpenAI Codex (App-Server) drives the Codex CLI's local app-server (JSON-RPC over WebSocket). The CLI self-manages its OpenAI OAuth, so OmniRoute never sees or replays your token. Requires the codex CLI reachable at the configured app-server URL; sign in via the CLI or the dashboard \u201cSign in with ChatGPT\u201d action.",
+    },
+  },
+  uncloseai: {
+    id: "uncloseai",
+    alias: "unc",
+    name: "UncloseAI",
+    icon: "auto_awesome",
+    color: "#8B5CF6",
+    textIcon: "UN",
+    website: "https://uncloseai.com",
+    noAuth: true,
+    hasFree: true,
+    passthroughModels: true,
+    serviceKinds: ["llm"],
+    authHint:
+      "No auth required. API accepts any non-empty string as key for identification. If older built-in models return 404, use Available Models → Import from /models or Auto-Sync; verified live model: solidrust/Hermes-3-Llama-3.1-8B-AWQ.",
+    freeNote: "Free forever — no signup, no credit card. OpenAI-compatible endpoints.",
+    notice: {
+      text: "UncloseAI needs no API key. API accepts any non-empty string as key for identification. If older built-in models return 404, use Available Models → Import from /models or Auto-Sync.",
+    },
+  },
   aihorde: {
     id: "aihorde",
     alias: "horde",

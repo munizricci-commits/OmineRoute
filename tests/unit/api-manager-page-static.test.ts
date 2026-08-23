@@ -39,6 +39,26 @@ test("permissions modal uses i18n for management access description", () => {
   assert.doesNotMatch(managementBlock, /Allow this API key to manage OmniRoute configuration\./);
 });
 
+test("API manager page renders purpose-first header", () => {
+  const source = readApiManagerPage();
+  const headerBlock = source.slice(
+    source.indexOf('<h1 className="text-3xl'),
+    source.indexOf("{/* Filter Bar", source.indexOf('<h1 className="text-3xl'))
+  );
+
+  assert.match(headerBlock, /\{t\("keyManagement"\)\}/);
+  assert.match(headerBlock, /\{t\("keyManagementDesc"\)\}/);
+  assert.match(headerBlock, /aria-label=\{t\("requestFlowAria"\)\}/);
+  assert.match(headerBlock, /\{t\("requestFlowYourApp"\)\}/);
+  assert.match(headerBlock, /\{t\("requestFlowApiKey"\)\}/);
+  assert.match(headerBlock, /\{t\("requestFlowOmniRoute"\)\}/);
+  assert.doesNotMatch(headerBlock, />\s*Your app\s*</);
+  assert.doesNotMatch(headerBlock, />\s*API key\s*</);
+  assert.doesNotMatch(headerBlock, />\s*OmniRoute\s*</);
+  assert.match(headerBlock, /setShowAddModal\(true\)/);
+  assert.match(headerBlock, /\{t\("createKey"\)\}/);
+});
+
 test("permissions modal converts API key expiration ISO timestamps to local datetime input values", () => {
   const source = readApiManagerPage();
   const expirationBlock = source.slice(

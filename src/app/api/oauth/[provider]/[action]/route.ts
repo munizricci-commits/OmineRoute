@@ -24,6 +24,7 @@ import {
 } from "@/models";
 import { getConsistentMachineId } from "@/shared/utils/machineId";
 import { isValidGheUrl } from "@/shared/validation/providerSpecificData";
+import { AWS_REGION_PATTERN } from "@/lib/oauth/constants/oauth";
 import { syncToCloud } from "@/lib/cloudSync";
 import { startLocalServer } from "@/lib/oauth/utils/server";
 import { runWithProxyContextOrDirect } from "@omniroute/open-sse/utils/proxyFetch.ts";
@@ -221,6 +222,16 @@ export async function GET(
             (requestDeviceCode as any)(provider, null, providerOverrideConfig)
           );
         } else if ((provider === "kiro" || provider === "amazon-q") && startUrl) {
+          // GHSA-7x63: `region` is interpolated into the AWS OIDC endpoint URLs
+          // below, which requestDeviceCode() then fetches. Validate it against the
+          // canonical AWS region shape before it can steer the outbound host to an
+          // attacker-chosen target (userinfo/fragment tricks → SSRF / metadata).
+          if (!AWS_REGION_PATTERN.test(region)) {
+            return NextResponse.json(
+              { error: "region must be a valid AWS region (e.g. us-east-1)" },
+              { status: 400 }
+            );
+          }
           const providerOverrideConfig = {
             ...providerData.config,
             startUrl,

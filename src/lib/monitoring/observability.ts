@@ -3,8 +3,47 @@ import {
   getCodexParentAccountDiagnostic,
 } from "@omniroute/open-sse/services/codexAccount/index.ts";
 import type { AdaptiveAdmissionPublicSnapshot } from "@omniroute/open-sse/services/admission/runtime.ts";
+import type { PerConnectionAdmissionController } from "@/shared/middleware/chatBodyAdmission";
 
 type JsonRecord = Record<string, unknown>;
+
+/** Process-wide structural chat-admission snapshot type (chatBodyAdmission.ts). */
+export type ChatAdmissionSnapshot = ReturnType<PerConnectionAdmissionController["snapshot"]>;
+
+/**
+ * Low-card structural chat-admission health summary (#11244) — the bounded
+ * heavyweight-lease gate from chatBodyAdmission.ts (#10110/#10437), NOT the
+ * adaptive shadow-mode layer above. Lane keys are opaque HMAC fairness
+ * fingerprints (resolveSessionId), never raw credentials.
+ */
+export type ChatAdmissionHealthSummary = {
+  activeHeavy: number;
+  activeHealthyHeadroom: number;
+  waiting: number;
+  queuedBytes: number;
+  shedTotal: number;
+  shedsByReason: Record<string, number>;
+  lanes: Array<{ key: string; waiting: number }>;
+};
+
+/**
+ * Explicit allowlisted projection of the structural admission snapshot.
+ * Never spreads the snapshot — only the documented low-cardinality fields pass.
+ */
+export function projectChatAdmissionSummary(
+  snapshot: ChatAdmissionSnapshot | null | undefined
+): ChatAdmissionHealthSummary | null {
+  if (!snapshot || typeof snapshot !== "object") return null;
+  return {
+    activeHeavy: snapshot.activeHeavy,
+    activeHealthyHeadroom: snapshot.activeHealthyHeadroom,
+    waiting: snapshot.waiting,
+    queuedBytes: snapshot.queuedBytes,
+    shedTotal: snapshot.shedTotal,
+    shedsByReason: { ...(snapshot.shedsByReason ?? {}) },
+    lanes: (snapshot.lanes ?? []).map((lane) => ({ key: lane.key, waiting: lane.waiting })),
+  };
+}
 
 /** Low-card adaptive-admission health summary — no tenant/request/body/queue details. */
 export type AdaptiveAdmissionHealthSummary = {
@@ -160,6 +199,8 @@ interface BuildHealthPayloadOptions {
   };
   /** Optional injected public adaptive-admission snapshot; projected, never raw-spread. */
   adaptiveAdmission?: AdaptiveAdmissionPublicSnapshot | null;
+  /** #11244: optional structural chat-admission snapshot; projected, never raw-spread. */
+  chatAdmission?: ChatAdmissionSnapshot | null;
 }
 
 function limitMonitors(monitors: QuotaMonitorSnapshot[], maxItems = 8): QuotaMonitorSnapshot[] {
@@ -347,6 +388,7 @@ export function buildHealthPayload({
   activeSessionsByKey = {},
   credentialHealth,
   adaptiveAdmission = null,
+  chatAdmission = null,
   buildSha = null,
 }: BuildHealthPayloadOptions) {
   const timestamp = new Date().toISOString();
@@ -449,6 +491,9 @@ export function buildHealthPayload({
     sessions: buildSessionsSummary({ activeSessions, activeSessionsByKey }),
     credentialHealth, // may be undefined if credentialHealth module not loaded
     adaptiveAdmission: projectAdaptiveAdmissionSummary(adaptiveAdmission),
+    // #11244: the STRUCTURAL gate (chatBodyAdmission.ts) next to the adaptive one —
+    // distinct key so clients reading `adaptiveAdmission` are untouched.
+    chatAdmission: projectChatAdmissionSummary(chatAdmission),
     dedup: {
       inflightRequests,
     },

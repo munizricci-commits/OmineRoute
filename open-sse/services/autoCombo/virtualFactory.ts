@@ -7,6 +7,8 @@ import { getProviderRegistry } from "./providerRegistryAccessor";
 import type { ConnectionFields } from "@/lib/db/encryption";
 import { NOAUTH_PROVIDERS } from "@/shared/constants/providers";
 import { hasUsableWebSessionCredential } from "@/shared/providers/webSessionCredentials";
+import { toNumber } from "@/shared/utils/numeric";
+import { isCompatibleProviderConnectionId } from "@/shared/utils/compatibleProviderId";
 import { defaultLogger as log } from "@omniroute/open-sse/utils/logger";
 import { getTokenLimit } from "../contextManager";
 import {
@@ -26,6 +28,8 @@ import { buildFamilyCandidateFilter, type ModelFamily } from "./modelFamily";
 import { getHiddenModelsByProvider } from "@/models";
 import { getSyncedAvailableModelsByConnection, getCustomModels } from "@/lib/db/models";
 import { filterPaidOnlyCandidates } from "./paidModelFilter";
+import { filterStrictZeroCostCandidates, filterTosAvoidCandidates } from "./strictZeroCostFilter";
+import { resolveFreeAccessState } from "./freeAccessQuota";
 import { isModelExcludedByConnection } from "@/domain/connectionModelRules";
 import { resolveProviderAlias } from "../model.ts";
 import {
@@ -180,9 +184,31 @@ function hasProviderSpecificSessionData(conn: VirtualFactoryConn): boolean {
   return hasUsableWebSessionCredential(conn.provider, conn.providerSpecificData);
 }
 
+/**
+ * #11180: a custom compatible connection (`openai-compatible-*` /
+ * `anthropic-compatible-*`) may legitimately carry no credential at all,
+ * because it points at a self-hosted backend the operator started without one
+ * (`llama-server --host 0.0.0.0` with no `--api-key`, Ollama, vLLM). For those
+ * IDs "no credential" is the normal configuration rather than an unconfigured
+ * connection, so the credential gate must not silently drop them from every
+ * `auto/*` pool while direct `<provider>/<model>` calls keep working.
+ *
+ * Deliberately narrow: only the four generated compatible-provider ID shapes
+ * qualify. A first-party provider with an empty key really is unconfigured and
+ * stays filtered out, and the no-auth registry allowlist below is untouched.
+ */
+function isKeylessEligibleConnection(conn: VirtualFactoryConn): boolean {
+  return isCompatibleProviderConnectionId(conn.provider);
+}
+
 function hasUsableConnectionCredential(conn: VirtualFactoryConn): boolean {
   const hasApiKey = typeof conn.apiKey === "string" && conn.apiKey.trim().length > 0;
-  return hasApiKey || hasUsableOAuthToken(conn) || hasProviderSpecificSessionData(conn);
+  return (
+    hasApiKey ||
+    hasUsableOAuthToken(conn) ||
+    hasProviderSpecificSessionData(conn) ||
+    isKeylessEligibleConnection(conn)
+  );
 }
 
 const SYNTHETIC_NOAUTH_CONNECTION_ID = RESILIENCE_NOAUTH_CONNECTION_ID;
@@ -593,6 +619,29 @@ export async function prepareVirtualAutoComboInputs(
     // exclude paid-only backends from EVERY `auto/*` candidate pool.
     const paidFilteredPool = filterPaidOnlyCandidates(pool, settings.hidePaidModels === true);
     if (paidFilteredPool !== pool) pool = paidFilteredPool;
+
+    // STRICT_ZERO_COST: opt-in, off by default (`settings.freeAccessPolicy !== "strict"`
+    // leaves `pool` byte-identical, same contract as `hidePaidModels`). See
+    // `strictZeroCostFilter.ts` for why this is stricter than `hidePaidModels` alone —
+    // including the connection-safety invariant it enforces per-connection, not just
+    // per-candidate: `resolveFreeAccessState` here is a raw pass-through of the real
+    // per-(provider,connectionId) resolver; the filter itself decides which connection(s)
+    // on each candidate to check and rewrites `allowedConnectionIds` to the SAFE subset.
+    const strictFilteredPool = filterStrictZeroCostCandidates(pool, {
+      enabled: settings.freeAccessPolicy === "strict",
+      resolveFreeAccessState,
+      // 1 percentage point of headroom, not 0: `freeAccessQuota.ts` reports
+      // remaining allowance as a percentage, and a raw ">0" comparison would
+      // let a reading of e.g. 0.3% (rounding noise, not real headroom) pass.
+      minRemainingAllowance: 1,
+      maxStateAgeMs: toNumber(settings.autoRefreshProviderQuotaInterval, 180) * 1000,
+    });
+    if (strictFilteredPool !== pool) pool = strictFilteredPool;
+
+    // Separate, optional ToS guard — independent of economic safety on purpose.
+    const tosFilteredPool = filterTosAvoidCandidates(pool, settings.excludeTosAvoid === true);
+    if (tosFilteredPool !== pool) pool = tosFilteredPool;
+
     return pool;
   };
 

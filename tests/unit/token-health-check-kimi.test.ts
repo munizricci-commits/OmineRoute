@@ -18,11 +18,10 @@ describe("Kimi Background Health Sweep", () => {
 
   it("triggers refresh when Kimi token is within jittered expiration window", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    // Token expiring in 30s. The production jitter threshold is 60-240s, so
-    // remainingSec=30 is always <= threshold and must trigger a refresh.
+    // Token expiring in 90 seconds (within 60-240s window)
     const token =
       "eyJhbGciOiJIUzUxMiJ9." +
-      Buffer.from(JSON.stringify({ exp: nowSec + 30, iat: nowSec })).toString("base64url") +
+      Buffer.from(JSON.stringify({ exp: nowSec + 90, iat: nowSec })).toString("base64url") +
       ".sig";
 
     let calledRefresh = false;

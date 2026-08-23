@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { platform, totalmem } from "node:os";
 import { t } from "../i18n.mjs";
 import { writePidFile, cleanupPidFile, waitForServer } from "../utils/pid.mjs";
@@ -20,6 +20,7 @@ import {
   buildNodeHeapArgs,
 } from "../../../scripts/build/runtime-env.mjs";
 import { resolveTlsOptions } from "../../../scripts/dev/tls-options.mjs";
+import { startDetachedTray, validateTrayOptions } from "../tray/detachedTray.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const _pkg = JSON.parse(readFileSync(join(__dirname, "..", "..", "..", "package.json"), "utf8"));
@@ -42,7 +43,7 @@ function parsePort(value, fallback) {
 }
 
 export function registerServe(program) {
-  program
+  const command = program
     .command("serve", { isDefault: true })
     .description(t("serve.description"))
     .option("--port <port>", t("serve.port"))
@@ -51,7 +52,7 @@ export function registerServe(program) {
     .option("--log", t("serve.log"))
     .option("--no-recovery", t("serve.no_recovery"))
     .option("--max-restarts <n>", t("serve.max_restarts"), parseInt, 2)
-    .option("--tray", t("serve.tray") || "Show system tray icon (desktop only)")
+    .option("--tray", t("serve.tray") || "Start in the system tray (desktop only)")
     .option("--no-tray", t("serve.no_tray") || "Disable system tray icon")
     .option(
       "--tls-cert <path>",
@@ -66,6 +67,9 @@ export function registerServe(program) {
     .action(async (opts) => {
       await runServe(opts);
     });
+  command.addOption(command.createOption("--tray-worker").hideHelp());
+  command.addOption(command.createOption("--tray-ready-port <port>").hideHelp());
+  command.addOption(command.createOption("--tray-ready-token <token>").hideHelp());
 }
 
 /** Once-per-process guard so the Android/Termux cache hint is not spammed. */
@@ -94,6 +98,32 @@ export function resetInstrumentationFailureHintForTests() {
 
 export async function runServe(opts = {}) {
   const startedAt = performance.now();
+
+  const trayOptionError = validateTrayOptions(opts);
+  if (trayOptionError) throw new Error(trayOptionError);
+
+  if (opts.tray === true && opts.trayWorker !== true) {
+    const port = parsePort(opts.port ?? process.env.PORT ?? "20128", 20128);
+    const tlsCert = opts.tlsCert ?? process.env.OMNIROUTE_TLS_CERT;
+    const tlsKey = opts.tlsKey ?? process.env.OMNIROUTE_TLS_KEY;
+    urlScheme = resolveTlsOptions({
+      ...process.env,
+      ...(tlsCert ? { OMNIROUTE_TLS_CERT: tlsCert } : {}),
+      ...(tlsKey ? { OMNIROUTE_TLS_KEY: tlsKey } : {}),
+    })
+      ? "https"
+      : "http";
+    const result = await startDetachedTray({
+      cliPath: join(ROOT, "bin", "omniroute.mjs"),
+      port,
+      maxRestarts: opts.maxRestarts ?? 2,
+      tlsCert,
+      tlsKey,
+    });
+    console.log(`\x1b[32m✔ OmniRoute tray started in background\x1b[0m`);
+    console.log(`  \x1b[1mDashboard:\x1b[0m  ${urlScheme}://localhost:${port}`);
+    return result;
+  }
 
   // Same prep as bin/omniroute.mjs — keep it here so a direct `runServe()` call
   // (tests / programmatic) still gets a writable Next.js cache dir before spawn.
@@ -255,7 +285,8 @@ export async function runServe(opts = {}) {
     opts.log === true,
     opts.maxRestarts ?? 2,
     startedAt,
-    useTray
+    useTray,
+    { trayReadyPort: opts.trayReadyPort, trayReadyToken: opts.trayReadyToken }
   );
 }
 
@@ -368,9 +399,11 @@ async function runWithSupervisor(
   showLog,
   maxRestarts,
   startedAt,
-  useTray = false
+  useTray = false,
+  { trayReadyPort, trayReadyToken } = {}
 ) {
   if (showLog) process.env.OMNIROUTE_SHOW_LOG = "1";
+  writePidFile("supervisor", process.pid);
 
   const supervisor = new ServerSupervisor({
     serverPath: serverJs,
@@ -381,7 +414,7 @@ async function runWithSupervisor(
       if (detectMitmCrash(crashLog)) {
         try {
           const PROJECT_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
-          const { updateSettings } = await import(`${PROJECT_ROOT}/src/lib/db/settings.ts`);
+          const { updateSettings } = await import(pathToFileURL(join(PROJECT_ROOT, "src/lib/db/settings.ts")).href);
           updateSettings({ mitmEnabled: false });
         } catch {}
         return "disable-mitm-and-retry";
@@ -394,17 +427,38 @@ async function runWithSupervisor(
 
   process.on("SIGINT", () => {
     killTrayIfActive();
+    cleanupPidFile("supervisor");
     supervisor.stop();
   });
   process.on("SIGTERM", () => {
     killTrayIfActive();
+    cleanupPidFile("supervisor");
     supervisor.stop();
   });
 
   if (!showLog) {
     waitForServer(dashboardPort, 60000).then(async (up) => {
       if (up) {
-        if (useTray) await maybeStartTray(dashboardPort, apiPort, supervisor);
+        if (useTray) {
+          const trayReady = await maybeStartTray(dashboardPort, apiPort, supervisor);
+          if (!trayReady) {
+            cleanupPidFile("supervisor");
+            supervisor.stop();
+            process.exitCode = 1;
+            return;
+          }
+          if (trayReadyPort && trayReadyToken) {
+            const { notifyTrayReady } = await import("../tray/detachedTray.mjs");
+            try {
+              await notifyTrayReady(parsePort(trayReadyPort, 0), trayReadyToken);
+            } catch {
+              cleanupPidFile("supervisor");
+              supervisor.stop();
+              process.exitCode = 1;
+              return;
+            }
+          }
+        }
         onReady(dashboardPort, apiPort, noOpen, startedAt);
       } else {
         reportReadinessTimeout(dashboardPort, supervisor);
@@ -451,29 +505,30 @@ function killTrayIfActive() {
 async function maybeStartTray(port, apiPort, supervisor) {
   try {
     const { initTray, isTraySupported } = await import("../tray/index.mjs");
-    if (!isTraySupported()) return;
+    if (!isTraySupported()) return false;
     const { default: open } = await import("open").catch(() => ({ default: null }));
     const dashboardUrl = `${urlScheme}://localhost:${port}`;
     const tray = await initTray({
       port,
       onQuit: () => {
         killTrayIfActive();
+        cleanupPidFile("supervisor");
         supervisor.stop();
       },
       onOpenDashboard: () => open?.(dashboardUrl),
-      onShowLogs: () => {
-        // In-place: open logs stream (best-effort)
-        process.stdout.write(`[omniroute][tray] Logs at: ${dashboardUrl}/logs\n`);
-      },
+      onShowLogs: () => open?.(`${dashboardUrl}/dashboard/logs`),
     });
     if (tray) {
       const { killTray } = await import("../tray/index.mjs");
       _killTray = killTray;
+      return true;
     }
+    return false;
   } catch (err) {
     // tray is optional — do not fail the server, but surface why it failed so
     // "--tray shows nothing" is diagnosable instead of silent (#4605).
     process.stderr.write(`[omniroute][tray] failed to start: ${err?.message ?? String(err)}\n`);
+    return false;
   }
 }
 

@@ -139,3 +139,23 @@ test("no hardcoded English labels in component files (all via t(...))", () => {
     assert.doesNotMatch(src, />\s*No connections\s*</, `${f}: hardcoded empty title`);
   }
 });
+
+test("page leads with plain-language reassurance before mechanics", () => {
+  const src = read(componentFiles[0]);
+  assert.match(src, /reassuranceTitle/, "reassurance heading missing from page.tsx");
+  assert.match(src, /reassuranceDetail/, "reassurance detail missing from page.tsx");
+  // Plain-language state legend renders before the client component
+  const legendPos = src.indexOf("plainStates");
+  const clientPos = src.indexOf("<ResilienceConnectionsClient");
+  assert.ok(legendPos > -1 && legendPos < clientPos, "state legend must render before the table");
+});
+
+test("en.json carries plain-language state copy", () => {
+  const messages = JSON.parse(read("src/i18n/messages/en.json"));
+  const block = messages.resilienceConnections;
+  assert.equal(block.reassuranceTitle, "Your connections recover automatically");
+  assert.match(block.reassuranceDetail, /no action is needed/i);
+  assert.equal(block.plainStates.healthy, "Requests can be sent");
+  assert.equal(block.plainStates.coolingDown, "Trying again soon");
+  assert.equal(block.plainStates.lockedOut, "Needs your attention");
+});

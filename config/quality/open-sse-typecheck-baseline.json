@@ -1,11 +1,4 @@
 {
-  "open-sse/handlers/chatCore/clientUsageBuffer.ts": {
-    "TS2345": 2
-  },
-  "open-sse/utils/stream.ts": {
-    "TS2345": 2,
-    "TS2322": 2
-  },
   "src/lib/guardrails/videoBridgeHelpers.ts": {
     "TS2488": 1,
     "TS2365": 2,

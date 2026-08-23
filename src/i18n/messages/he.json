@@ -2218,6 +2218,10 @@
     "fullAccess": "גישה מלאה",
     "keyManagement": "ניהול מפתחות API",
     "keyManagementDesc": "צור ונהל מפתחות API לאימות בקשות לנקודת הקצה שלך",
+    "requestFlowAria": "Your app sends requests through an API key to OmniRoute",
+    "requestFlowYourApp": "Your app",
+    "requestFlowApiKey": "API key",
+    "requestFlowOmniRoute": "OmniRoute",
     "totalKeys": "סך הכל מפתחות",
     "restricted": "מוגבל",
     "totalRequests": "סך כל הבקשות",
@@ -5830,6 +5834,8 @@
     "rateLimitOverridesSection": "עקיפת מגבלות קצב",
     "rateLimitOverridesMaxConcurrentHint": "עקיפת מספר הבקשות המקביליות המרבי עבור חיבור זה. עוקף את המגבלה ברמת החשבון.",
     "rateLimitOverridesMaxConcurrentLabel": "מקסימום בקשות מקביליות (מגבלת קצב)",
+    "rateLimitOverridesMaxWaitMsHint": "__MISSING__:Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "זמן מינימלי (במילישניות) בין בקשות. עוקף את השהיית מגביל הקצב כברירת מחדל.",
     "rateLimitOverridesMinTimeLabel": "מרווח מינימלי (מילישניות)",
     "rateLimitOverridesRpmHint": "מקסימום בקשות לדקה עבור חיבור זה. עוקף את ברירת המחדל של הספק.",
@@ -6107,7 +6113,6 @@
       "glmt": "פרופיל GLM מוגדר מראש עם תקציב טוקנים גבוה יותר, חשיבה מופעלת ופסק זמן ארוך יותר.",
       "getgoapi": "חבר את GoAPI באמצעות מפתח API.",
       "groq": "מסלול חינמי: 30 RPM / 14.4K RPD — ללא כרטיס אשראי",
-      "hackclub": "התחבר עם חשבון ה-Hack Club שלך ב-ai.hackclub.com.",
       "haiper": "קבל מפתח API ב-haiper.ai/haiper-api",
       "heroku": "חבר את Heroku AI באמצעות מפתח API.",
       "hcnsec": "קבל מפתח API ב-api.hcnsec.cn",
@@ -12202,7 +12207,7 @@
       },
       "omni-webhooks": {
         "name": "Webhooks",
-        "description": "רשום, הצג, בדוק והסר נקודות קצה של webhook. הגדר מנויים לאירועים (request.completed, provider.error, budget.exceeded וכו') ונהל ניסיונות מסירה חוזרים."
+        "description": "__MISSING__:Register, list, test, and remove webhook endpoints. Configure event subscriptions (request.completed, request.failed, quota.exceeded, etc.) and manage delivery retries."
       },
       "omni-mcp": {
         "name": "שרת MCP",

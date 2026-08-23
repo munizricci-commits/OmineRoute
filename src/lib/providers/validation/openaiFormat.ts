@@ -1,7 +1,6 @@
 // OpenAI/Gemini-format + Bedrock provider key validators (bedrock, openai-like, command-code, gemini-like, openai-compatible).
 // Extracted from validation.ts (god-file decomposition) — top-level functions; behavior is
 // byte-identical to the original inline defs.
-import { randomUUID } from "node:crypto";
 import { getRegistryEntry } from "@omniroute/open-sse/config/providerRegistry.ts";
 import {
   discoverBedrockNativeModels,
@@ -196,13 +195,12 @@ export async function validateOpenAILikeProvider({
 export async function validateCommandCodeProvider({ apiKey, providerSpecificData = {} }: any) {
   const entry = getRegistryEntry("command-code");
   const baseUrl = normalizeBaseUrl(entry?.baseUrl || "https://api.commandcode.ai");
-  const chatPath = entry?.chatPath || "/alpha/generate";
+  const chatPath = entry?.chatPath || "/provider/v1/chat/completions";
   const url = `${baseUrl}${chatPath.startsWith("/") ? chatPath : `/${chatPath}`}`;
   const validationModelId =
     providerSpecificData?.validationModelId ||
     entry?.models?.find((model) => model.id === "deepseek/deepseek-v4-flash")?.id ||
     "deepseek/deepseek-v4-flash";
-  const { COMMAND_CODE_VERSION } = await import("@omniroute/open-sse/executors/commandCode.ts");
 
   return validateDirectChatProvider({
     url,
@@ -210,37 +208,13 @@ export async function validateCommandCodeProvider({ apiKey, providerSpecificData
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
-      "x-command-code-version": COMMAND_CODE_VERSION,
-      "x-cli-environment": "external",
-      "x-project-slug": "pi-cc",
-      "x-taste-learning": "false",
-      "x-co-flag": "false",
-      "x-session-id": randomUUID(),
+      Accept: "text/event-stream",
     },
     body: {
-      config: {
-        workingDir: "/workspace",
-        date: new Date().toISOString().slice(0, 10),
-        environment: "external",
-        structure: [],
-        isGitRepo: false,
-        currentBranch: "",
-        mainBranch: "",
-        gitStatus: "",
-        recentCommits: [],
-      },
-      memory: "",
-      taste: "",
-      skills: "",
-      permissionMode: "standard",
-      params: {
-        model: validationModelId,
-        messages: [{ role: "user", content: "test" }],
-        tools: [],
-        system: "",
-        max_tokens: 1,
-        stream: true,
-      },
+      model: validationModelId,
+      messages: [{ role: "user", content: "test" }],
+      stream: true,
+      max_tokens: 1,
     },
   });
 }

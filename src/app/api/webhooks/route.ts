@@ -14,12 +14,15 @@ import { encryptMetadata } from "@/lib/webhookDispatcher";
 import { isEncryptionEnabled } from "@/lib/db/encryption";
 import { parseAndValidateWebhookUrl } from "@/shared/network/outboundUrlGuardPolicy";
 
+import { WEBHOOK_EVENT_VALUES } from "@/lib/webhooks/eventDescriptions";
+
 const WEBHOOK_KINDS = ["slack", "telegram", "discord", "custom"] as const;
+const WEBHOOK_EVENT_VALUES_WITH_WILDCARD = ["*", ...WEBHOOK_EVENT_VALUES] as const;
 
 const createWebhookSchema = z
   .object({
     url: z.string().min(1).max(2000),
-    events: z.array(z.string()).optional().default(["*"]),
+    events: z.array(z.enum(WEBHOOK_EVENT_VALUES_WITH_WILDCARD)).optional().default(["*"]),
     secret: z.string().max(500).optional(),
     description: z.string().max(1000).optional().default(""),
     kind: z.enum(WEBHOOK_KINDS).optional().default("custom"),

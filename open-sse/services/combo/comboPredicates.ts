@@ -96,6 +96,11 @@ export const MAX_COMBO_DEPTH = 3;
 export const MAX_COMBO_DEPTH_HARD_CAP = 10;
 export const MAX_FALLBACK_WAIT_MS = 5000;
 export const MAX_GLOBAL_ATTEMPTS = 30;
+// Absolute safety ceiling for the operator-configured shared attempt budget
+// (#11134). config.maxGlobalAttempts can raise the default (30) or lower it,
+// but never above this cap — an unbounded attempt budget is the same runaway
+// background-request DoS risk that motivated MAX_COMBO_DEPTH_HARD_CAP.
+export const MAX_GLOBAL_ATTEMPTS_HARD_CAP = 200;
 
 /**
  * Clamp an operator-configured combo nesting depth (config.maxComboDepth) to a
@@ -107,6 +112,20 @@ export function clampComboDepth(value: unknown): number {
   const n = Math.floor(Number(value));
   if (!Number.isFinite(n) || n < 1) return MAX_COMBO_DEPTH;
   return Math.min(n, MAX_COMBO_DEPTH_HARD_CAP);
+}
+
+/**
+ * Clamp an operator-configured shared per-request attempt budget
+ * (config.maxGlobalAttempts) to a safe integer in
+ * [1, MAX_GLOBAL_ATTEMPTS_HARD_CAP] (#11134). Mirrors clampComboDepth: anything
+ * non-numeric, < 1, NaN or Infinity falls back to the default
+ * MAX_GLOBAL_ATTEMPTS so a bad config can never disable the budget (runaway
+ * retries against a dead pool) nor blow past the safety ceiling.
+ */
+export function clampGlobalAttempts(value: unknown): number {
+  const n = Math.floor(Number(value));
+  if (!Number.isFinite(n) || n < 1) return MAX_GLOBAL_ATTEMPTS;
+  return Math.min(n, MAX_GLOBAL_ATTEMPTS_HARD_CAP);
 }
 
 /** Minimum recorded requests before the predictive-TTFT breaker trusts the average. */

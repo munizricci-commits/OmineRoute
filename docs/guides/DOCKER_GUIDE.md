@@ -505,7 +505,7 @@ Stock Docker / Kubernetes OmniRoute is **one Node process + one SQLite writer**.
 | Constraint | Consequence |
 | --- | --- |
 | Single writer | Do **not** run multiple replicas against the same SQLite file. That corrupts the DB. |
-| Recreate / restart / HEALTHCHECK kill | **Full outage** of in-flight SSE, dashboard sessions, and in-memory state. Every connected client drops. |
+| Recreate / restart / HEALTHCHECK kill | **Full outage** of in-flight SSE, dashboard sessions, and in-memory state. Every connected client drops. New requests during the empty-endpoint window get a reverse-proxy **`502 Bad Gateway: Unknown error`**, not OmniRoute JSON — clients cannot distinguish this from a provider failure (#11015). |
 | Same event loop as `/healthz` | A busy catalog or compression tick can delay probes; a short timeout then restarts the **only** replica. |
 
 **Probe matrix** (see also [Kubernetes probe recommendations](../ops/MONITORING_GUIDE.md#kubernetes-probe-recommendations)):
@@ -517,6 +517,35 @@ Stock Docker / Kubernetes OmniRoute is **one Node process + one SQLite writer**.
 | Deep / humans | `/api/monitoring/health` | Automated kubelet liveness |
 
 **Upgrades:** expect every session to drop. Drain clients if you can; there is no rolling update on default SQLite. Compose `restart: unless-stopped` plus Docker `HEALTHCHECK` will also replace the only process when the container is Unhealthy — same blast radius.
+
+Kubernetes snippet for a **single replica** (Recreate is required; do not raise `replicas` against one SQLite file):
+
+```yaml
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    spec:
+      terminationGracePeriodSeconds: 90
+      containers:
+        - name: omniroute
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sleep", "15"]
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 20128
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 20128
+            periodSeconds: 20
+```
+
+`preStop` sleep lets kube drop Service endpoints before SIGTERM so **new** traffic stops hitting the dying process. In-flight `/v1/responses` SSE is drained up to `SHUTDOWN_TIMEOUT_MS` (default 30s) via heavyweight admission leases (#11015). New requests that still reach the process get `503` + `Retry-After: 5`. The Recreate empty-endpoint gap until the replacement is Ready remains a hard outage — that is the SQLite topology, not a probe misconfig.
 
 External Postgres / multi-writer HA is **not** a documented stock path. If you need HA, keep a single replica or run a topology the project has tested and documented separately. The Postgres/MySQL work lives in [#8075](https://github.com/diegosouzapw/OmniRoute/issues/8075). Until that ships, the only supported way to multiply **large** `/v1/responses` capacity is N independent processes (next section), not `replicas > 1` on one volume.
 

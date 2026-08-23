@@ -8,7 +8,11 @@ export const command_codeProvider: RegistryEntry = {
   format: "openai",
   executor: "command-code",
   baseUrl: "https://api.commandcode.ai",
-  chatPath: "/alpha/generate",
+  // Chat uses the documented /provider/v1/chat/completions (OpenAI-format)
+  // endpoint — NOT the CLI-only /alpha/generate endpoint, which Command Code
+  // version-gates and proxy-blocks for external callers (#10265). Discovery
+  // already targets the sibling /provider/v1/models endpoint.
+  chatPath: "/provider/v1/chat/completions",
   modelsUrl: "https://api.commandcode.ai/provider/v1/models",
   // The discovery response is a partial routing catalog; static registry
   // entries omitted from it can still be accepted by the gateway.

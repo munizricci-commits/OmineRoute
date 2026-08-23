@@ -199,6 +199,8 @@ export async function handleRerank({
   return_documents,
   credentials,
   connectionId = null,
+  apiKeyId = null,
+  apiKeyName = null,
 }) {
   const startTime = Date.now();
   if (!model) return errorResponse(400, "model is required");
@@ -267,10 +269,23 @@ export async function handleRerank({
 
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
-      return errorResponse(
-        res.status,
-        errData.message || errData.error?.message || `Provider returned HTTP ${res.status}`
-      );
+      const errorMessage =
+        errData.message || errData.error?.message || `Provider returned HTTP ${res.status}`;
+      saveCallLog({
+        method: "POST",
+        path: "/v1/rerank",
+        status: res.status,
+        model: `${providerId}/${modelId}`,
+        provider: providerId,
+        connectionId: connectionId || undefined,
+        duration: Date.now() - startTime,
+        requestBody,
+        responseBody: errData,
+        error: errorMessage,
+        apiKeyId: apiKeyId || undefined,
+        apiKeyName: apiKeyName || undefined,
+      }).catch(() => {});
+      return errorResponse(res.status, errorMessage);
     }
 
     const data = await res.json();
@@ -289,10 +304,13 @@ export async function handleRerank({
       status: 200,
       model: `${providerId}/${modelId}`,
       provider: providerId,
+      connectionId: connectionId || undefined,
       duration: Date.now() - startTime,
       tokens: { prompt_tokens: 0, completion_tokens: 0 },
-      responseBody: { results_count: Array.isArray(result?.results) ? result.results.length : 0 },
-      connectionId,
+      requestBody,
+      responseBody: result,
+      apiKeyId: apiKeyId || undefined,
+      apiKeyName: apiKeyName || undefined,
     }).catch(() => {});
 
     const headers = new Headers({ ...CORS_HEADERS, "Content-Type": "application/json" });

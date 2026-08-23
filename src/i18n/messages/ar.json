@@ -2218,6 +2218,10 @@
     "fullAccess": "الوصول الكامل",
     "keyManagement": "إدارة مفاتيح API",
     "keyManagementDesc": "قم بإنشاء وإدارة مفاتيح API لمصادقة الطلبات إلى نقطة النهاية الخاصة بك",
+    "requestFlowAria": "Your app sends requests through an API key to OmniRoute",
+    "requestFlowYourApp": "Your app",
+    "requestFlowApiKey": "API key",
+    "requestFlowOmniRoute": "OmniRoute",
     "totalKeys": "مجموع المفاتيح",
     "restricted": "مقيد",
     "totalRequests": "إجمالي الطلبات",
@@ -5830,6 +5834,8 @@
     "rateLimitOverridesSection": "تجاوزات حد المعدل",
     "rateLimitOverridesMaxConcurrentHint": "تجاوز الحد الأقصى للطلبات المتزامنة لهذا الاتصال. يتجاوز الحد الأقصى على مستوى الحساب.",
     "rateLimitOverridesMaxConcurrentLabel": "الحد الأقصى للتزامن (حد المعدل)",
+    "rateLimitOverridesMaxWaitMsHint": "__MISSING__:Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "الحد الأدنى للوقت (مللي ثانية) بين الطلبات. يتجاوز تأخير محدد المعدل الافتراضي.",
     "rateLimitOverridesMinTimeLabel": "الحد الأدنى للفاصل الزمني (مللي ثانية)",
     "rateLimitOverridesRpmHint": "الحد الأقصى للطلبات في الدقيقة لهذا الاتصال. يتجاوز القيمة الافتراضية للمزود.",
@@ -6107,7 +6113,6 @@
       "glmt": "ملف تعريف GLM مسبق الضبط بميزانية رموز أعلى، وتمكين التفكير، ومهلة أطول.",
       "getgoapi": "ربط GoAPI بمفتاح API.",
       "groq": "الفئة المجانية: 30 طلبًا في الدقيقة / 14.4 ألف طلب في اليوم — بدون بطاقة ائتمان",
-      "hackclub": "سجل الدخول باستخدام حساب Hack Club الخاص بك على ai.hackclub.com.",
       "haiper": "احصل على مفتاح API من haiper.ai/haiper-api",
       "heroku": "ربط Heroku AI بمفتاح API.",
       "hcnsec": "احصل على مفتاح API من api.hcnsec.cn",
@@ -12202,7 +12207,7 @@
       },
       "omni-webhooks": {
         "name": "خطافات الويب",
-        "description": "تسجيل، وعرض، واختبار، وإزالة نقاط نهاية webhook. تكوين اشتراكات الأحداث (request.completed، وprovider.error، وbudget.exceeded، إلخ) وإدارة محاولات التسليم."
+        "description": "__MISSING__:Register, list, test, and remove webhook endpoints. Configure event subscriptions (request.completed, request.failed, quota.exceeded, etc.) and manage delivery retries."
       },
       "omni-mcp": {
         "name": "خادم MCP",

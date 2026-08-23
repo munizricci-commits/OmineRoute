@@ -47,7 +47,7 @@
  * fail-open, so this never throws into the install.
  */
 
-import { cpSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, realpathSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join, sep } from "node:path";
 
@@ -119,7 +119,9 @@ function isPackageIntact(targetNodeModulesDir, name) {
     const resolved = probe.resolve(name);
     // A resolution that walked past the target into an ancestor tree does not
     // prove the target copy is usable.
-    return resolved.startsWith(targetNodeModulesDir + sep);
+    const realTarget = realpathSync(targetNodeModulesDir);
+    const realResolved = realpathSync(resolved);
+    return realResolved.startsWith(realTarget + sep);
   } catch {
     return false;
   }

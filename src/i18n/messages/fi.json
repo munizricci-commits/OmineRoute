@@ -2218,6 +2218,10 @@
     "fullAccess": "Täysi pääsy",
     "keyManagement": "API-avainten hallinta",
     "keyManagementDesc": "Luo ja hallitse API-avaimia päätepisteesi pyyntöjen todentamiseksi",
+    "requestFlowAria": "Your app sends requests through an API key to OmniRoute",
+    "requestFlowYourApp": "Your app",
+    "requestFlowApiKey": "API key",
+    "requestFlowOmniRoute": "OmniRoute",
     "totalKeys": "Avaimet yhteensä",
     "restricted": "Rajoitettu",
     "totalRequests": "Pyyntöjä yhteensä",
@@ -5830,6 +5834,8 @@
     "rateLimitOverridesSection": "Pyyntörajojen ohitukset",
     "rateLimitOverridesMaxConcurrentHint": "Samanaikaisten pyyntöjen enimmäismäärän ohitus tälle yhteydelle. Ohittaa tilitason rajoituksen.",
     "rateLimitOverridesMaxConcurrentLabel": "Samanaikaisia enintään (pyyntöraja)",
+    "rateLimitOverridesMaxWaitMsHint": "__MISSING__:Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "Vähimmäisaika (ms) pyyntöjen välillä. Ohittaa oletusarvoisen pyyntörajoittimen viiveen.",
     "rateLimitOverridesMinTimeLabel": "Vähimmäisväli (ms)",
     "rateLimitOverridesRpmHint": "Pyyntöjen enimmäismäärä minuutissa tälle yhteydelle. Ohittaa tarjoajan oletusarvon.",
@@ -6107,7 +6113,6 @@
       "glmt": "Esiasetettu GLM-profiili suuremmalla token-budjetilla, ajattelu käytössä ja pidemmällä aikakatkaisulla.",
       "getgoapi": "Yhdistä GoAPI API-avaimella.",
       "groq": "Ilmainen taso: 30 RPM / 14,4K RPD — ei luottokorttia",
-      "hackclub": "Kirjaudu sisään Hack Club -tililläsi osoitteessa ai.hackclub.com.",
       "haiper": "Hanki API-avain osoitteesta haiper.ai/haiper-api",
       "heroku": "Yhdistä Heroku AI API-avaimella.",
       "hcnsec": "Hanki API-avain osoitteesta api.hcnsec.cn",
@@ -12202,7 +12207,7 @@
       },
       "omni-webhooks": {
         "name": "Webhookit",
-        "description": "Rekisteröi, listaa, testaa ja poista webhook-päätepisteitä. Määritä tapahtumatilaukset (request.completed, provider.error, budget.exceeded jne.) ja hallitse toimituksen uudelleenyrityksiä."
+        "description": "__MISSING__:Register, list, test, and remove webhook endpoints. Configure event subscriptions (request.completed, request.failed, quota.exceeded, etc.) and manage delivery retries."
       },
       "omni-mcp": {
         "name": "MCP-palvelin",

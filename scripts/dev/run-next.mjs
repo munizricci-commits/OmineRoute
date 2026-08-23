@@ -87,8 +87,10 @@ const { dashboardPort } = runtimePorts;
 const hostname = process.env.HOST || "0.0.0.0";
 // Turbopack by default in dev (matches the Next 16 CLI default and the production
 // build default in build-next-isolated.mjs); OMNIROUTE_USE_TURBOPACK=0 is the
-// webpack escape hatch.
-const useTurbopack = dev && mergedEnv.OMNIROUTE_USE_TURBOPACK !== "0";
+// webpack escape hatch. Under Bun, Turbopack native V8 bindings are unavailable,
+// so Bun automatically disables Turbopack and uses Webpack.
+const isBun = Boolean(process.versions.bun);
+const useTurbopack = dev && mergedEnv.OMNIROUTE_USE_TURBOPACK !== "0" && !isBun;
 process.env.OMNIROUTE_WS_BRIDGE_SECRET ||= randomUUID();
 // Per-process secret used to prove the trusted peer-IP stamp came from this
 // server (read by the authz middleware in the same process). See peer-stamp.mjs.

@@ -1,6 +1,7 @@
 import { getImageProvider } from "@omniroute/open-sse/config/imageRegistry";
 
 import { getProviderOutboundGuard } from "@/shared/network/outboundUrlGuardPolicy";
+import { isSecurityBlockError } from "@/lib/providers/validation/transport";
 import {
   SAFE_OUTBOUND_FETCH_PRESETS,
   SafeOutboundFetchError,
@@ -62,7 +63,7 @@ function toValidationErrorResult(error: unknown) {
     ...(error instanceof SafeOutboundFetchError && error.code === "TIMEOUT"
       ? { timeout: true }
       : {}),
-    ...(statusCode === 400 ? { securityBlocked: true } : {}),
+    ...(isSecurityBlockError(error) ? { securityBlocked: true } : {}),
   };
 }
 

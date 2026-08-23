@@ -6,6 +6,19 @@ import type { SqliteAdapter, PreparedStatement, RunResult } from "./types";
 const SAVE_DEBOUNCE_MS = 100;
 const CHECKPOINT_INTERVAL_MS = 60_000;
 
+// sql.js's stmt.getAsObject() returns rows whose prototype is `null`
+// (Object.create(null)), whereas better-sqlite3 (the driver we ship and run in
+// production/CI) hands back ordinary Object.prototype rows. That difference is
+// invisible for normal property access but breaks callers that compare rows
+// with structural equality that also checks the prototype (e.g. Node's
+// assert.deepStrictEqual, used by several unit tests written against the
+// better-sqlite3 row shape). Normalize every row to a plain object so the
+// sql.js fallback is behaviourally identical to the native better-sqlite3 path.
+function toPlainRow<T>(row: T): T {
+  if (row === null || typeof row !== "object") return row;
+  return { ...(row as Record<string, unknown>) } as T;
+}
+
 let _sqlJsLib: Awaited<ReturnType<(typeof import("sql.js"))["default"]>> | null = null;
 
 function resolveSqlJsWasmPath(): string {
@@ -240,7 +253,7 @@ export async function createSqlJsAdapter(filePath: string): Promise<SqliteAdapte
         try {
           const bindValue = toBindValue(params);
           if (bindValue !== undefined) stmt.bind(bindValue);
-          if (stmt.step()) return stmt.getAsObject();
+          if (stmt.step()) return toPlainRow(stmt.getAsObject());
           return undefined;
         } finally {
           stmt.free();
@@ -252,7 +265,7 @@ export async function createSqlJsAdapter(filePath: string): Promise<SqliteAdapte
           const bindValue = toBindValue(params);
           if (bindValue !== undefined) stmt.bind(bindValue);
           const rows: unknown[] = [];
-          while (stmt.step()) rows.push(stmt.getAsObject());
+          while (stmt.step()) rows.push(toPlainRow(stmt.getAsObject()));
           return rows;
         } finally {
           stmt.free();

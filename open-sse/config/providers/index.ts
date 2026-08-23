@@ -70,7 +70,6 @@ import { togetherProvider } from "./registry/together/index.ts";
 import { cohereProvider } from "./registry/cohere/index.ts";
 import { cursorProvider, cursor_apiProvider } from "./registry/cursor/index.ts";
 import { volcengineProvider } from "./registry/volcengine/index.ts";
-import { hackclubProvider } from "./registry/hackclub/index.ts";
 import { freetheaiProvider } from "./registry/freetheai/index.ts";
 import { g4f_groqProvider } from "./registry/g4f-groq/index.ts";
 import { g4f_geminiProvider } from "./registry/g4f-gemini/index.ts";
@@ -211,6 +210,7 @@ import { baiduProvider } from "./registry/baidu/index.ts";
 import { pollinationsProvider } from "./registry/pollinations/index.ts";
 import { veoaifree_webProvider } from "./registry/veoaifree-web/index.ts";
 import { codexProvider } from "./registry/codex/index.ts";
+import { codexAppServerProvider } from "./registry/codex-app-server/index.ts";
 import { veniceProvider } from "./registry/venice/index.ts";
 import { kiroProvider } from "./registry/kiro/index.ts";
 import { openadapterProvider } from "./registry/openadapter/index.ts";
@@ -265,6 +265,7 @@ import { freeAiProvider } from "./registry/free-ai/index.ts";
 import { voidAiProvider } from "./registry/void-ai/index.ts";
 import { helixmindProvider } from "./registry/helixmind/index.ts";
 import { tabitokenProvider } from "./registry/tabitoken/index.ts";
+import { logfareProvider } from "./registry/logfare/index.ts";
 
 export const REGISTRY: Record<string, RegistryEntry> = {
   aimlapi: aimlapiProvider,
@@ -336,7 +337,6 @@ export const REGISTRY: Record<string, RegistryEntry> = {
   cursor: cursorProvider,
   "cursor-api": cursor_apiProvider,
   volcengine: volcengineProvider,
-  hackclub: hackclubProvider,
   freetheai: freetheaiProvider,
   "g4f-groq": g4f_groqProvider,
   "g4f-gemini": g4f_geminiProvider,
@@ -477,6 +477,7 @@ export const REGISTRY: Record<string, RegistryEntry> = {
   pollinations: pollinationsProvider,
   "veoaifree-web": veoaifree_webProvider,
   codex: codexProvider,
+  "codex-app-server": codexAppServerProvider,
   venice: veniceProvider,
   kiro: kiroProvider,
   byteplus: byteplusProvider,
@@ -534,4 +535,5 @@ export const REGISTRY: Record<string, RegistryEntry> = {
   "void-ai": voidAiProvider,
   helixmind: helixmindProvider,
   tabitoken: tabitokenProvider,
+  logfare: logfareProvider,
 };

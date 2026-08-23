@@ -554,6 +554,10 @@ test("v1 management health endpoint aggregates proxy log metrics", async () => {
     levelId: "openai",
     provider: "openai",
   });
+  // logProxyEvent only enqueues for the 1s/100-entry background batch; the health
+  // route below aggregates persisted proxy_logs synchronously, so flush first or
+  // the seeded rows are not yet on disk (timing-flaky otherwise).
+  proxyLogger.flushProxyLogsSync();
 
   const healthRes = await proxyHealthV1Route.GET(
     new Request("http://localhost/api/v1/management/proxies/health?hours=24")

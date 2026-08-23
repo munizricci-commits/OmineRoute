@@ -245,6 +245,15 @@ const CLI_TOOLS: Record<string, any> = {
       config: ".jcode/config.json",
     },
   },
+  "prime-agent": {
+    defaultCommand: "prime-agent",
+    envBinKey: "CLI_PRIME_AGENT_BIN",
+    requiresBinary: true,
+    healthcheckTimeoutMs: 8000,
+    paths: {
+      config: ".prime-agent/config.json",
+    },
+  },
   "grok-build": GROK_BUILD_RUNTIME_ENTRY,
   "deepseek-tui": {
     defaultCommand: "deepseek-tui",
@@ -329,6 +338,7 @@ export const CLI_TOOL_ALIASES: Readonly<Record<string, string>> = {
   "claude-code": "claude",
   "openai-codex": "codex",
   openai: "codex",
+  "codex-app-server": "codex",
   cn: "continue",
   qodercli: "qoder",
 };

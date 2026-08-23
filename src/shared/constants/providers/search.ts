@@ -69,7 +69,8 @@ export const SEARCH_PROVIDERS = {
     textIcon: "FC",
     website: "https://firecrawl.dev",
     hasFree: true,
-    authHint: "API key from firecrawl.dev/app/api-keys (or set your self-hosted Firecrawl base URL)",
+    authHint:
+      "API key from firecrawl.dev/app/api-keys (or set your self-hosted Firecrawl base URL)",
     notice: {
       text: "Free tier: 1,000 credits/month. Powers /v1/web/fetch and /v1/search.",
       apiKeyUrl: "https://firecrawl.dev/app/api-keys",
@@ -149,5 +150,18 @@ export const SEARCH_PROVIDERS = {
     textIcon: "OS",
     website: "https://ollama.com/settings/keys",
     authHint: "Same API key as Ollama Cloud (from ollama.com/settings/keys)",
+  },
+  context7: {
+    id: "context7",
+    alias: "context7",
+    name: "Context7 (library docs)",
+    icon: "menu_book",
+    color: "#6B4FBB",
+    textIcon: "C7",
+    website: "https://context7.com",
+    hasFree: true,
+    authHint:
+      "API key optional (ctx7sk-...) — anonymous tier works without a key; a key raises the rate limit",
+    serviceKinds: ["webSearch", "webFetch"],
   },
 };

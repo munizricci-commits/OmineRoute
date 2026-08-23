@@ -25,6 +25,7 @@ import {
   GLMT_TIMEOUT_MS,
   GLM_SHARED_MODELS,
 } from "../glmProvider.ts";
+import { OPENCODE_ZEN_GO_SHARED_MODELS } from "../opencodeZenGoSharedModels.ts";
 import { MARITALK_DEFAULT_BASE_URL } from "../maritalk.ts";
 import {
   CURSOR_REGISTRY_VERSION,
@@ -283,14 +284,21 @@ export const GPT_5_6_API_CAPABILITIES = {
   maxOutputTokens: 128000,
 } as const;
 
+// Codex OAuth catalog limits. The live OAuth `/codex/models` endpoint reports
+// `context_window` (~272K, the first pricing tier) alongside
+// `max_context_window` (~872K, the real usable window); requests past the
+// pricing tier succeed upstream (verified: gpt-5.6-luna-xhigh served 380-390K
+// input tokens with HTTP 200). The static catalog must advertise the usable
+// window so the conservative discovery merge (`Math.min`) does not cap the
+// live value at the pricing tier.
 export const GPT_5_6_CODEX_CAPABILITIES = {
   targetFormat: "openai-responses",
   toolCalling: true,
   supportsReasoning: true,
   supportsVision: true,
   supportsXHighEffort: true,
-  contextLength: 272000,
-  maxInputTokens: 272000,
+  contextLength: 872000,
+  maxInputTokens: 872000,
   maxOutputTokens: 128000,
 } as const;
 
@@ -719,6 +727,7 @@ export {
   GLM_TIMEOUT_MS,
   GLMT_TIMEOUT_MS,
   GLM_SHARED_MODELS,
+  OPENCODE_ZEN_GO_SHARED_MODELS,
   MARITALK_DEFAULT_BASE_URL,
   CURSOR_REGISTRY_VERSION,
   getAntigravityProviderHeaders,

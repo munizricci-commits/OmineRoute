@@ -2218,6 +2218,10 @@
     "fullAccess": "पूर्ण प्रवेश",
     "keyManagement": "एपीआई कुंजी प्रबंधन",
     "keyManagementDesc": "अपने एंडपॉइंट पर अनुरोधों को प्रमाणित करने के लिए एपीआई कुंजियाँ बनाएं और प्रबंधित करें",
+    "requestFlowAria": "Your app sends requests through an API key to OmniRoute",
+    "requestFlowYourApp": "Your app",
+    "requestFlowApiKey": "API key",
+    "requestFlowOmniRoute": "OmniRoute",
     "totalKeys": "कुल कुंजियाँ",
     "restricted": "प्रतिबंधित",
     "totalRequests": "कुल अनुरोध",
@@ -5830,6 +5834,8 @@
     "rateLimitOverridesSection": "रेट लिमिट ओवरराइड",
     "rateLimitOverridesMaxConcurrentHint": "इस कनेक्शन के लिए अधिकतम समवर्ती अनुरोध ओवरराइड। खाता-स्तरीय सीमा को ओवरराइड करता है।",
     "rateLimitOverridesMaxConcurrentLabel": "अधिकतम समवर्ती (रेट लिमिट)",
+    "rateLimitOverridesMaxWaitMsHint": "__MISSING__:Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "अनुरोधों के बीच न्यूनतम समय (ms)। डिफ़ॉल्ट रेट लिमिटर विलंब को ओवरराइड करता है।",
     "rateLimitOverridesMinTimeLabel": "न्यूनतम अंतराल (ms)",
     "rateLimitOverridesRpmHint": "इस कनेक्शन के लिए प्रति मिनट अधिकतम अनुरोध। प्रदाता डिफ़ॉल्ट को ओवरराइड करता है।",
@@ -6107,7 +6113,6 @@
       "glmt": "उच्च टोकन बजट, थिंकिंग (thinking) सक्षम और लंबे टाइमआउट के साथ प्रीसेट GLM प्रोफ़ाइल।",
       "getgoapi": "GoAPI को एक API कुंजी से कनेक्ट करें।",
       "groq": "निःशुल्क टियर: 30 RPM / 14.4K RPD — कोई क्रेडिट कार्ड नहीं",
-      "hackclub": "ai.hackclub.com पर अपने Hack Club खाते से साइन इन करें।",
       "haiper": "haiper.ai/haiper-api पर API कुंजी प्राप्त करें",
       "heroku": "Heroku AI को एक API कुंजी से कनेक्ट करें।",
       "hcnsec": "api.hcnsec.cn पर API कुंजी प्राप्त करें",
@@ -12202,7 +12207,7 @@
       },
       "omni-webhooks": {
         "name": "वेबहुक",
-        "description": "वेबहुक एंडपॉइंट्स को रजिस्टर, सूचीबद्ध, टेस्ट और रिमूव करें। इवेंट सब्सक्रिप्शन (request.completed, provider.error, budget.exceeded, आदि) कॉन्फ़िगर करें और डिलीवरी रीट्राय प्रबंधित करें।"
+        "description": "__MISSING__:Register, list, test, and remove webhook endpoints. Configure event subscriptions (request.completed, request.failed, quota.exceeded, etc.) and manage delivery retries."
       },
       "omni-mcp": {
         "name": "MCP सर्वर",

@@ -311,6 +311,12 @@ export async function resolveAutoStrategyOrder(
             taskType,
             requestHasTools,
             lastKnownGoodProvider,
+            // #11181: the Routing tab persists an LKGP on/off toggle and
+            // LKGPStrategy guards on `context.lkgpEnabled === false`, but the
+            // field was never forwarded into this context, so the guard never
+            // saw the setting and the off-switch was unreachable.
+            lkgpEnabled: (settings as { lkgpEnabled?: unknown } | null | undefined)?.lkgpEnabled as
+              boolean | undefined,
             estimatedInputTokens,
             sla: slaPolicy,
           },

@@ -2218,6 +2218,10 @@
     "fullAccess": "전체 액세스",
     "keyManagement": "API 키 관리",
     "keyManagementDesc": "엔드포인트에 대한 요청을 인증하기 위한 API 키 생성 및 관리",
+    "requestFlowAria": "Your app sends requests through an API key to OmniRoute",
+    "requestFlowYourApp": "Your app",
+    "requestFlowApiKey": "API key",
+    "requestFlowOmniRoute": "OmniRoute",
     "totalKeys": "총 키",
     "restricted": "제한됨",
     "totalRequests": "총 요청",
@@ -5830,6 +5834,8 @@
     "rateLimitOverridesSection": "속도 제한 재정의",
     "rateLimitOverridesMaxConcurrentHint": "이 연결에 대한 최대 동시 요청 수 재정의입니다. 계정 수준의 제한을 재정의합니다.",
     "rateLimitOverridesMaxConcurrentLabel": "최대 동시 요청 수 (속도 제한)",
+    "rateLimitOverridesMaxWaitMsHint": "__MISSING__:Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "요청 간 최소 시간(ms)입니다. 기본 속도 제한기 지연 시간을 재정의합니다.",
     "rateLimitOverridesMinTimeLabel": "최소 간격 (ms)",
     "rateLimitOverridesRpmHint": "이 연결에 대한 분당 최대 요청 수입니다. 제공업체 기본값을 재정의합니다.",
@@ -6107,7 +6113,6 @@
       "glmt": "더 높은 토큰 예산, 생각하기(thinking) 활성화 및 더 긴 타임아웃이 설정된 프리셋 GLM 프로필.",
       "getgoapi": "API 키로 GoAPI 연결.",
       "groq": "무료 티어: 30 RPM / 14.4K RPD — 신용카드 불필요",
-      "hackclub": "ai.hackclub.com 에서 Hack Club 계정으로 로그인하세요.",
       "haiper": "haiper.ai/haiper-api 에서 API 키를 가져오세요.",
       "heroku": "API 키로 Heroku AI 연결.",
       "hcnsec": "api.hcnsec.cn 에서 API 키를 가져오세요.",
@@ -12202,7 +12207,7 @@
       },
       "omni-webhooks": {
         "name": "웹훅",
-        "description": "웹훅 엔드포인트를 등록, 나열, 테스트 및 제거합니다. 이벤트 구독(request.completed, provider.error, budget.exceeded 등)을 구성하고 전달 재시도를 관리합니다."
+        "description": "__MISSING__:Register, list, test, and remove webhook endpoints. Configure event subscriptions (request.completed, request.failed, quota.exceeded, etc.) and manage delivery retries."
       },
       "omni-mcp": {
         "name": "MCP 서버",

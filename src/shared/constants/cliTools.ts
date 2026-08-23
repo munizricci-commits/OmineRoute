@@ -593,6 +593,31 @@ aider --openai-api-base "{{baseUrl}}" --model "{{model}}"`,
   },
 
   /**
+   * ★ Added 2026-08-22 — Prime Agent (PrimeIntellect-ai/prime-agent).
+   * A self-improving RLM coding harness (TypeScript) whose LLM toolkit
+   * (prime-agent-ai) supports "any OpenAI-compatible API" + a dedicated
+   * "OpenAI Codex (ChatGPT Plus/Pro OAuth)" provider, so it can point at
+   * OmniRoute's OpenAI-compatible base URL like codex/forge. Installed via
+   * `curl -fsSL https://app.primeintellect.ai/prime-agent/install.sh | sh`;
+   * provider chosen at first run via `/login`.
+   */
+  "prime-agent": {
+    id: "prime-agent",
+    name: "Prime Agent",
+    icon: "terminal",
+    color: "#6366F1",
+    description:
+      "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support",
+    docsUrl: "https://github.com/PrimeIntellect-ai/prime-agent",
+    configType: "custom",
+    category: "agent",
+    vendor: "Prime Intellect (OSS)",
+    acpSpawnable: false,
+    baseUrlSupport: "full",
+    defaultCommand: "prime-agent",
+  },
+
+  /**
    * ★ Added by plan 14 (CLI Pages Redesign) — 2026-05-27
    * Kept as a legacy/dual entry after CodeWhale (see below) took over as the
    * actively-maintained successor. Existing users who still have DeepSeek

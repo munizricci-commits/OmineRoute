@@ -2218,6 +2218,10 @@
     "fullAccess": "Full Access",
     "keyManagement": "API Key Management",
     "keyManagementDesc": "Create and manage API keys for authenticating requests to your endpoint",
+    "requestFlowAria": "Your app sends requests through an API key to OmniRoute",
+    "requestFlowYourApp": "Your app",
+    "requestFlowApiKey": "API key",
+    "requestFlowOmniRoute": "OmniRoute",
     "totalKeys": "Total Keys",
     "restricted": "Restricted",
     "totalRequests": "Total Requests",
@@ -5830,6 +5834,8 @@
     "rateLimitOverridesSection": "রেট লিমিট ওভাররাইড",
     "rateLimitOverridesMaxConcurrentHint": "এই সংযোগের জন্য সর্বোচ্চ সমবর্তী অনুরোধের ওভাররাইড। অ্যাকাউন্ট-স্তরের সীমা ওভাররাইড করে।",
     "rateLimitOverridesMaxConcurrentLabel": "সর্বোচ্চ সমবর্তী (রেট লিমিট)",
+    "rateLimitOverridesMaxWaitMsHint": "__MISSING__:Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "অনুরোধগুলোর মধ্যে ন্যূনতম সময় (ms)। ডিফল্ট রেট লিমিটারের বিলম্ব ওভাররাইড করে।",
     "rateLimitOverridesMinTimeLabel": "ন্যূনতম ব্যবধান (ms)",
     "rateLimitOverridesRpmHint": "এই সংযোগের জন্য প্রতি মিনিটে সর্বোচ্চ অনুরোধ। প্রদানকারীর ডিফল্ট ওভাররাইড করে।",
@@ -6107,7 +6113,6 @@
       "glmt": "উচ্চতর টোকেন বাজেট, থিংকিং সক্রিয় এবং দীর্ঘতর টাইমআউট সহ প্রিসেট GLM প্রোফাইল।",
       "getgoapi": "একটি API কী দিয়ে GoAPI কানেক্ট করুন।",
       "groq": "ফ্রি টিয়ার: 30 RPM / 14.4K RPD — কোনো ক্রেডিট কার্ড লাগবে না",
-      "hackclub": "ai.hackclub.com-এ আপনার Hack Club অ্যাকাউন্ট দিয়ে সাইন ইন করুন।",
       "haiper": "haiper.ai/haiper-api থেকে API কী পান",
       "heroku": "একটি API কী দিয়ে Heroku AI কানেক্ট করুন।",
       "hcnsec": "api.hcnsec.cn-এ API কী পান",
@@ -12202,7 +12207,7 @@
       },
       "omni-webhooks": {
         "name": "ওয়েবহুক",
-        "description": "ওয়েবহুক এন্ডপয়েন্ট রেজিস্টার, তালিকাভুক্ত, পরীক্ষা এবং অপসারণ করুন। ইভেন্ট সাবস্ক্রিপশন (request.completed, provider.error, budget.exceeded ইত্যাদি) কনফিগার করুন এবং ডেলিভারি রিট্রাই পরিচালনা করুন।"
+        "description": "__MISSING__:Register, list, test, and remove webhook endpoints. Configure event subscriptions (request.completed, request.failed, quota.exceeded, etc.) and manage delivery retries."
       },
       "omni-mcp": {
         "name": "MCP সার্ভার",

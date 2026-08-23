@@ -131,7 +131,22 @@ test("buildChatInvocation produces a type:4 chat invocation carrying the user te
   assert.equal(arg.sessionId, "session-id");
   assert.equal(arg.conversationId, "conversation-id");
   assert.equal(arg.productThreadType, "Office");
-  assert.deepEqual(arg.clientInfo, { clientAppName: "Office", clientPlatform: "mcmcopilot-web" });
+  // 2026-08-21 capture (#11069): clientInfo gained 8 keys (clientEntrypoint,
+  // clientSessionId, ProductCategory, clientAppType, productEntryPoint,
+  // deviceOS, deviceType, clientPlatformVersion). The #10718 base shape only
+  // carried clientAppName + clientPlatform.
+  assert.deepEqual(arg.clientInfo, {
+    clientAppName: "Office",
+    clientPlatform: "mcmcopilot-web",
+    clientEntrypoint: "mcmcopilot-officeweb",
+    clientSessionId: "session-id",
+    ProductCategory: "Chat",
+    clientAppType: "Web",
+    productEntryPoint: "ChatPanel",
+    deviceOS: "Windows",
+    deviceType: "Desktop",
+    clientPlatformVersion: "10",
+  });
   assert.equal(arg.isStartOfSession, true);
   assert.ok(Array.isArray(arg.optionsSets));
   assert.ok((arg.optionsSets as string[]).includes("enable_gg_gpt"));

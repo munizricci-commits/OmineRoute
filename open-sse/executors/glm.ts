@@ -73,7 +73,7 @@ type GlmEffortTier = {
  * `thinking.type=enabled` (5.3 no longer accepts thinking disabled).
  *
  * https://docs.z.ai/devpack/latest-model
- * https://z.ai/blog/glm-5.3
+ * https://docs.z.ai/guides/llm/glm-5.3
  */
 function parseGlmEffortTier(model: string): GlmEffortTier | null {
   switch (model) {
@@ -399,7 +399,24 @@ export class GlmExecutor extends DefaultExecutor {
   ): Promise<GlmExecuteResult> {
     const credentials = input.credentials;
     const url = buildGlmChatUrl(credentials?.providerSpecificData, transport, this.config.baseUrl);
-    const headers = this.buildHeaders(credentials, input.stream, input.clientHeaders, input.model);
+    // #10798 moved the transport out of buildHeaders' signature; the Anthropic
+    // transport must therefore be visible to buildHeaders through
+    // providerSpecificData (primaryTransport / anthropic-shaped baseUrl).
+    const headers =
+      transport === "anthropic"
+        ? this.buildHeaders(
+            {
+              ...credentials,
+              providerSpecificData: {
+                ...credentials?.providerSpecificData,
+                primaryTransport: "anthropic",
+              },
+            },
+            input.stream,
+            input.clientHeaders,
+            input.model
+          )
+        : this.buildHeaders(credentials, input.stream, input.clientHeaders, input.model);
     applyConfiguredUserAgent(headers, credentials.providerSpecificData);
     mergeUpstreamExtraHeaders(headers, input.upstreamExtraHeaders);
 
@@ -430,6 +447,7 @@ export class GlmExecutor extends DefaultExecutor {
 
     let response: Response;
     try {
+      this.assertOutboundUrlAllowed(url); // GHSA-4f49: glm has its own fetch path
       response = await fetch(url, {
         method: "POST",
         headers,

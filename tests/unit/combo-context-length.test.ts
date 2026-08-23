@@ -46,6 +46,7 @@ test.after(async () => {
 test("createComboSchema accepts valid context_length", () => {
   const result = schemas.createComboSchema.safeParse({
     name: "TestCombo",
+    models: ["openai/gpt-4o-mini"],
     context_length: 128000,
   });
   assert.equal(result.success, true);
@@ -54,6 +55,7 @@ test("createComboSchema accepts valid context_length", () => {
 test("createComboSchema rejects context_length below minimum (1000)", () => {
   const result = schemas.createComboSchema.safeParse({
     name: "TestCombo",
+    models: ["openai/gpt-4o-mini"],
     context_length: 999,
   });
   assert.equal(result.success, false);
@@ -62,6 +64,7 @@ test("createComboSchema rejects context_length below minimum (1000)", () => {
 test("createComboSchema rejects context_length above maximum (2000000)", () => {
   const result = schemas.createComboSchema.safeParse({
     name: "TestCombo",
+    models: ["openai/gpt-4o-mini"],
     context_length: 2000001,
   });
   assert.equal(result.success, false);
@@ -70,12 +73,14 @@ test("createComboSchema rejects context_length above maximum (2000000)", () => {
 test("createComboSchema accepts context_length at exact boundaries", () => {
   const min = schemas.createComboSchema.safeParse({
     name: "MinCombo",
+    models: ["openai/gpt-4o-mini"],
     context_length: 1000,
   });
   assert.equal(min.success, true);
 
   const max = schemas.createComboSchema.safeParse({
     name: "MaxCombo",
+    models: ["openai/gpt-4o-mini"],
     context_length: 2000000,
   });
   assert.equal(max.success, true);
@@ -84,6 +89,7 @@ test("createComboSchema accepts context_length at exact boundaries", () => {
 test("createComboSchema rejects non-integer context_length", () => {
   const result = schemas.createComboSchema.safeParse({
     name: "TestCombo",
+    models: ["openai/gpt-4o-mini"],
     context_length: 128000.5,
   });
   assert.equal(result.success, false);
@@ -92,6 +98,7 @@ test("createComboSchema rejects non-integer context_length", () => {
 test("createComboSchema accepts omitted context_length", () => {
   const result = schemas.createComboSchema.safeParse({
     name: "TestCombo",
+    models: ["openai/gpt-4o-mini"],
   });
   assert.equal(result.success, true);
 });

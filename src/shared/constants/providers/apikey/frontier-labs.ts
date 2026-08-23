@@ -91,6 +91,11 @@ export const APIKEY_PROVIDERS_FRONTIER = {
     hasFree: true,
     freeNote:
       "Limited free access is available through Blackbox; model availability and account limits apply",
+    subscriptionRisk: true,
+    riskNoticeVariant: "deprecated",
+    deprecated: true,
+    deprecationReason:
+      "api.blackbox.ai returns HTTP 404 on every path variant (sweep 2026-08-21); the public inference surface has moved to the gated enterprise.blackbox.ai/v1 endpoint.",
   },
   xai: {
     id: "xai",

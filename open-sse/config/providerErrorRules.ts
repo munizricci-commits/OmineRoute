@@ -30,20 +30,62 @@ export type ProviderErrorRule = {
 export type ProviderErrorRuleMatch = {
   reason: ConfiguredErrorReason;
   /**
-   * Intended lock scope. #10334: this field is CONSUMED end-to-end only for
-   * providers in `HONORS_RULE_LOCK_SCOPE_PROVIDERS` (agentrouter-exclusive
-   * today, gated by `honorsRuleLockScope()`) — for those, `checkFallbackError`
-   * surfaces it as `ruleScope` on its return value for the persistence layer
-   * to honor instead of re-deriving scope from `hasPerModelQuota()`. For
-   * every other provider it remains INFORMATIONAL: `getProviderErrorRuleMatch`
-   * callers still read only `reason`/`cooldownMs`, and the actual lock scope
-   * is decided independently by each call site. Widening the allowlist is
-   * tracked as a follow-up — see `docs/architecture/RESILIENCE_GUIDE.md` §7.
+   * Intended lock scope. #10334: for a BUILT-IN catalog rule, this field is
+   * CONSUMED end-to-end only for providers in `HONORS_RULE_LOCK_SCOPE_PROVIDERS`
+   * (agentrouter-exclusive today, gated by `honorsRuleLockScope()`) — for those,
+   * `checkFallbackError` surfaces it as `ruleScope` on its return value for the
+   * persistence layer to honor instead of re-deriving scope from
+   * `hasPerModelQuota()`. For every other built-in-rule provider it remains
+   * INFORMATIONAL. #11104: an OPERATOR-declared rule (`OperatorProviderErrorRule`)
+   * is exempt from this allowlist — `honorsRuleLockScope()` always returns true
+   * when the provider has one, since the operator already opted in by declaring
+   * the rule. Widening `HONORS_RULE_LOCK_SCOPE_PROVIDERS` itself (for a new
+   * built-in catalog rule) is tracked as a follow-up — see
+   * `docs/architecture/RESILIENCE_GUIDE.md` §7.
    */
   scope: "model" | "provider" | "connection";
   /** Optional explicit cooldown; falls back to the existing per-reason defaults. */
   cooldownMs?: number;
 };
+
+/**
+ * Operator-declared per-provider error rule (settings-driven).
+ *
+ * Mirrors the catalog `ProviderErrorRule` but is data-only so an operator can
+ * add a scope/cooldown/reason override for a provider without editing this
+ * file. `match` is a plain case-insensitive SUBSTRING of the error body — never
+ * a RegExp — so an operator-supplied pattern can never introduce a ReDoS on the
+ * error-classification hot path. Bounded to <= 50 rules total by the settings
+ * schema. An operator rule is consulted BEFORE the built-in `providerRuleRegistry`
+ * and wins on the first status+substring match for a provider.
+ */
+export type OperatorProviderErrorRule = {
+  status: number;
+  match: string;
+  scope: "model" | "provider" | "connection";
+  reason?: ConfiguredErrorReason;
+  cooldownMs?: number;
+};
+
+let operatorProviderErrorRules: Record<string, OperatorProviderErrorRule[]> = {};
+
+/**
+ * Inject operator-declared rules. Called from the runtime-settings applier
+ * (`applyRuntimeSettings`) once at boot and on every settings update, with the
+ * value validated by the settings schema. Pass `undefined`/empty/null to clear.
+ * Provider keys are lowercased so lookups are case-insensitive.
+ */
+export function setOperatorProviderErrorRules(
+  rules: Record<string, OperatorProviderErrorRule[]> | undefined | null
+): void {
+  operatorProviderErrorRules = {};
+  if (!rules) return;
+  for (const [provider, list] of Object.entries(rules)) {
+    if (Array.isArray(list) && list.length > 0) {
+      operatorProviderErrorRules[provider.toLowerCase()] = list;
+    }
+  }
+}
 
 // ─── Opencode ───────────────────────────────────────────────────────────────────
 // Opencode Go uses an account-wide quota. The body usually says "rate limit
@@ -272,11 +314,21 @@ export const providerRuleRegistry = new Map<string, ProviderErrorRule[]>([
  * FULL_TEXT_RULE_PROVIDERS: that set controls what body a rule matches against
  * (input), this one controls whether the matched scope changes caller behavior
  * (output). A provider could need one without the other.
+ *
+ * Providers with an operator-declared rule (`setOperatorProviderErrorRules`)
+ * are honored too, without being added here: the allowlist exists to gate
+ * BUILT-IN catalog rules, which change default behavior for every operator
+ * running that provider — an operator rule is already an explicit, per-operator
+ * opt-in, so gating it a second time behind this list would make the settings
+ * mechanism (#11104) silently inert for every provider except the ones listed
+ * below. See `hasOperatorRuleForProvider`.
  */
 const HONORS_RULE_LOCK_SCOPE_PROVIDERS = new Set(["agentrouter"]);
 
 export function honorsRuleLockScope(provider: string | null | undefined): boolean {
-  return !!provider && HONORS_RULE_LOCK_SCOPE_PROVIDERS.has(provider.toLowerCase());
+  if (!provider) return false;
+  const key = provider.toLowerCase();
+  return HONORS_RULE_LOCK_SCOPE_PROVIDERS.has(key) || hasOperatorRuleForProvider(key);
 }
 
 /**
@@ -310,28 +362,51 @@ export function egressBucketedLockProviders(): string[] {
 }
 
 /**
- * Providers whose rules match on the FULL upstream error text.
- * checkFallbackError's rule lookup normally passes only the structured
+ * Providers whose BUILT-IN catalog rules match on the FULL upstream error
+ * text. checkFallbackError's rule lookup normally passes only the structured
  * error ({code, type} — message stripped by the combo callers), which is
  * enough for header/status/code rules but blind to body-text markers like
  * agentrouter's "额度不足". Providers in this set get the raw error text as
  * the match body instead. EXCLUSIVE allowlist by owner decision (2026-08-13):
  * adding a provider here is an explicit opt-in — the default path for every
  * other provider must remain byte-for-byte unchanged.
+ *
+ * Operator-declared rules bypass this allowlist entirely (see
+ * `hasOperatorRuleForProvider`): the operator's `match` is a literal substring
+ * of the error body by construction, so a rule that never sees body text could
+ * never match anything, defeating the point of declaring it.
  */
 const FULL_TEXT_RULE_PROVIDERS = new Set(["agentrouter"]);
 
 /**
+ * True when an operator has declared at least one rule for this provider via
+ * `settings.providerErrorRules` (injected through `setOperatorProviderErrorRules`).
+ * Presence of the rule IS the opt-in — no separate allowlist to maintain, and
+ * no widening decision needed as new operators configure new providers.
+ */
+export function hasOperatorRuleForProvider(provider: string | null | undefined): boolean {
+  if (!provider) return false;
+  const rules = operatorProviderErrorRules[provider.toLowerCase()];
+  return !!rules && rules.length > 0;
+}
+
+/**
  * Resolve the body handed to getProviderErrorRuleMatch inside
- * checkFallbackError: full error text for FULL_TEXT_RULE_PROVIDERS,
- * the structured error for everyone else.
+ * checkFallbackError: full error text for FULL_TEXT_RULE_PROVIDERS or any
+ * provider with an operator-declared rule, the structured error for everyone
+ * else.
  */
 export function resolveRuleMatchBody(
   provider: string | null | undefined,
   structuredError: unknown,
   errorText: string | null | undefined
 ): unknown {
-  if (provider && FULL_TEXT_RULE_PROVIDERS.has(provider.toLowerCase()) && errorText) {
+  if (
+    provider &&
+    (FULL_TEXT_RULE_PROVIDERS.has(provider.toLowerCase()) ||
+      hasOperatorRuleForProvider(provider)) &&
+    errorText
+  ) {
     return errorText;
   }
   return structuredError ?? null;
@@ -346,10 +421,32 @@ export function getProviderErrorRuleMatch(
   provider: string | null | undefined,
   status: number,
   headers: Headers | Record<string, string> | null | undefined,
-  body?: unknown
+  body?: unknown,
+  operatorRules?: Record<string, OperatorProviderErrorRule[]>
 ): ProviderErrorRuleMatch | null {
   if (!provider) return null;
-  const rules = providerRuleRegistry.get(provider.toLowerCase());
+  const key = provider.toLowerCase();
+
+  // Operator-declared rules win first: an operator can override any catalog
+  // rule for a provider without editing this file. `operatorRules` is the
+  // injected source (tests / direct callers); when omitted we fall back to the
+  // settings-backed cache populated by `setOperatorProviderErrorRules`.
+  const opRules = (operatorRules ?? operatorProviderErrorRules)?.[key];
+  if (opRules && opRules.length > 0) {
+    const text = typeof body === "string" ? body : JSON.stringify(body ?? "");
+    const lowered = text.toLowerCase();
+    for (const r of opRules) {
+      if (r.status === status && lowered.includes(r.match.toLowerCase())) {
+        return {
+          reason: r.reason ?? "quota_exhausted",
+          scope: r.scope,
+          cooldownMs: r.cooldownMs,
+        };
+      }
+    }
+  }
+
+  const rules = providerRuleRegistry.get(key);
   if (!rules) return null;
   // Normalize headers: accept either a `Headers` object (from `fetch()`) or
   // a plain record. Provider rules access headers via plain object indexing.

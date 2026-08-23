@@ -167,6 +167,41 @@ test("createDisconnectAwareStream treats cancel after Responses completed as suc
   assert.equal(disconnectHandled, false);
 });
 
+test("createDisconnectAwareStream recognizes a large Responses compaction completion", async () => {
+  let errorHandled = false;
+  const completed = `event: response.completed\ndata: ${JSON.stringify({
+    type: "response.completed",
+    response: {
+      status: "completed",
+      output: [{ type: "compaction", encrypted_content: "x".repeat(5000) }],
+    },
+  })}\n\n`;
+  const transformStream = {
+    readable: new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(completed));
+        controller.close();
+      },
+    }),
+    writable: createNoopAbortWritable(),
+  };
+
+  const stream = createDisconnectAwareStream(
+    transformStream,
+    createStreamController({
+      clientResponseFormat: FORMATS.OPENAI_RESPONSES,
+      onError() {
+        errorHandled = true;
+      },
+    })
+  );
+  const text = await readStreamText(stream);
+
+  assert.equal(text, completed);
+  assert.equal(errorHandled, false);
+  assert.doesNotMatch(text, /response\.failed/);
+});
+
 test("createDisconnectAwareStream: Gemini 503 high-demand error becomes SSE error chunk with message preserved", async () => {
   const geminiMsg =
     "[503]: This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.";

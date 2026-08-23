@@ -2218,6 +2218,10 @@
     "fullAccess": "Buong Access",
     "keyManagement": "Pamamahala ng Key ng API",
     "keyManagementDesc": "Gumawa at mamahala ng mga API key para sa pag-authenticate ng mga kahilingan sa iyong endpoint",
+    "requestFlowAria": "Your app sends requests through an API key to OmniRoute",
+    "requestFlowYourApp": "Your app",
+    "requestFlowApiKey": "API key",
+    "requestFlowOmniRoute": "OmniRoute",
     "totalKeys": "Kabuuang Mga Susi",
     "restricted": "Pinaghihigpitan",
     "totalRequests": "Kabuuang Mga Kahilingan",
@@ -5830,6 +5834,8 @@
     "rateLimitOverridesSection": "Mga Override sa Rate Limit",
     "rateLimitOverridesMaxConcurrentHint": "Override sa max concurrent requests para sa koneksyong ito. Ino-override ang cap sa antas ng account.",
     "rateLimitOverridesMaxConcurrentLabel": "Max Concurrent (Rate Limit)",
+    "rateLimitOverridesMaxWaitMsHint": "__MISSING__:Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "Minimum na oras (ms) sa pagitan ng mga request. Ino-override ang default na delay ng rate limiter.",
     "rateLimitOverridesMinTimeLabel": "Min Interval (ms)",
     "rateLimitOverridesRpmHint": "Max na request bawat minuto para sa koneksyong ito. Ino-override ang default ng provider.",
@@ -6107,7 +6113,6 @@
       "glmt": "Preset na GLM profile na may mas mataas na token budget, naka-enable ang thinking, at mas mahabang timeout.",
       "getgoapi": "Ikonekta ang GoAPI gamit ang isang API key.",
       "groq": "Libreng tier: 30 RPM / 14.4K RPD — walang credit card",
-      "hackclub": "Mag-sign in gamit ang iyong Hack Club account sa ai.hackclub.com.",
       "haiper": "Kumuha ng API key sa haiper.ai/haiper-api",
       "heroku": "Ikonekta ang Heroku AI gamit ang isang API key.",
       "hcnsec": "Kumuha ng API key sa api.hcnsec.cn",
@@ -12202,7 +12207,7 @@
       },
       "omni-webhooks": {
         "name": "Mga Webhook",
-        "description": "Magrehistro, maglista, magsubok, at mag-alis ng mga webhook endpoint. I-configure ang mga subscription sa event (request.completed, provider.error, budget.exceeded, atbp.) at pamahalaan ang mga muling pagsubok sa paghahatid."
+        "description": "__MISSING__:Register, list, test, and remove webhook endpoints. Configure event subscriptions (request.completed, request.failed, quota.exceeded, etc.) and manage delivery retries."
       },
       "omni-mcp": {
         "name": "MCP Server",

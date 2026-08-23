@@ -21,7 +21,11 @@ import {
   honorsRuleLockScope,
 } from "../config/providerErrorRules.ts";
 import * as rot from "./rotationConfig.ts";
-import { getPassthroughProviders, getProviderCategory } from "../config/providerRegistry.ts";
+import {
+  getPassthroughProviders,
+  getProviderCategory,
+  isLocalProvider,
+} from "../config/providerRegistry.ts";
 import {
   DEFAULT_RESILIENCE_SETTINGS,
   resolveResilienceSettings,
@@ -37,7 +41,12 @@ import {
   type FailureKind,
 } from "../../src/shared/utils/classify429";
 import { recordProviderSuccess as resetCooldownFailureCount } from "./providerCooldownTracker.ts";
-import { resolveProviderId } from "../../src/shared/constants/providers";
+import {
+  getProviderById,
+  resolveProviderId,
+  isLocalProvider as isLocalProviderId,
+  isSelfHostedChatProvider,
+} from "../../src/shared/constants/providers";
 import { resolveUseUpstream429BreakerHints } from "../../src/shared/utils/providerHints";
 import { getCodexModelScope } from "../config/codexQuotaScopes.ts";
 import { getQuotaScopedModelForProvider } from "./antigravityQuotaFamily.ts";
@@ -791,12 +800,20 @@ export function hasPerModelQuota(
     return connectionPassthroughModels;
   }
   if (!provider) return false;
-  if (getCanonicalLockProvider(provider) === "antigravity") return true;
-  if (getCanonicalLockProvider(provider) === "codex") return true;
-  if (provider === "gemini" || provider === "github") return true;
-  if (provider === "antigravity" || provider === "agy") return true;
-  if (getPassthroughProviders().has(provider)) return true;
-  if (isCompatibleProvider(provider)) return true;
+  const canonicalId = resolveProviderId(provider);
+  if (getCanonicalLockProvider(canonicalId) === "antigravity") return true;
+  if (getCanonicalLockProvider(canonicalId) === "codex") return true;
+  if (canonicalId === "gemini" || canonicalId === "github") return true;
+  if (canonicalId === "antigravity" || canonicalId === "agy") return true;
+  if (getPassthroughProviders().has(canonicalId)) return true;
+  // #11071: getPassthroughProviders() reads the open-sse REGISTRY. A provider can declare
+  // passthroughModels:true in the SHARED registry (src/shared/constants/providers/) and be
+  // absent from that set — 40 of them are, and they are neither local nor self-hosted, so the
+  // branch below never reaches them either. Without this lookup a missing-model 404 on one of
+  // those cools the whole connection instead of locking out the single model.
+  if (getProviderById(canonicalId)?.passthroughModels === true) return true;
+  if (isCompatibleProvider(canonicalId)) return true;
+  if (isLocalProviderId(canonicalId) || isSelfHostedChatProvider(canonicalId)) return true;
   return false;
 }
 

@@ -8,11 +8,7 @@ import { isOpenAIResponsesStoreEnabled } from "@/lib/providers/requestDefaults";
 import { FORMATS } from "../formats.ts";
 import { register } from "../registry.ts";
 import { normalizeResponsesInputForChat } from "../../utils/responsesInputNormalization.ts";
-import {
-  createReasoningTransportIncompatibleError,
-  hasOpaqueReasoningState,
-  extractReplayableResponsesReasoningText,
-} from "../../services/reasoningInputPolicy.ts";
+import { extractReplayableResponsesReasoningText } from "../../services/reasoningInputPolicy.ts";
 import {
   getRegisteredProviders,
   requiresPlainStringContent,
@@ -454,10 +450,8 @@ export function openaiResponsesToOpenAIRequest(
 
     if (itemType === "reasoning") {
       // Only genuine plaintext reasoning can cross into Chat reasoning_content.
-      // Opaque encrypted state and its display summary have no Chat replay form.
-      if (preserveReasoningContent && hasOpaqueReasoningState(item)) {
-        throw createReasoningTransportIncompatibleError();
-      }
+      // Opaque encrypted state and its display summary have no Chat replay form,
+      // so opaque-only items are dropped while mixed items replay their plaintext.
       if (preserveReasoningContent) {
         const reasoning = extractReplayableResponsesReasoningText(item);
         if (reasoning) {

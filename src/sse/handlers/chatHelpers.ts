@@ -422,7 +422,7 @@ export async function executeChatWithBreaker({
   conversationId = null,
   modelPinned = false,
   routingComboId = null,
-  reasoningTransportFallback = "skip",
+  reasoningTransportFallback = "drop",
   sessionAffinityKey = null,
   managedLease = null,
 }: ExecuteChatWithBreakerOptions): Promise<ExecuteChatWithBreakerResult> {

@@ -5,6 +5,7 @@ import { readRunningBuildSha } from "@/lib/monitoring/buildSha";
 import { APP_CONFIG } from "@/shared/constants/config";
 import { AI_PROVIDERS } from "@/shared/constants/providers";
 import { isAuthenticated } from "@/shared/utils/apiAuth";
+import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 
 /**
  * GET /api/monitoring/health — System health overview
@@ -20,10 +21,25 @@ import { isAuthenticated } from "@/shared/utils/apiAuth";
 let healthPayloadCache: { payload: unknown; expiresAt: number } | null = null;
 const HEALTH_PAYLOAD_TTL_MS = 1000;
 
-export async function GET() {
+// GHSA-mvf8-qc78-5mxm: the full health payload fingerprints the host (version,
+// node version, pid, memory, provider config). An anonymous caller — the common
+// case on a keyless install, and what a liveness/load-balancer probe needs — gets
+// only the liveness verdict; the detail is reserved for a management principal.
+function publicHealthView(payload: unknown): Record<string, unknown> {
+  const p = (payload ?? {}) as Record<string, unknown>;
+  return {
+    status: p.status ?? "unknown",
+    ...(p.setupComplete !== undefined ? { setupComplete: p.setupComplete } : {}),
+  };
+}
+
+export async function GET(request: Request) {
+  const fullView = (await requireManagementAuth(request, { alwaysRequireAuth: true })) === null;
   const cachedNow = Date.now();
   if (healthPayloadCache && cachedNow <= healthPayloadCache.expiresAt) {
-    return NextResponse.json(healthPayloadCache.payload);
+    return NextResponse.json(
+      fullView ? healthPayloadCache.payload : publicHealthView(healthPayloadCache.payload)
+    );
   }
 
   const readHealthValue = <T>(label: string, reader: () => T, fallback: T): T => {
@@ -58,6 +74,7 @@ export async function GET() {
       credentialHealthModule,
       localHealthModule,
       adaptiveAdmissionModule,
+      chatAdmissionModule,
       settingsResult,
       connectionsResult,
     ] = await Promise.allSettled([
@@ -70,6 +87,7 @@ export async function GET() {
       import("@/lib/credentialHealth/cache"),
       import("@/lib/localHealthCheck"),
       import("@omniroute/open-sse/services/admission/runtime.ts"),
+      import("@/shared/middleware/chatBodyAdmission"),
       getCachedSettings(),
       getProviderConnections(),
     ]);
@@ -156,6 +174,17 @@ export async function GET() {
             null
           )
         : null;
+    // #11244: the STRUCTURAL admission gate (chatBodyAdmission.ts — bounded
+    // heavyweight lease + shed counters), exposed next to but distinct from the
+    // adaptive shadow-mode snapshot above. Additive key — nothing existing moves.
+    const chatAdmission =
+      chatAdmissionModule.status === "fulfilled"
+        ? readHealthValue(
+            "chat admission",
+            () => chatAdmissionModule.value.perConnectionAdmissionController.snapshot(),
+            null
+          )
+        : null;
 
     const payload = buildHealthPayload({
       appVersion: APP_CONFIG.version,
@@ -184,10 +213,11 @@ export async function GET() {
       activeSessionsByKey,
       credentialHealth,
       adaptiveAdmission,
+      chatAdmission,
     });
 
     healthPayloadCache = { payload, expiresAt: Date.now() + HEALTH_PAYLOAD_TTL_MS };
-    return NextResponse.json(payload);
+    return NextResponse.json(fullView ? payload : publicHealthView(payload));
   } catch (error) {
     console.error("[API] GET /api/monitoring/health error:", error);
     return NextResponse.json({
@@ -202,6 +232,7 @@ export async function GET() {
       quotaMonitor: { ...fallbackQuotaMonitorSummary, monitors: [] },
       sessions: { activeCount: 0, stickyBoundCount: 0, byApiKey: {}, top: [] },
       adaptiveAdmission: null,
+      chatAdmission: null,
       dedup: { inflightRequests: 0 },
     });
   }

@@ -10,6 +10,8 @@
  * perplexity-search reuses credentials from the "perplexity" chat provider.
  */
 
+import { isProviderBlockedByIdOrAlias } from "@/shared/utils/noAuthProviders";
+
 export interface SearchProviderConfig {
   id: string;
   name: string;
@@ -261,6 +263,36 @@ export const SEARCH_PROVIDERS: Record<string, SearchProviderConfig> = {
     cacheTTLMs: 5 * 60 * 1000,
   },
 
+  // Context7 (context7.com) — library-docs search. Anonymous tier works without a
+  // key (per-minute rate limit, context7-quota-tier: anonymous); a configured
+  // ctx7sk-* key raises the quota, sent as Bearer when a connection exists.
+  // fallbackOnly: doc-focused corpus, never auto-selected for generic web search.
+  context7: {
+    id: "context7",
+    name: "Context7 (library docs)",
+    baseUrl: "https://context7.com/api/v1",
+    method: "GET",
+    // authType "none" means the framework skips credential injection entirely
+    // (registryUtils.ts). A configured ctx7sk-* key still reaches the builder
+    // via params.token, which attaches it as Bearer manually — authHeader
+    // stays "none" so the generic injector never double-writes it.
+    // The Bearer attachment lives in buildContext7Request
+    // (open-sse/handlers/search.ts) — keep the two in sync when editing.
+    authType: "none",
+    authHeader: "none",
+    costPerQuery: 0,
+    // Anonymous tier is unlimited per-minute (rate-limited, not metered):
+    // a 0 here would let the quota preflight reject anonymous traffic (the
+    // same reason DuckDuckGo uses 999999 — see its entry above).
+    freeMonthlyQuota: 999999,
+    searchTypes: ["web"],
+    defaultMaxResults: 5,
+    maxMaxResults: 20,
+    timeoutMs: 10_000,
+    cacheTTLMs: 5 * 60 * 1000,
+    fallbackOnly: true,
+  },
+
   // Free, no-API-key DuckDuckGo lite scraping (free-claude-code port). Last-resort
   // only (fallbackOnly): never auto-selected over a configured provider; served by
   // the dedicated HTML path in open-sse/handlers/search.ts (not the generic JSON one).
@@ -341,7 +373,9 @@ export const SEARCH_PROVIDER_ALIASES: Record<string, string> = {
   searxng: "searxng-search",
   zai: "zai-search",
   duckduckgo: "duckduckgo-free",
-  "x_search": "x-search",
+  ctx7: "context7",
+  c7: "context7",
+  x_search: "x-search",
   x: "x-search",
 };
 
@@ -394,16 +428,18 @@ export function supportsSearchType(
 /**
  * Get all search providers as a flat list
  */
-export function getAllSearchProviders(): Array<{
+export function getAllSearchProviders(blockedProviders: string[] = []): Array<{
   id: string;
   name: string;
   searchTypes: string[];
 }> {
-  return Object.values(SEARCH_PROVIDERS).map((p) => ({
-    id: p.id,
-    name: p.name,
-    searchTypes: p.searchTypes,
-  }));
+  return Object.values(SEARCH_PROVIDERS)
+    .filter((p) => !p.disabled && !isProviderBlockedByIdOrAlias(p.id, blockedProviders))
+    .map((p) => ({
+      id: p.id,
+      name: p.name,
+      searchTypes: p.searchTypes,
+    }));
 }
 
 /**

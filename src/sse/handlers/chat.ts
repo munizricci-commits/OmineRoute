@@ -1936,7 +1936,7 @@ async function handleSingleModelChat(
             modelPinned: runtimeOptions?.modelPinned ?? false,
             routingComboId: runtimeOptions?.routingComboId ?? null,
             sessionAffinityKey: runtimeOptions.sessionAffinityKey ?? null,
-            reasoningTransportFallback: runtimeOptions.reasoningTransportFallback ?? "skip",
+            reasoningTransportFallback: runtimeOptions.reasoningTransportFallback ?? "drop",
             managedLease: runtimeOptions.managedLease ?? null,
           },
           runtimeOptions
@@ -2325,6 +2325,7 @@ async function handleSingleModelChat(
       if (
         !runtimeOptions.emergencyFallbackTried &&
         !comboName &&
+        !forceLiveComboTest &&
         shouldRetrySameAccountTransport({
           status: result.status,
           errorText: errorStr,

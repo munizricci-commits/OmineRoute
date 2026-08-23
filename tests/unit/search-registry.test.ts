@@ -36,7 +36,9 @@ test("SEARCH_PROVIDERS has all registered providers", () => {
   assert.ok(SEARCH_PROVIDERS["jina-search"], "jina-search should exist");
   assert.ok(SEARCH_PROVIDERS["duckduckgo-free"], "duckduckgo-free should exist");
   assert.ok(SEARCH_PROVIDERS["x-search"], "x-search should exist");
-  assert.equal(Object.keys(SEARCH_PROVIDERS).length, 16);
+  // #11140: context7 (library-docs search) is the 17th registered provider
+  assert.ok(SEARCH_PROVIDERS["context7"], "context7 should exist");
+  assert.equal(Object.keys(SEARCH_PROVIDERS).length, 17);
 });
 
 test("duckduckgo-free config is a no-key, fallback-only provider", () => {
@@ -170,7 +172,8 @@ test("zai-search config is correct", () => {
 
 test("getAllSearchProviders returns flat list", () => {
   const all = getAllSearchProviders();
-  assert.equal(all.length, 16);
+  // #11140: 17 providers with context7 registered
+  assert.equal(all.length, 17);
   assert.ok(all.some((p) => p.id === "duckduckgo-free"));
   assert.ok(all.some((p) => p.id === "jina-search"));
   assert.ok(all.some((p) => p.id === "x-search"));
@@ -471,6 +474,24 @@ test("validateProviderApiKeySchema requires cx for Google PSE", async () => {
     cx: "engine-id",
   });
   assert.equal(valid.success, true);
+});
+
+test("validateProviderApiKeySchema accepts AWS Polly signing credentials", async () => {
+  const { validateProviderApiKeySchema } = await import("../../src/shared/validation/schemas.ts");
+
+  const result = validateProviderApiKeySchema.safeParse({
+    provider: "aws-polly",
+    apiKey: "aws-secret-access-key",
+    accessKeyId: "AKIAEXAMPLE",
+    sessionToken: "temporary-session-token",
+    region: "us-east-1",
+  });
+
+  assert.equal(result.success, true);
+  if (result.success) {
+    assert.equal(result.data.accessKeyId, "AKIAEXAMPLE");
+    assert.equal(result.data.sessionToken, "temporary-session-token");
+  }
 });
 
 test("v1SearchSchema applies defaults", async () => {

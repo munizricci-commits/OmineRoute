@@ -46,6 +46,11 @@ const FLAT_RATE_SUBSCRIPTION_PROVIDER_IDS: ReadonlySet<string> = new Set([
   "glm-cn", // GLM Coding (China) plan
   "claude", // Claude Code plan (OAuth-only — a Claude Pro/Max subscription)
   "cc", // Claude Code plan (alias id — same connection, shares the `cc` pricing rows)
+  // OpenCode Go subscription (https://opencode.ai/go) — a flat monthly fee. It is an
+  // aggregator reselling GLM, Kimi, Grok, DeepSeek, MiniMax, Qwen and GPT-5.x, so
+  // per-token rows price each call at the UNDERLYING model's metered rate and the
+  // analytics overstatement is large rather than marginal (#11149).
+  "opencode-go",
 ]);
 
 /**

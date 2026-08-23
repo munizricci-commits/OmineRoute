@@ -272,6 +272,37 @@ test("codex.normalizeCodexModelsResponse parses the Codex live catalog shape", (
   assert.equal(parsed.find((model) => model.id === "gpt-5.5")?.outputTokenLimit, 64000);
 });
 
+test("codex.normalizeCodexModelsResponse prefers max_context_window over the context_window pricing tier", () => {
+  // The live Codex OAuth catalog reports BOTH fields: `context_window` is the
+  // first pricing tier (~272K) while `max_context_window` is the real usable
+  // window (~872K). Requests well above 272K succeed upstream (verified:
+  // gpt-5.6-luna-xhigh served 380-390K input tokens with HTTP 200), so the
+  // usable window must win when both are present.
+  const parsed = normalizeCodexModelsResponse({
+    models: [
+      {
+        slug: "gpt-5.6-luna",
+        display_name: "GPT 5.6 Luna",
+        visibility: "list",
+        supported_in_api: true,
+        context_window: 272000,
+        max_context_window: 872000,
+      },
+      {
+        slug: "gpt-5.4",
+        display_name: "GPT-5.4",
+        visibility: "list",
+        supported_in_api: true,
+        context_window: 272000,
+        max_context_window: 1000000,
+      },
+    ],
+  });
+
+  assert.equal(parsed.find((model) => model.id === "gpt-5.6-luna")?.inputTokenLimit, 872000);
+  assert.equal(parsed.find((model) => model.id === "gpt-5.4")?.inputTokenLimit, 1000000);
+});
+
 test("codex.normalizeCodexGithubCatalogResponse parses current client catalog metadata", () => {
   const parsed = normalizeCodexGithubCatalogResponse({
     models: [

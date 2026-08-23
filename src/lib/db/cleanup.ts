@@ -194,6 +194,31 @@ export async function cleanupMcpAudit(): Promise<CleanupResult> {
 }
 
 /**
+ * Clean up old config_audit_log based on retention settings.
+ */
+export async function cleanupConfigAudit(retentionDays = getRetentionSettings().configAudit): Promise<CleanupResult> {
+  const db = getDbInstance();
+  const result: CleanupResult = { deleted: 0, errors: 0 };
+
+  try {
+    const stmt = db.prepare(
+      "DELETE FROM config_audit_log WHERE datetime(timestamp) < datetime('now', '-' || ? || ' days')"
+    );
+    const runResult = stmt.run(String(retentionDays));
+    result.deleted = runResult.changes;
+
+    console.log(
+      `[Cleanup] Deleted ${result.deleted} config_audit_log older than ${retentionDays} days`
+    );
+  } catch (err: unknown) {
+    console.error("[Cleanup] Error cleaning config_audit_log:", err);
+    result.errors++;
+  }
+
+  return result;
+}
+
+/**
  * Clean up old a2a_task_events based on retention settings.
  */
 export async function cleanupA2aEvents(): Promise<CleanupResult> {
@@ -420,6 +445,7 @@ export async function runAutoCleanup(): Promise<{
     usageHistory: await cleanupUsageHistory(),
     compressionAnalytics: await cleanupCompressionAnalytics(),
     mcpAudit: await cleanupMcpAudit(),
+    configAudit: await cleanupConfigAudit(),
     a2aEvents: await cleanupA2aEvents(),
     memoryEntries: await cleanupMemoryEntries(),
     domainCostHistory: await cleanupDomainCostHistory(),

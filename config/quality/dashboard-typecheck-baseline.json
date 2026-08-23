@@ -1,9 +1,6 @@
 {
-  "open-sse/services/payloadRules.ts": {
-    "TS2677": 1
-  },
   "src/app/(dashboard)/dashboard/HomePageClient.tsx": {
-    "TS2339": 16
+    "TS2339": 10
   },
   "src/app/(dashboard)/dashboard/agent-skills/AgentSkillsPageClient.tsx": {
     "TS2503": 3
@@ -120,10 +117,6 @@
   "src/app/(dashboard)/dashboard/providers/[id]/components/CompatibleModelsSection.tsx": {
     "TS2741": 1
   },
-  "src/app/(dashboard)/dashboard/providers/[id]/components/ConnectionRow.tsx": {
-    "TS2345": 3,
-    "TS2322": 1
-  },
   "src/app/(dashboard)/dashboard/providers/[id]/components/ConnectionsListPanel.tsx": {
     "TS2322": 2
   },
@@ -140,12 +133,6 @@
   },
   "src/app/(dashboard)/dashboard/providers/[id]/components/ProviderPlaygroundPanel.tsx": {
     "TS2503": 1
-  },
-  "src/app/(dashboard)/dashboard/providers/[id]/components/modals/EditConnectionModal.tsx": {
-    "TS2322": 1
-  },
-  "src/app/(dashboard)/dashboard/providers/[id]/hooks/useModelImportHandlers.ts": {
-    "TS2339": 1
   },
   "src/app/(dashboard)/dashboard/providers/[id]/hooks/useModelVisibilityHandlers.ts": {
     "TS2339": 15
@@ -190,9 +177,6 @@
   "src/lib/combos/builderDraft.ts": {
     "TS2741": 1
   },
-  "src/lib/providers/codexFastTier.ts": {
-    "TS2367": 1
-  },
   "src/lib/services/htmlRewriter.ts": {
     "TS2322": 2,
     "TS2345": 2
@@ -219,14 +203,7 @@
   "src/shared/hooks/useElectron.ts": {
     "TS2339": 19
   },
-  "src/shared/providers/webSessionCredentials.ts": {
-    "TS2353": 1,
-    "TS2322": 1
-  },
   "src/shared/schemas/cliCatalog.ts": {
     "TS2554": 2
-  },
-  "src/shared/services/opencodeConfig.ts": {
-    "TS2345": 1
   }
 }

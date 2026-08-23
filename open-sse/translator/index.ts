@@ -334,6 +334,15 @@ export function translateRequest(
   const isKimiCoding =
     normalizedProvider === "kimi-coding" || normalizedProvider === "kimi-coding-apikey";
 
+  // GLM-family upstreams (Z.AI / Zhipu console gateways) reject messages arrays
+  // with no role:"user" turn (400 [1214] "The messages parameter is illegal").
+  // Pure tool-loop continuations from coding agents produce exactly that shape
+  // after Claude→OpenAI conversion, so flag those providers to have the source→
+  // openai translator append a synthetic user turn when none survives.
+  const isGlmFamilyUpstream =
+    ["opencode-go", "opencode-zen"].includes(normalizedProvider) ||
+    /glm|zhipu|z-ai/i.test(normalizedModel);
+
   // Phase 2: Apply thinking budget control before normalization
   result = applyThinkingBudget(result);
   // Explicit reasoning-routing policies are final. The marker is internal and is
@@ -463,13 +472,15 @@ export function translateRequest(
             options?.copilotClient ||
             hasTargetHint ||
             preserveCacheControl ||
-            preserveResponsesReasoning
+            preserveResponsesReasoning ||
+            isGlmFamilyUpstream
               ? {
                   ...(credentials && typeof credentials === "object" ? credentials : {}),
                   ...(options?.copilotClient ? { _copilotClient: true } : {}),
                   ...(hasTargetHint ? { _targetFormat: targetFormat } : {}),
                   ...(preserveCacheControl ? { _preserveCacheControl: true } : {}),
                   ...(preserveResponsesReasoning ? { _preserveReasoningContent: true } : {}),
+                  ...(isGlmFamilyUpstream ? { _ensureUserTurn: true } : {}),
                 }
               : credentials;
           result = toOpenAI(model, result, stream, step1Credentials);

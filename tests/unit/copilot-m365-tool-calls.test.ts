@@ -182,7 +182,9 @@ test("buildChatInvocation defaults stay backward compatible", () => {
     requestId: "r",
     conversationId: "c",
   }).arguments[0] as Record<string, unknown>;
-  assert.deepEqual(arg.plugins, []);
+  // 2026-08-21 capture (#11069): BingWebSearch BuiltIn plugin is now the
+  // default on all tiers (was [] in the #10718 shape); toolChoice stays null.
+  assert.deepEqual(arg.plugins, [{ Id: "BingWebSearch", Source: "BuiltIn" }]);
   assert.equal(arg.toolChoice, null);
   assert.equal(arg.customInstructions, undefined);
 });

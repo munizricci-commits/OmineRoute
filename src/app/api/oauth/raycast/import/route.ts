@@ -11,14 +11,14 @@ import { createProviderConnection } from "@/models";
 import { RaycastService } from "@/lib/oauth/services/raycast";
 import { raycastImportSchema } from "@/shared/validation/schemas";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
-import { isAuthRequired, isAuthenticated } from "@/shared/utils/apiAuth";
+import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import { resolveProxyForProvider } from "@/models";
 import { runWithProxyContext } from "@omniroute/open-sse/utils/proxyFetch.ts";
 
 async function requireOAuthImportAuth(request: Request) {
-  if (!(await isAuthRequired(request))) return null;
-  if (await isAuthenticated(request)) return null;
-  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // GHSA-mg76: importing a provider connection is a state-mutating admin action;
+  // require management scope (or a dashboard session), not any valid client key.
+  return requireManagementAuth(request, { invalidApiKeyStatus: 401 });
 }
 
 export async function POST(request: Request) {

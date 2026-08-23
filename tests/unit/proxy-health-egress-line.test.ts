@@ -74,6 +74,7 @@ test("forceProxyHealthSweep logs the anonymous egress line when accounts share a
   // Two codex accounts on one egress IP, persisted (the sweep reads the DB).
   proxyLogger.logProxyEvent({ status: "success", provider: "codex", targetUrl: "codex/gpt-5.5", egressIp: "100.115.194.84", account: "acc-a", connectionId: "conn-a" });
   proxyLogger.logProxyEvent({ status: "success", provider: "codex", targetUrl: "codex/gpt-5.5", egressIp: "100.115.194.84", account: "acc-b", connectionId: "conn-b" });
+  proxyLogger.flushProxyLogsSync(); // persist the enqueued batch before the sweep reads the DB
 
   const logs: string[] = [];
   const originalLog = console.log;
@@ -103,6 +104,7 @@ test("forceProxyHealthSweep logs raw details only with PROXY_LOG_INCLUDE_IPS=tru
   });
   proxyLogger.logProxyEvent({ status: "success", provider: "codex", targetUrl: "codex/gpt-5.5", egressIp: "100.115.194.84", account: "acc-a", connectionId: "conn-a" });
   proxyLogger.logProxyEvent({ status: "success", provider: "codex", targetUrl: "codex/gpt-5.5", egressIp: "100.115.194.84", account: "acc-b", connectionId: "conn-b" });
+  proxyLogger.flushProxyLogsSync(); // persist the enqueued batch before the sweep reads the DB
 
   const logs: string[] = [];
   const originalLog = console.log;

@@ -65,7 +65,11 @@ export function providerSupportsSystemMessage(provider: string | null | undefine
  *
  * Populated with the Xiaomi MiMo endpoint (provider id `xiaomi-mimo`, registry
  * alias `mimo`, serving mimo-v2.5) confirmed live to 400 on a non-first system
- * message. Add other providers here only when they are documented as strict.
+ * message, and the TokenRouter gateway (provider id `tokenrouter`), confirmed
+ * live on 2026-08-22 to reject mid-array system messages — including the
+ * compression notice spliced by purifyHistory() before that splice was fixed to
+ * merge into the leading system message. Add other providers here only when
+ * they are documented as strict.
  *
  * Self-hosted deployments can extend this list without a source change via
  * OMNIROUTE_STRICT_SYSTEM_PROVIDERS (comma-separated provider ids,
@@ -73,7 +77,7 @@ export function providerSupportsSystemMessage(provider: string | null | undefine
  * self-hosted Qwen3.5+/3.6 model, whose chat template enforces the same
  * single-leading-system-message constraint as xiaomi-mimo.
  */
-const BUILTIN_PROVIDERS_SYSTEM_MUST_BE_FIRST = new Set(["xiaomi-mimo", "mimo"]);
+const BUILTIN_PROVIDERS_SYSTEM_MUST_BE_FIRST = new Set(["xiaomi-mimo", "mimo", "tokenrouter"]);
 
 /**
  * Parses OMNIROUTE_STRICT_SYSTEM_PROVIDERS into a normalized id list.

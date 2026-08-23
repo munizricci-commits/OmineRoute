@@ -16,6 +16,23 @@ const SENSITIVE_KEYS = new Set([
   "password",
   "secret",
   "token",
+  // secret-leak hardening: session cookies + browser-storage credentials that
+  // some web-impersonation providers (Meta AI ecto_1_sess, chatgpt-web
+  // storageState / runtimeKey) can surface into a request/response BODY field
+  // rather than a header. Header-borne values are already masked by
+  // maskSensitiveHeaders; this covers the body path into the on-disk call-log
+  // artifact. Scoped to the actual credential field names only — the generic
+  // word "capability" was intentionally NOT included: it is a common non-secret
+  // field (model catalogs' `capabilities`, degradation/provider-discovery
+  // `capability` strings, MCP tool schemas) and matching it here would broadly
+  // redact useful diagnostics from call-log artifacts. The real Meta AI secret
+  // is the ecto_1_sess cookie / ecto1: WS token, already covered by
+  // cookie/authorization/storageState above.
+  "cookie",
+  "Cookie",
+  "storageState",
+  "storage-state",
+  "runtimeKey",
 ]);
 
 type JsonRecord = Record<string, unknown>;

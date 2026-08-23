@@ -12,7 +12,7 @@
  * temp-directory filesystem.
  */
 
-import { describe, it, beforeEach, after } from "node:test";
+import { describe, it, beforeEach, after, mock } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
@@ -68,8 +68,11 @@ describe("resolveSpawnArgs (#6877 — real filesystem)", () => {
   });
 
   it("uses the .exe command name on Windows", async () => {
-    const originalPlatformDescriptor = Object.getOwnPropertyDescriptor(process, "platform");
-    Object.defineProperty(process, "platform", { value: "win32", configurable: true });
+    // resolveSpawnArgs reads os.platform() at call time (#11236 — a
+    // process.platform literal is constant-folded away by the Linux build of
+    // the published artifact), so the Windows host is simulated through the
+    // same runtime os.platform() seam binaryManager.test.ts uses for #10244.
+    const platformMock = mock.method(os, "platform", () => "win32");
 
     try {
       const { resolveSpawnArgs } =
@@ -78,9 +81,7 @@ describe("resolveSpawnArgs (#6877 — real filesystem)", () => {
 
       assert.equal(result.command, path.join(dataDir, "bin", "cliproxyapi.exe"));
     } finally {
-      if (originalPlatformDescriptor) {
-        Object.defineProperty(process, "platform", originalPlatformDescriptor);
-      }
+      platformMock.mock.restore();
     }
   });
 
