@@ -9,6 +9,28 @@ import {
   attachRequestStreamGuards,
   installProcessCrashGuard,
 } from "../../scripts/dev/httpClientAbortGuard.mjs";
+import * as sharedGuard from "../../src/shared/utils/httpClientAbortGuard.mjs";
+
+// The dev server imports from scripts/dev/httpClientAbortGuard.mjs, while the
+// TypeScript servers (apiBridgeServer, liveServer, embedWsProxy) import from
+// src/shared/utils/httpClientAbortGuard.mjs. The scripts/dev copy must be a pure
+// re-export of the shared implementation — verify they are the SAME functions
+// (single source of truth, no drift).
+test("scripts/dev guard re-exports the shared src implementation (single source of truth)", () => {
+  assert.equal(isClientAbortError, sharedGuard.isClientAbortError);
+  assert.equal(shouldSwallowUncaught, sharedGuard.shouldSwallowUncaught);
+  assert.equal(attachRequestStreamGuards, sharedGuard.attachRequestStreamGuards);
+  assert.equal(installProcessCrashGuard, sharedGuard.installProcessCrashGuard);
+  // And the shared module exposes everything the TS servers rely on.
+  for (const name of [
+    "isClientAbortError",
+    "shouldSwallowUncaught",
+    "attachRequestStreamGuards",
+    "installProcessCrashGuard",
+  ]) {
+    assert.equal(typeof sharedGuard[name], "function", `shared guard must export ${name}`);
+  }
+});
 
 // Minimal stand-ins for IncomingMessage / ServerResponse that expose the
 // `error` event (Node's http streams are EventEmitters).

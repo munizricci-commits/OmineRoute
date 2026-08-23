@@ -34,6 +34,11 @@ import { CHANNEL_EVENTS, getChannelForEvent } from "@/lib/events/types";
 import { isAutomatedTestProcess, isBuildProcess } from "@/shared/utils/testProcess";
 
 import {
+  attachRequestStreamGuards,
+  installProcessCrashGuard,
+} from "@/shared/utils/httpClientAbortGuard";
+
+import {
   buildAllowedOrigins,
   buildAllowedHosts,
   isOriginAllowed as isOriginAllowedPure,
@@ -460,6 +465,11 @@ export async function startLiveDashboardServer(
   port = DEFAULT_PORT,
   host = DEFAULT_HOST
 ): Promise<import("http").Server> {
+  // Safety net: a client aborting a connection can emit `Error: aborted`/
+  // ECONNRESET on the request stream; without this the single missed listener
+  // becomes an uncaughtException that kills the server. Benign aborts are
+  // swallowed; genuine errors still crash loudly (#fix-dev-server-aborted).
+  installProcessCrashGuard();
   if (!process.env.JWT_SECRET) {
     console.warn(
       "  \x1b[33m⚠ Warning: JWT_SECRET is not set in the environment.\x1b[0m\n" +
@@ -469,6 +479,10 @@ export async function startLiveDashboardServer(
   }
 
   const server = createServer((req, res) => {
+    // Absorb client-abort errors (browser closes the socket during navigation/
+    // HMR/bfcache) on the request/response streams so they never surface as an
+    // uncaughtException that kills the server (#fix-dev-server-aborted).
+    attachRequestStreamGuards(req, res);
     handleInternalEventRequest(req, res);
   });
   const wss = new WebSocketServer({ server });
