@@ -9,7 +9,7 @@
  */
 
 import { getDbInstance } from "./core";
-import { encrypt } from "./encryption";
+import { encrypt, decrypt } from "./encryption";
 
 export interface GithubOAuthConfigInput {
   enabled?: boolean;
