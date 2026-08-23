@@ -27,6 +27,8 @@ export interface UserRecord {
   loginIdentifier: string | null;
   role: UserRole;
   status: UserStatus;
+  /** Email verification state. false = pending (must confirm via token); true = verified. */
+  emailVerified: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -135,6 +137,7 @@ function parseUserRow(row: Record<string, unknown>): UserRecord {
         : String(camel.loginIdentifier),
     role: clampRole(camel.role),
     status: clampStatus(camel.status),
+    emailVerified: camel.emailVerified === 1 || camel.emailVerified === true,
     createdAt: String(camel.createdAt),
     updatedAt: String(camel.updatedAt),
   };
@@ -184,9 +187,9 @@ export function createUserSync(input: CreateUserInput = {}): UserRecord {
   const loginIdentifier = normalizeLoginIdentifier(input.loginIdentifier) ?? null;
 
   db.prepare(
-    `INSERT INTO users (id, email, display_name, login_identifier, role, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(id, email, displayName, loginIdentifier, role, status, ts, ts);
+    `INSERT INTO users (id, email, display_name, login_identifier, role, status, email_verified, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(id, email, displayName, loginIdentifier, role, status, 0, ts, ts);
 
   return parseUserRow({
     id,
@@ -195,6 +198,7 @@ export function createUserSync(input: CreateUserInput = {}): UserRecord {
     login_identifier: loginIdentifier,
     role,
     status,
+    email_verified: 0,
     created_at: ts,
     updated_at: ts,
   });
@@ -335,6 +339,24 @@ export async function updateUser(id: string, input: UpdateUserInput): Promise<Us
 
 export async function setUserRole(id: string, role: UserRole): Promise<UserRecord | null> {
   return updateUser(id, { role });
+}
+
+/**
+ * Set the email verification state for a user (P4). Used after a successful
+ * verification-token consume, and to mark users verified when SMTP is not
+ * configured at registration time.
+ */
+export async function setUserEmailVerified(
+  id: string,
+  verified: boolean
+): Promise<UserRecord | null> {
+  const db = getDbInstance();
+  db.prepare(`UPDATE users SET email_verified = ?, updated_at = ? WHERE id = ?`).run(
+    verified ? 1 : 0,
+    nowIso(),
+    id
+  );
+  return getUserById(id);
 }
 
 export async function listUsers(limit = 100, offset = 0): Promise<UserRecord[]> {

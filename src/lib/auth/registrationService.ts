@@ -15,6 +15,10 @@ import { setUserPasswordSync } from "@/lib/db/userCredentials";
 import { resolveRegistrationVisibility } from "@/lib/auth/registrationConfig";
 import { evaluatePassword, DEFAULT_PASSWORD_POLICY } from "@/lib/auth/passwordPolicy";
 import { normalizeLoginIdentifier } from "@/lib/db/users";
+import { isSmtpConfigured } from "@/lib/db/smtpConfig";
+import { createEmailVerificationToken } from "@/lib/db/emailVerification";
+import { sendEmailVerificationEmail } from "@/lib/auth/emailVerificationService";
+import { setUserEmailVerified } from "@/lib/db/users";
 
 export class RegistrationError extends Error {
   code: string;
@@ -110,15 +114,9 @@ export async function acceptRegistration(raw: unknown): Promise<AcceptedUser> {
     return user;
   });
 
+  let user: import("@/lib/db/users").UserRecord;
   try {
-    const user = tx(input);
-    return {
-      id: user.id,
-      loginIdentifier: user.loginIdentifier ?? null,
-      email: user.email ?? null,
-      role: user.role,
-      status: user.status,
-    };
+    user = tx(input);
   } catch (err) {
     // Race: a concurrent registration slipped in between the pre-check and the
     // insert. The unique indexes reject the duplicate; surface it as the same
@@ -128,4 +126,35 @@ export async function acceptRegistration(raw: unknown): Promise<AcceptedUser> {
     }
     throw err;
   }
+
+  // Email verification (P4): when SMTP is configured, the account starts
+  // unverified and must confirm via a token emailed to the address. When SMTP
+  // is not configured we cannot deliver the verification mail, so the account
+  // is treated as verified immediately (preserves the pre-P4 behavior).
+  if (input.email) {
+    const smtpOn = await isSmtpConfigured();
+    if (smtpOn) {
+      try {
+        const token = await createEmailVerificationToken(user.id, user.email ?? input.email);
+        await sendEmailVerificationEmail(user.id, user.email ?? input.email, token);
+      } catch {
+        // Never block registration on mail-system failure; the account stays
+        // pending and the user can resend. (Anti-enumeration: same path.)
+      }
+    } else {
+      await setUserEmailVerified(user.id, true);
+    }
+  } else {
+    // No email supplied -> nothing to verify.
+    await setUserEmailVerified(user.id, true);
+  }
+
+  return {
+    id: user.id,
+    loginIdentifier: user.loginIdentifier ?? null,
+    email: user.email ?? null,
+    role: user.role,
+    status: user.status,
+    emailVerified: user.emailVerified,
+  };
 }

@@ -168,6 +168,26 @@ export async function POST(request) {
       if (requestedLogin.length > 0) {
         const resolved = await resolveUserByIdentifierOrEmail(requestedLogin);
         if (resolved && resolved.status === "active") {
+          // P4: block login until the email address is verified.
+          if (resolved.emailVerified === false) {
+            logAuditEvent({
+              action: "auth.login.email_not_verified",
+              actor: resolved.id,
+              target: "dashboard-auth",
+              resourceType: "auth_session",
+              status: "failed",
+              ipAddress: clientIp || undefined,
+              requestId: auditContext.requestId,
+              metadata: { reason: "email_not_verified" },
+            });
+            return NextResponse.json(
+              {
+                error: "Please verify your email address before signing in.",
+                needsVerification: true,
+              },
+              { status: 403 }
+            );
+          }
           subject = resolved.id;
         }
       }

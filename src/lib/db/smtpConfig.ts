@@ -71,6 +71,12 @@ export async function getSmtpConfig(): Promise<SmtpConfig> {
   return parseRow(row);
 }
 
+/** True when SMTP is enabled and has a host configured (mail can be dispatched). */
+export async function isSmtpConfigured(): Promise<boolean> {
+  const cfg = await getSmtpConfig();
+  return cfg.enabled === true && !!cfg.host;
+}
+
 export async function setSmtpConfig(input: SmtpConfigInput): Promise<SmtpConfig> {
   const db = getDbInstance();
   const existing = db.prepare(`SELECT * FROM smtp_config WHERE id = ?`).get(SINGLETON_ID) as
