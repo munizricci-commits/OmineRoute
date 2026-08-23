@@ -284,7 +284,8 @@ type HandleChatImplementation = (
   clientRawRequest: any,
   preParsedBody: any,
   correlationId: string | undefined,
-  admissionContext: ChatAdmissionContext
+  admissionContext: ChatAdmissionContext,
+  routingScope?: import("@/lib/org/autoScope").RoutingScope | null
 ) => Promise<Response>;
 
 export type WithChatAdmissionOptions = {
@@ -303,7 +304,8 @@ export function withChatAdmission(
     request: any,
     clientRawRequest: any = null,
     preParsedBody: any = null,
-    correlationId?: string
+    correlationId?: string,
+    routingScope?: import("@/lib/org/autoScope").RoutingScope | null
   ): Promise<Response> {
     const admissionContext = createChatAdmissionContext(
       options.getRuntime ?? getAdaptiveAdmissionRuntime
@@ -314,7 +316,8 @@ export function withChatAdmission(
         clientRawRequest,
         preParsedBody,
         correlationId,
-        admissionContext
+        admissionContext,
+        routingScope
       );
       const admittedState = admissionContext.getAdmittedState();
       if (!admittedState) return response;

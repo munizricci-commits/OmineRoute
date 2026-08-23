@@ -110,6 +110,8 @@ export const HIDEABLE_SIDEBAR_ITEM_IDS = [
   "docs",
   "issues",
   "changelog",
+  // Organizations (multi-tenant feature)
+  "organizations",
 ] as const;
 
 export type HideableSidebarItemId = (typeof HIDEABLE_SIDEBAR_ITEM_IDS)[number];
@@ -129,7 +131,8 @@ export type SidebarSectionId =
   | "agentic-features"
   | "other-features"
   | "configuration"
-  | "help";
+  | "help"
+  | "organizations";
 
 export interface SidebarItemDefinition {
   id: SidebarItemId;

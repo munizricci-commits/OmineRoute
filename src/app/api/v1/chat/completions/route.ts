@@ -27,6 +27,10 @@ import {
   withCompressionHeaderEcho,
 } from "@/shared/utils/compressionHeaderEcho";
 import { resolveModelAliasWithSeedFallbackOnBody } from "@/lib/modelAliasResolver";
+import { resolveDashboardUserPrincipal } from "@/lib/org/principal";
+import { buildOrgRoutingContext } from "@/lib/org/qualifiedRoute";
+import { resolveAndApplyOrgAutoScope } from "@/lib/org/autoWiring";
+import type { RoutingScope } from "@/lib/org/autoScope";
 
 let initPromise = null;
 
@@ -132,6 +136,8 @@ export async function POST(request) {
     // the admission-rebuilt request: the bytes are already buffered in memory by
     // admitChatRequest(), so json() parses them directly — no clone(), no second stream read.
     let parsedBody = null;
+    // P7: the org routing scope resolved below (null = personal/legacy).
+    let routingScope: RoutingScope | null = null;
     try {
       parsedBody = await request.json().catch(() => null);
       if (parsedBody) {
@@ -183,6 +189,41 @@ export async function POST(request) {
             )
           );
         }
+
+        // P6 — Qualified Routes: resolve an org-scoped model BEFORE handing the
+        // body to handleChat. Fail-closed: a qualified `<org>/<route>` that the
+        // caller is not an active member of yields a 404 "model not found" with
+        // NO existence reveal (org/combo must not leak across tenants). Personal
+        // models (no org qualifier) pass through unchanged — legacy behavior.
+        // The actual combo/auto scoping inside handleChat is applied via the
+        // same `buildOrgRoutingContext` result threaded through the request.
+        if (
+          isRecord(parsedBody) &&
+          typeof parsedBody.model === "string" &&
+          parsedBody.model.includes("/")
+        ) {
+          try {
+            const principal = await resolveDashboardUserPrincipal(request);
+            const orgCtx = await buildOrgRoutingContext(parsedBody, principal);
+            if (orgCtx.denied) {
+              return finishAdmission(errorResponse(404, `Model '${parsedBody.model}' not found`));
+            }
+            // P7 (live wiring): an authorized org-qualified AUTO route must be
+            // rewritten to its bare engine route (`team1/auto:coding` →
+            // `auto/coding`) and its RoutingScope threaded into handleChat, so
+            // candidate discovery is restricted to that org's connections and
+            // the virtual combo id is namespaced per organization. Personal
+            // models are a strict no-op; `denied` already returned above.
+            const applied = await resolveAndApplyOrgAutoScope(parsedBody, principal);
+            if (applied.scope.scope === "organization") {
+              parsedBody.model = applied.body.model;
+              routingScope = applied.scope;
+            }
+          } catch {
+            // Resolution failure must not widen access — treat as not-found.
+            return finishAdmission(errorResponse(404, `Model '${parsedBody.model}' not found`));
+          }
+        }
       }
     } catch (error) {
       console.error("[SECURITY] Prompt injection guard failed:", error);
@@ -210,7 +251,7 @@ export async function POST(request) {
       // client cancels while handleChat is still pending, earlyStreamKeepalive will cancel the
       // eventual handler body; only that confirmed cleanup releases heavyweight capacity.
       const handlerResponse = releaseChatAdmissionAfterHandler(
-        handleChat(request, null, parsedBody, reqId),
+        handleChat(request, null, parsedBody, reqId, routingScope),
         admission.lease
       );
       const streamedResponse = await withEarlyStreamKeepalive(handlerResponse, {
@@ -226,7 +267,7 @@ export async function POST(request) {
 
     return finishAdmission(
       withCompressionHeaderEcho(
-        await handleChat(request, null, parsedBody),
+        await handleChat(request, null, parsedBody, undefined, routingScope),
         compressionRequestHeader
       )
     );

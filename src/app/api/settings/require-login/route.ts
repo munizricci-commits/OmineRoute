@@ -11,6 +11,9 @@ import { isAuthenticated } from "@/shared/utils/apiAuth";
 import { getNodeRuntimeSupport } from "@/shared/utils/nodeRuntimeSupport.ts";
 import { updateRequireLoginSchema } from "@/shared/validation/schemas";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
+import { isPasswordRecoverySupported } from "@/lib/auth/passwordRecoverySupport";
+import { isGithubOAuthEnabled } from "@/lib/db/githubOAuthConfig";
+import { resolveRegistrationVisibility } from "@/lib/auth/registrationConfig";
 
 function getJwtSecret(): Uint8Array | null {
   const secret = process.env.JWT_SECRET?.trim();
@@ -59,6 +62,9 @@ export async function GET() {
         isFeatureFlagEnabled("OMNIROUTE_OIDC_DISABLE_PASSWORD_LOGIN") ||
         process.env.OMNIROUTE_OIDC_DISABLE_PASSWORD_LOGIN === "true" ||
         process.env.OIDC_DISABLE_PASSWORD_LOGIN === "true");
+    const passwordRecoverySupported = isPasswordRecoverySupported(settings);
+    const githubOAuthEnabled = await isGithubOAuthEnabled();
+    const registration = resolveRegistrationVisibility();
     return NextResponse.json({
       authenticated,
       requireLogin,
@@ -66,6 +72,10 @@ export async function GET() {
       setupComplete,
       oidcEnabled,
       oidcDisablePasswordLogin,
+      passwordRecoverySupported,
+      githubOAuthEnabled,
+      multiUserEnabled: registration.multiUserEnabled,
+      registrationPolicy: registration.registrationPolicy,
       ...nodeInfo,
     });
   } catch (error) {
@@ -78,6 +88,10 @@ export async function GET() {
         setupComplete: true,
         oidcEnabled: false,
         oidcDisablePasswordLogin: false,
+        passwordRecoverySupported: false,
+        githubOAuthEnabled: false,
+        multiUserEnabled: false,
+        registrationPolicy: "disabled",
         ...nodeInfo,
       },
       { status: 200 }

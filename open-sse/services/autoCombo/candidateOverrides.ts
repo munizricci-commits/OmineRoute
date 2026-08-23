@@ -43,3 +43,39 @@ export function filterExcludedCandidates<T extends OverridableCandidate>(
       : [candidate];
   });
 }
+
+/**
+ * P7.02 (Organizations) — ALLOWLIST counterpart of `filterExcludedCandidates`.
+ *
+ * Restrict the candidate pool to a scoped set of connection ids so an
+ * org-qualified auto route can only ever select the organization's own
+ * connections. `null` means "unrestricted" (personal scope) and returns the SAME
+ * array reference, keeping the personal hot path allocation-free and
+ * byte-identical to pre-P7 behavior.
+ *
+ * FAIL-CLOSED, unlike the exclusion filter above: an EMPTY set allows nothing,
+ * and a candidate with no resolvable connection identity is dropped under any
+ * restricted scope. A denied/empty org scope must never widen back to the
+ * personal pool.
+ */
+export function filterCandidatesByAllowedConnections<T extends OverridableCandidate>(
+  pool: T[],
+  allowedConnectionIds: Set<string> | null | undefined
+): T[] {
+  if (allowedConnectionIds === null || allowedConnectionIds === undefined) return pool;
+
+  return pool.flatMap((candidate) => {
+    if (Array.isArray(candidate.allowedConnectionIds)) {
+      const allowed = candidate.allowedConnectionIds.filter((connectionId) =>
+        allowedConnectionIds.has(connectionId)
+      );
+      if (allowed.length === 0) return [];
+      if (allowed.length === candidate.allowedConnectionIds.length) return [candidate];
+      return [{ ...candidate, allowedConnectionIds: allowed }];
+    }
+
+    return candidate.connectionId && allowedConnectionIds.has(candidate.connectionId)
+      ? [candidate]
+      : [];
+  });
+}

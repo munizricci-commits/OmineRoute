@@ -5,20 +5,28 @@ import { useTranslations } from "next-intl";
 import { useState, useEffect } from "react";
 import { Button, Input } from "@/shared/components";
 import { useRouter } from "next/navigation";
+import { buildLoginPayload } from "@/lib/auth/loginPayload";
+import { useRegistrationPolicy } from "@/lib/auth/useRegistrationPolicy";
+import { RegistrationForm } from "./RegistrationForm";
 
 export default function LoginPage() {
   const t = useTranslations("auth");
   const [password, setPassword] = useState("");
+  const [login, setLogin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [hasPassword, setHasPassword] = useState<boolean | null>(null);
   const [setupComplete, setSetupComplete] = useState<boolean | null>(null);
   const [oidcEnabled, setOidcEnabled] = useState<boolean | null>(null);
   const [oidcDisablePasswordLogin, setOidcDisablePasswordLogin] = useState<boolean | null>(null);
+  const [recoverySupported, setRecoverySupported] = useState<boolean | null>(null);
+  const [githubOAuthEnabled, setGithubOAuthEnabled] = useState<boolean | null>(null);
   const [mounted, setMounted] = useState(false);
   const [nodeVersion, setNodeVersion] = useState(null);
   const [nodeCompatible, setNodeCompatible] = useState(true);
   const router = useRouter();
+  const registerAllowed = useRegistrationPolicy();
+  const [mode, setMode] = useState<"login" | "register">("login");
 
   useEffect(() => {
     const raf = requestAnimationFrame(() => setMounted(true));
@@ -45,11 +53,14 @@ export default function LoginPage() {
           setSetupComplete(!!data.setupComplete);
           setOidcEnabled(!!data.oidcEnabled);
           setOidcDisablePasswordLogin(!!data.oidcDisablePasswordLogin);
+          setRecoverySupported(!!data.passwordRecoverySupported);
+          setGithubOAuthEnabled(!!data.githubOAuthEnabled);
         } else {
           setHasPassword(true);
           setSetupComplete(true);
           setOidcEnabled(false);
           setOidcDisablePasswordLogin(false);
+          setRecoverySupported(false);
         }
       } catch (err) {
         clearTimeout(timeoutId);
@@ -57,6 +68,7 @@ export default function LoginPage() {
         setSetupComplete(true);
         setOidcEnabled(false);
         setOidcDisablePasswordLogin(false);
+        setRecoverySupported(false);
       }
     }
     checkAuth();
@@ -71,7 +83,7 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify(buildLoginPayload(password, login)),
       });
 
       if (res.ok) {
@@ -263,36 +275,60 @@ export default function LoginPage() {
               </div>
             ) : (
               <>
-                <form onSubmit={handleLogin} className="space-y-5 w-full">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-text-main">{t("password")}</label>
-                    <Input
-                      type="password"
-                      placeholder={t("enterPassword")}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      autoFocus
-                      className="h-11"
-                    />
-                    {error && (
-                      <p className="text-sm text-red-500 flex items-center gap-1.5 pt-1">
-                        <span className="material-symbols-outlined text-base">error</span>
-                        {error}
+                {mode === "login" && (
+                  <form onSubmit={handleLogin} className="space-y-5 w-full">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-text-main">
+                        {t("loginIdentifier")}
+                      </label>
+                      <Input
+                        type="text"
+                        autoComplete="username"
+                        placeholder={t("loginIdentifierPlaceholder")}
+                        value={login}
+                        onChange={(e) => setLogin(e.target.value)}
+                        className="h-11"
+                      />
+                      <p className="text-xs text-text-muted/60 pt-0.5">
+                        {t("loginIdentifierHint")}
                       </p>
-                    )}
-                    <p className="text-xs text-text-muted/60 pt-0.5">{t("defaultPasswordHint")}</p>
-                  </div>
+                    </div>
 
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    className="w-full h-11 text-sm font-medium"
-                    loading={loading}
-                  >
-                    {t("continue")}
-                  </Button>
-                </form>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-text-main">{t("password")}</label>
+                      <Input
+                        type="password"
+                        autoComplete="current-password"
+                        placeholder={t("enterPassword")}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        autoFocus
+                        className="h-11"
+                      />
+                      {error && (
+                        <p className="text-sm text-red-500 flex items-center gap-1.5 pt-1">
+                          <span className="material-symbols-outlined text-base">error</span>
+                          {error}
+                        </p>
+                      )}
+                      <p className="text-xs text-text-muted/60 pt-0.5">
+                        {t("defaultPasswordHint")}
+                      </p>
+                    </div>
+
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      className="w-full h-11 text-sm font-medium"
+                      loading={loading}
+                    >
+                      {t("continue")}
+                    </Button>
+                  </form>
+                )}
+
+                {mode === "register" && <RegistrationForm />}
 
                 {oidcEnabled && (
                   <div className="mt-4">
@@ -310,14 +346,53 @@ export default function LoginPage() {
               </>
             )}
 
+            {githubOAuthEnabled && (
+              <div className="mt-4">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full h-11 text-sm font-medium"
+                  onClick={() => (window.location.href = "/api/auth/github/authorize")}
+                >
+                  {t("continueWithGithub")}
+                </Button>
+              </div>
+            )}
+
             {!oidcEnabled && (
               <div className="mt-6 pt-6 border-t border-border">
-                <a
-                  href="/forgot-password"
-                  className="text-sm text-text-muted hover:text-primary transition-colors"
-                >
-                  {t("forgotPassword")}
-                </a>
+                {recoverySupported && (
+                  <a
+                    href="/forgot-password"
+                    className="text-sm text-text-muted hover:text-primary transition-colors"
+                  >
+                    {t("forgotPassword")}
+                  </a>
+                )}
+                {registerAllowed === true &&
+                  (mode === "register" ? (
+                    <a
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setMode("login");
+                      }}
+                      className="block mt-3 text-sm text-primary hover:underline transition-colors"
+                    >
+                      {t("backToSignIn")}
+                    </a>
+                  ) : (
+                    <a
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setMode("register");
+                      }}
+                      className="block mt-3 text-sm text-primary hover:underline transition-colors"
+                    >
+                      {t("createAccount")}
+                    </a>
+                  ))}
               </div>
             )}
           </div>

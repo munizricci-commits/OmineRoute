@@ -89,6 +89,18 @@ export {
   reorderCombos,
   deleteCombo,
 } from "./db/combos";
+// Organizations feature (P5 — Combos): org-scoped combo CRUD + scope resolution.
+export {
+  createOrganizationCombo,
+  getOrganizationCombos,
+  getOrganizationComboById,
+  getOrganizationComboByName,
+  updateOrganizationCombo,
+  deleteOrganizationCombo,
+  resolveComboInScope,
+  OrgComboError,
+} from "./db/orgCombos";
+export type { ComboScopeError } from "./lib/org/comboScope";
 export * from "./db/ccrBlocks";
 export * from "./db/compressionCacheStats";
 export * from "./db/compressionCombos";
@@ -113,7 +125,155 @@ export {
   clearApiKeyCaches,
   resetApiKeyState,
   ApiKeyPolicyInvariantError,
+  setApiKeyUserId,
+  getApiKeyUserId,
+  getApiKeyUser,
 } from "./db/apiKeys";
+
+// Organizations feature (P1 — Identity): durable users entity.
+export {
+  createUser,
+  getUserById,
+  getUserByEmail,
+  getUserByLoginIdentifier,
+  resolveUserByIdentifierOrEmail,
+  updateUser,
+  setUserRole,
+  listUsers,
+  deleteUser,
+  backfillUserLoginIdentifiers,
+  normalizeLoginIdentifier,
+  validateLoginIdentifier,
+} from "./db/users";
+export type {
+  UserRecord,
+  UserRole,
+  UserStatus,
+  CreateUserInput,
+  UpdateUserInput,
+} from "./db/users";
+
+// Auth roadmap (Phase 02): instance-wide authentication settings.
+export { getInstanceAuthSettings, setInstanceAuthSettings } from "./db/instanceAuthSettings";
+export type {
+  InstanceAuthSettings,
+  RegistrationPolicy,
+  SetInstanceAuthSettingsInput,
+} from "./db/instanceAuthSettings";
+
+// Organizations feature (P2 — Organizations): organizations entity (P2.01).
+export {
+  createOrganization,
+  getOrganizationById,
+  getOrganizationBySlug,
+  listOrganizations,
+  listUserOrganizations,
+  updateOrganization,
+  archiveOrganization,
+  deleteOrganization,
+  getOrganizationWithMembers,
+  OrganizationError,
+} from "./db/organizations";
+export type {
+  OrganizationRecord,
+  CreateOrganizationInput,
+  UpdateOrganizationInput,
+  OrgRole,
+  OrgStatus,
+} from "./db/organizations";
+
+// Organizations feature (P9 — Quota): organization-wide quota configuration (P9.02).
+export {
+  getOrganizationQuota,
+  setOrganizationQuota,
+  deleteOrganizationQuota,
+  OrgQuotaError,
+} from "./db/orgQuotas";
+export type { OrganizationQuotaConfig, SetOrganizationQuotaInput } from "./db/orgQuotas";
+
+// Organizations feature (P3 — Authorization): org-scoped authz layer.
+export {
+  resolveOrganizationContext,
+  platformAdminOrganizationContext,
+  canReadOrganization,
+  canUseOrganizationResource,
+  canManageOrganizationResource,
+  canManageMembership,
+  canArchiveOrganization,
+  canDeleteOrganization,
+  resolveConnectionVisibility,
+  redactConnectionCredentials,
+  CREDENTIAL_FIELDS,
+} from "./org/authorization";
+export type { ConnectionRef } from "./org/authorization";
+export type {
+  ResourceScope,
+  OrganizationContext,
+  OrgPrincipal,
+  AnyPrincipal,
+  ConnectionVisibility,
+  ConnectionCredentialFields,
+} from "./org/types";
+
+// Organizations feature (P3 — Authorization): request-handler gate (P3.03).
+export { requireOrganizationAccess, resolveOrgAccess, OrgAccessDeniedError } from "./org/apiAuth";
+export type { OrgAccessCapability } from "./org/apiAuth";
+
+// Organizations feature (P1 — Identity): dashboard session principal resolver.
+export { resolveDashboardUserPrincipal } from "./org/principal";
+
+// Organizations feature (P4 — Connections): org-scoped connection primitives.
+export { getOrganizationConnections, createOrganizationConnection } from "./db/orgConnections";
+
+// Organizations feature (P6 — Qualified Routes): parse + resolve org-scoped routes.
+export {
+  parseQualifiedModel,
+  resolveQualifiedRoute,
+  buildOrgRoutingContext,
+} from "./org/qualifiedRoute";
+export type {
+  ParsedQualifiedModel,
+  ResolvedQualifiedRoute,
+  OrgRoutingContext,
+  ModelBody,
+} from "./org/qualifiedRoute";
+
+// Organizations feature (P7 — Auto Routing): personal/organization routing scope.
+export {
+  isAutoRoute,
+  resolveAutoRoutingScope,
+  scopedConnectionIdSet,
+  scopeAllowsConnection,
+} from "./org/autoScope";
+export type {
+  RoutingScope,
+  PersonalRoutingScope,
+  OrganizationRoutingScope,
+  DeniedRoutingScope,
+} from "./org/autoScope";
+
+// Organizations feature (P2 — Organizations): membership service (P2.03).
+export {
+  addMember,
+  removeMember,
+  promoteMember,
+  demoteMember,
+  listMembers,
+  getMembership,
+  MembershipError,
+} from "./db/members";
+export type { MembershipRecord, AddMemberInput } from "./db/members";
+
+// Organizations feature (P2 — Organizations): invitation lifecycle (P2.04).
+export {
+  createInvitation,
+  acceptInvitation,
+  revokeInvitation,
+  listInvitations,
+  getInvitationByToken,
+  InvitationError,
+} from "./db/invitations";
+export type { InvitationRecord, CreateInvitationInput, InvitationStatus } from "./db/invitations";
 
 export {
   // Evals

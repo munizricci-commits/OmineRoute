@@ -32,7 +32,10 @@ import { filterStrictZeroCostCandidates, filterTosAvoidCandidates } from "./stri
 import { resolveFreeAccessState } from "./freeAccessQuota";
 import { isModelExcludedByConnection } from "@/domain/connectionModelRules";
 import { resolveProviderAlias } from "../model.ts";
-import { filterExcludedCandidates } from "./candidateOverrides";
+import {
+  filterExcludedCandidates,
+  filterCandidatesByAllowedConnections,
+} from "./candidateOverrides";
 import { getExcludedConnectionIds } from "@/lib/db/autoCandidateOverrides";
 import {
   filterResilienceBlockedCandidates,
@@ -729,16 +732,40 @@ function clonePreparedCandidates(
   }));
 }
 
+/**
+ * P7 (Organizations) — routing-scope options for the auto engine. `null`/absent
+ * `allowedConnectionIds` means personal (unrestricted) scope, keeping pre-P7
+ * behavior byte-identical. A non-null set restricts the candidate pool to an
+ * organization's own connections and is applied FAIL-CLOSED (an empty set yields
+ * an empty pool rather than widening back to the personal pool).
+ */
+export interface VirtualAutoComboScopeOptions {
+  allowedConnectionIds?: Set<string> | null;
+  /** Namespace for the virtual combo id / cache + cooldown keys (P7.03). */
+  scopeKey?: string | null;
+}
+
 export async function createVirtualAutoComboFromPrepared(
   prepared: PreparedVirtualAutoComboInputs,
   variant: AutoVariant | undefined,
   spec?: AutoComboSpec,
   apiKeyId?: string,
-  autoChannel?: string
+  autoChannel?: string,
+  scopeOptions?: VirtualAutoComboScopeOptions
 ): Promise<VirtualAutoCombo> {
   let candidatePool = clonePreparedCandidates(
     spec?.family ? prepared.familyCandidates : prepared.regularCandidates
   );
+
+  // P7.02 (Organizations): restrict the pool to the routing scope's connections
+  // BEFORE any other narrowing, so no downstream filter, fallback, or failover
+  // path can reintroduce an out-of-scope connection. Personal scope (null) is
+  // the identity function.
+  const scopeAllowedConnectionIds = scopeOptions?.allowedConnectionIds ?? null;
+  const scopedPool = filterCandidatesByAllowedConnections(candidatePool, scopeAllowedConnectionIds);
+  if (scopedPool !== candidatePool) {
+    candidatePool = scopedPool;
+  }
 
   // #7819 (Level 2): per-API-key candidate exclusions. Fail-open — an absent
   // apiKeyId/autoChannel (every caller before #7819) or a DB lookup failure
@@ -977,8 +1004,16 @@ export async function createVirtualAutoCombo(
   variant: AutoVariant | undefined,
   spec?: AutoComboSpec,
   apiKeyId?: string,
-  autoChannel?: string
+  autoChannel?: string,
+  scopeOptions?: VirtualAutoComboScopeOptions
 ): Promise<VirtualAutoCombo> {
   const prepared = await prepareVirtualAutoComboInputs();
-  return createVirtualAutoComboFromPrepared(prepared, variant, spec, apiKeyId, autoChannel);
+  return createVirtualAutoComboFromPrepared(
+    prepared,
+    variant,
+    spec,
+    apiKeyId,
+    autoChannel,
+    scopeOptions
+  );
 }

@@ -38,6 +38,10 @@ export const REQUEST_DEFAULT_SERVICE_TIER_VALUES = new Set(["default", "priority
 
 export const loginSchema = z.object({
   password: z.string().min(1, "Password is required").max(200),
+  // Optional login identifier (username / email). When supplied, the session is
+  // bound to the resolved user (Task 04); when omitted, the legacy
+  // management-password session is used unchanged.
+  login: z.string().max(128).optional(),
 });
 
 export const dbBackupCleanupSchema = z.object({

@@ -783,6 +783,20 @@ const HELP_ITEMS: readonly SidebarItemDefinition[] = [
   },
 ];
 
+// ─── Organizations (multi-tenant feature) ───────────────────────────────────
+
+const ORGANIZATIONS_ITEMS: readonly SidebarItemDefinition[] = [
+  {
+    id: "organizations",
+    href: "/dashboard/organizations",
+    i18nKey: "organizations",
+    labelFallback: "Organizations",
+    subtitleKey: "organizationsSubtitle",
+    subtitleFallback: "Multi-tenant teams, members & shared routing",
+    icon: "groups",
+  },
+];
+
 // ─── Sections ────────────────────────────────────────────────────────────────
 
 export const SIDEBAR_SECTIONS: readonly SidebarSectionDefinition[] = [
@@ -835,6 +849,13 @@ export const SIDEBAR_SECTIONS: readonly SidebarSectionDefinition[] = [
     titleKey: "agenticFeaturesSection",
     titleFallback: "Agentic Features",
     children: AGENTIC_FEATURES_ITEMS,
+  },
+  {
+    id: "organizations",
+    titleKey: "organizationsSection",
+    titleFallback: "Organizations",
+    children: ORGANIZATIONS_ITEMS,
+    showTitle: true,
   },
   {
     id: "other-features",

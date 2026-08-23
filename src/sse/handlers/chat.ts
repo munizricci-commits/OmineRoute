@@ -119,6 +119,10 @@ import {
   filterReasoningCombo,
 } from "./reasoningRouting";
 import { createVirtualAutoCombo, resolveAutoRoutingState } from "./autoRouting";
+import type { RoutingScope } from "@/lib/org/autoScope";
+import { enforceOrgQuotaScope, consumeOrgQuota } from "@/lib/org/orgQuotaEnforcement";
+import { parseQualifiedModel } from "@/lib/org/qualifiedRoute";
+import { resolveComboInScope } from "@/lib/db/orgCombos";
 import { getComboFailureLogError } from "./comboFailureLogging";
 
 // Pipeline integration — wired modules
@@ -354,7 +358,8 @@ async function handleChatImplementation(
   clientRawRequest: any = null,
   preParsedBody: any = null,
   correlationId: string | undefined,
-  admissionContext: chatAdmission.ChatAdmissionContext
+  admissionContext: chatAdmission.ChatAdmissionContext,
+  routingScope: RoutingScope | null = null
 ) {
   const peerRejection = rejectPeerRequest(request?.headers, log.warn, errorResponse);
   if (peerRejection) return peerRejection;
@@ -874,6 +879,30 @@ async function handleChatImplementation(
 
   // Check if model is a combo (has multiple models with fallback)
   telemetry.startPhase("resolve");
+
+  // P6 — explicit organization combo (e.g. `team1/combo:dev`). When the request
+  // resolved to an org routing scope (verified member) and the model is
+  // org-qualified, resolve the combo from THAT organization only. This is the
+  // execution-time isolation boundary: a member of teamA can never resolve a
+  // combo belonging to teamB, and the resolved combo is the org's own. Personal
+  // / denied / unqualified models skip this entirely (legacy path unchanged).
+  if (routingScope?.scope === "organization" && routingScope.organizationId) {
+    const parsed = parseQualifiedModel(resolvedModelStr);
+    if (parsed.organizationSlug) {
+      const orgCombo = await resolveComboInScope(
+        { name: parsed.route, organizationId: routingScope.organizationId },
+        routingScope.ctx
+      );
+      if (orgCombo) {
+        log.info(
+          "ROUTING",
+          `Resolved org combo "${resolvedModelStr}" → org ${routingScope.organizationId}`
+        );
+        combo = orgCombo;
+      }
+    }
+  }
+
   let combo: any = await getComboForModel(resolvedModelStr);
   if (reasoningDecision?.targetCombo) combo = reasoningDecision.targetCombo;
 
@@ -890,7 +919,12 @@ async function handleChatImplementation(
     }
   }
 
-  const virtualCombo = await createVirtualAutoCombo(autoRouting, combo, apiKeyInfo?.id);
+  const virtualCombo = await createVirtualAutoCombo(
+    autoRouting,
+    combo,
+    apiKeyInfo?.id,
+    routingScope
+  );
   if (virtualCombo instanceof Response) return virtualCombo;
   combo = virtualCombo;
   if (combo) {
@@ -1029,6 +1063,41 @@ async function handleChatImplementation(
     // because only this layer knows which connectionId was actually selected.
     const { defer: deferContextOverflowWhenCompressible, exclusions: compressionExclusions } =
       await resolveComboContextOverflowDeferral(log, apiKeyInfo);
+
+    // P9.03 — org-scoped quota PRE-flight gate. Fail-open on any error so a
+    // transient quota-infra failure never blocks legitimate traffic. Only an
+    // organization routing scope (resolved from P6/P7) is subject to the org
+    // quota; personal/denied scopes skip this entirely (legacy path unchanged).
+    if (routingScope?.scope === "organization" && routingScope.organizationId) {
+      try {
+        const decision = await enforceOrgQuotaScope({
+          scope: "organization",
+          organizationId: routingScope.organizationId,
+          unit: "requests",
+          estimatedAmount: 1,
+        });
+        if (decision.kind === "block") {
+          return new Response(
+            JSON.stringify({
+              error: {
+                message: "Organization request quota exceeded. Try again later.",
+                code: "org_quota_exceeded",
+              },
+            }),
+            {
+              status: 429,
+              headers: {
+                "content-type": "application/json",
+                "retry-after": String(decision.retryAfterSeconds ?? 60),
+              },
+            }
+          );
+        }
+      } catch {
+        // Fail-open: never block on quota-infra errors.
+      }
+    }
+
     const response = await (handleComboChat as any)({
       body,
       combo,
@@ -1212,6 +1281,22 @@ async function handleChatImplementation(
         });
       } catch {}
     }
+
+    // P9.03 — org-scoped quota POST-flight accounting (non-streaming only).
+    // Fire-and-forget: consumeOrgQuota swallows all errors (fail-open). Streaming
+    // accounting is a documented follow-up (response-stream finalization in
+    // handleComboChat). Guarded by !body.stream so we never double-count or touch
+    // the SSE response body.
+    if (
+      routingScope?.scope === "organization" &&
+      routingScope.organizationId &&
+      !body.stream &&
+      response &&
+      (response as Response).ok
+    ) {
+      consumeOrgQuota(routingScope.organizationId, "requests", 1).catch(() => {});
+    }
+
     return withModalityBridgeHeader(
       withConversationId(
         withCorrelationId(withSessionHeader(response, sessionId), reqId),

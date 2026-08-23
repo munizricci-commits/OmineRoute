@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuditRequestContext, logAuditEvent } from "@/lib/compliance/index";
 import { classifyIpScope } from "@/lib/ipUtils";
-import { getCachedSettings } from "@/lib/db/settings";
+import { getCachedSettings } from "@/lib/db/readCache";
 import { SignJWT } from "jose";
 import { cookies } from "next/headers";
 import {
@@ -10,6 +10,7 @@ import {
   verifyManagementPassword,
 } from "@/lib/auth/managementPassword";
 import { isFeatureFlagEnabled } from "@/shared/utils/featureFlags";
+import { resolveUserByIdentifierOrEmail } from "@/lib/db/users";
 import { loginSchema } from "@/shared/validation/schemas";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 import { checkLoginGuard, clearLoginAttempts, recordLoginFailure } from "@/server/auth/loginGuard";
@@ -157,7 +158,44 @@ export async function POST(request) {
       const isHttpsRequest = forwardedProto === "https" || request.nextUrl?.protocol === "https:";
       const useSecureCookie = forceSecureCookie || isHttpsRequest;
 
-      const token = await new SignJWT({ authenticated: true })
+      // Task 04: when a `login` identifier is supplied, bind the session to the
+      // resolved user so the Organizations principal carries a `sub` claim.
+      // Backward compatible: an omitted/empty login keeps the legacy
+      // management-password session (no `sub`) unchanged.
+      const requestedLogin =
+        typeof validation.data.login === "string" ? validation.data.login.trim() : "";
+      let subject: string | undefined;
+      if (requestedLogin.length > 0) {
+        const resolved = await resolveUserByIdentifierOrEmail(requestedLogin);
+        if (resolved && resolved.status === "active") {
+          // P4: block login until the email address is verified.
+          if (resolved.emailVerified === false) {
+            logAuditEvent({
+              action: "auth.login.email_not_verified",
+              actor: resolved.id,
+              target: "dashboard-auth",
+              resourceType: "auth_session",
+              status: "failed",
+              ipAddress: clientIp || undefined,
+              requestId: auditContext.requestId,
+              metadata: { reason: "email_not_verified" },
+            });
+            return NextResponse.json(
+              {
+                error: "Please verify your email address before signing in.",
+                needsVerification: true,
+              },
+              { status: 403 }
+            );
+          }
+          subject = resolved.id;
+        }
+      }
+
+      const claims: Record<string, unknown> = { authenticated: true };
+      if (subject) claims.sub = subject;
+
+      const token = await new SignJWT(claims)
         .setProtectedHeader({ alg: "HS256" })
         .setExpirationTime("30d")
         .sign(getJwtSecret());

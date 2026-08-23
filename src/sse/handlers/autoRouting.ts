@@ -15,6 +15,12 @@ import {
   type ModelFamily,
 } from "@omniroute/open-sse/services/autoCombo/modelFamily.ts";
 import { getCachedSettings } from "@/lib/localDb";
+import {
+  autoScopeKey,
+  buildScopedAutoComboId,
+  scopedConnectionIdSet,
+  type RoutingScope,
+} from "@/lib/org/autoScope";
 import * as log from "../utils/logger";
 
 export type AutoRoutingState = {
@@ -122,7 +128,8 @@ export async function resolveAutoRoutingState(model: string): Promise<AutoRoutin
 export async function createVirtualAutoCombo(
   state: AutoRoutingState,
   combo: any,
-  apiKeyId?: string
+  apiKeyId?: string,
+  scope?: RoutingScope
 ): Promise<any | Response> {
   if (!state.isAutoRouting || combo !== null) return combo;
   if (!state.recognizedBuiltInAuto) {
@@ -138,9 +145,19 @@ export async function createVirtualAutoCombo(
     // #7819 (Level 2): scope candidate exclusions to this API key + the
     // requested auto channel (e.g. "auto/best-coding"). Omitted for any
     // caller that doesn't pass apiKeyId — routing stays unfiltered.
-    const virtualCombo = await createVirtual(state.variant, state.spec, apiKeyId, state.model);
+    //
+    // P7.02 (Organizations): when the request resolved to an ORGANIZATION
+    // routing scope, restrict the candidate pool to that org's own connections.
+    // Personal scope passes `null` (unrestricted) so legacy routing is
+    // unchanged; a denied scope passes an empty set (fail-closed).
+    const virtualCombo = await createVirtual(state.variant, state.spec, apiKeyId, state.model, {
+      allowedConnectionIds: scopedConnectionIdSet(scope),
+      scopeKey: autoScopeKey(scope),
+    });
     virtualCombo.name = state.model;
-    virtualCombo.id = state.model;
+    // P7.03: namespace the virtual combo id by organization so two orgs
+    // requesting the same auto channel never share cached results/cooldowns.
+    virtualCombo.id = buildScopedAutoComboId(state.model, scope);
     log.info(
       "AUTO",
       `Virtual auto-combo created: ${virtualCombo.name} (${virtualCombo.candidatePool?.length || 0} candidates)`
