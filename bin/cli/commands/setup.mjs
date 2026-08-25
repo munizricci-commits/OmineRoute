@@ -41,10 +41,16 @@ async function resolvePassword(opts, prompt, nonInteractive) {
 }
 
 async function setupPassword(db, opts, prompt, nonInteractive) {
+  const existingSettings = getSettings(db);
+  if (existingSettings.password && !opts.password) {
+    updateSettings(db, { requireLogin: true });
+    printInfo("Using existing admin password");
+    return false;
+  }
+
   const password = await resolvePassword(opts, prompt, nonInteractive);
   if (!password) {
-    const settings = getSettings(db);
-    if (!settings.password) {
+    if (!existingSettings.password) {
       updateSettings(db, { requireLogin: false });
     }
     if (!nonInteractive) {
