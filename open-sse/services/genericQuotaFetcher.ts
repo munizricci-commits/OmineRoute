@@ -150,14 +150,62 @@ export function convertUsageToQuotaInfo(usage: unknown): QuotaInfo | null {
 
   if (Object.keys(windows).length === 0) return null;
 
+  const normalized = normalizeQuotaWindows(windows);
+
   return {
     used: 0,
     total: 0,
     percentUsed: worstPercent,
     resetAt: worstResetAt,
     windows,
+    ...normalized,
     limitReached: worstPercent >= 1 - 1e-9,
   };
+}
+
+/**
+ * Map provider-native window keys to canonical structural windows so that
+ * reset-aware / reset-window scoring works without knowing every provider's
+ * naming convention.
+ *
+ *   - Claude: "session (5h)" → window5h, "weekly (7d)" → window7d
+ *   - Antigravity: worst per-model quota → window5h; worst *_weekly quota → window7d
+ */
+function normalizeQuotaWindows(
+  windows: Record<string, { percentUsed: number; resetAt: string | null }>
+): Record<string, { percentUsed: number; resetAt: string | null }> {
+  const normalized: Record<string, { percentUsed: number; resetAt: string | null }> = {};
+
+  // Claude-style explicit time windows.
+  if (windows["session (5h)"] && !normalized.window5h) {
+    normalized.window5h = windows["session (5h)"];
+  }
+  if (windows["weekly (7d)"] && !normalized.window7d) {
+    normalized.window7d = windows["weekly (7d)"];
+  }
+
+  // Antigravity-style per-model 5h windows: pick the worst (most used) model quota.
+  const modelWindows = Object.entries(windows).filter(
+    ([key]) =>
+      key !== "credits" &&
+      !key.endsWith("_weekly") &&
+      !key.startsWith("window") &&
+      !key.includes("(5h)") &&
+      !key.includes("(7d)")
+  );
+  if (modelWindows.length > 0 && !normalized.window5h) {
+    const worst = modelWindows.reduce((a, b) => (a[1].percentUsed > b[1].percentUsed ? a : b));
+    normalized.window5h = worst[1];
+  }
+
+  // Antigravity-style weekly family buckets: pick the worst *_weekly quota.
+  const weeklyWindows = Object.entries(windows).filter(([key]) => key.endsWith("_weekly"));
+  if (weeklyWindows.length > 0 && !normalized.window7d) {
+    const worst = weeklyWindows.reduce((a, b) => (a[1].percentUsed > b[1].percentUsed ? a : b));
+    normalized.window7d = worst[1];
+  }
+
+  return normalized;
 }
 
 /**

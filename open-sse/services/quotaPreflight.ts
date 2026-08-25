@@ -48,6 +48,16 @@ export interface QuotaInfo {
    * (e.g. "session", "weekly", "monthly").
    */
   windows?: Record<string, QuotaWindowInfo>;
+  /**
+   * Structural, canonical window snapshots used by reset-aware / reset-window
+   * scoring. Providers that expose time-based windows (5h, weekly, monthly)
+   * populate these in addition to the provider-native `windows` map so the
+   * scorer does not need to know every provider's key naming convention.
+   */
+  window5h?: QuotaWindowInfo;
+  window7d?: QuotaWindowInfo;
+  windowWeekly?: QuotaWindowInfo;
+  windowMonthly?: QuotaWindowInfo;
   /** True when the upstream usage endpoint explicitly reports exhausted quota. */
   limitReached?: boolean;
 }

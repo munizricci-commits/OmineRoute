@@ -261,7 +261,7 @@ function getWindowsMapQuotaWindow(
   );
 }
 
-function resolveQuotaWindowByName(
+export function resolveQuotaWindowByName(
   quota: unknown,
   windowName: ResetWindowName
 ): QuotaWindowSnapshot | null {
@@ -321,8 +321,8 @@ export function scoreResetAwareQuota(
   if (quota.limitReached === true) return { score: -Infinity };
 
   const overallPercentUsed = clamp01(finiteNumberOrNull(quota.percentUsed) ?? 0.5);
-  const sessionWindow = getQuotaWindow(quota, "window5h");
-  const weeklyWindow = getQuotaWindow(quota, "window7d") || getQuotaWindow(quota, "windowWeekly");
+  const sessionWindow = resolveQuotaWindowByName(quota, "session");
+  const weeklyWindow = resolveQuotaWindowByName(quota, "weekly");
   const sessionRemaining = clamp01(1 - (sessionWindow?.percentUsed ?? overallPercentUsed));
   const weeklyRemaining = clamp01(1 - (weeklyWindow?.percentUsed ?? overallPercentUsed));
   const sessionScore = scoreQuotaWindow(

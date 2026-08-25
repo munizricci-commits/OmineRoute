@@ -498,6 +498,17 @@ async function fetchGenericSaturation(
     const result = await fetcher(connectionId, provider);
     if (result && typeof result === "object") {
       const obj = result as Record<string, unknown>;
+
+      // Prefer the normalized quota shape (handles nested `quotas` map for
+      // Antigravity / Claude / etc.). Fall back to legacy top-level fields.
+      const { convertUsageToQuotaInfo } = await import(
+        "@omniroute/open-sse/services/genericQuotaFetcher"
+      );
+      const quota = convertUsageToQuotaInfo(result);
+      if (quota && Number.isFinite(quota.percentUsed)) {
+        return Math.min(1, Math.max(0, quota.percentUsed));
+      }
+
       const pct =
         typeof obj.percentUsed === "number"
           ? obj.percentUsed
