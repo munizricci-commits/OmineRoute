@@ -63,7 +63,7 @@ const SERVICES: ServiceEntry[] = [
     healthIntervalMs: 5_000,
     stopTimeoutMs: 15_000,
     logsBufferBytes: 5_242_880,
-    needsApiKey: false,
+    needsApiKey: true,
   },
   {
     tool: "mux",
@@ -115,7 +115,7 @@ function buildSpawnArgsFactory(
   if (cfg.tool === "dario") {
     return () => darioSpawnArgs(apiKey, cfg.port);
   }
-  return () => cliproxySpawnArgs(cfg.port);
+  return () => cliproxySpawnArgs(cfg.port, apiKey);
 }
 
 export async function bootstrapEmbeddedServices(): Promise<void> {

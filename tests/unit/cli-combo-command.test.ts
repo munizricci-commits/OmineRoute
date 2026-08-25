@@ -27,7 +27,14 @@ async function withComboEnv(fn: (dataDir: string) => Promise<void>) {
   } finally {
     console.log = originalLog;
     globalThis.fetch = ORIGINAL_FETCH;
-    fs.rmSync(dataDir, { recursive: true, force: true });
+    // On Windows the SQLite file may still be held open by the db module when
+    // the test ends, and rmSync then throws EPERM, failing a test whose
+    // assertions all passed. Retry, then give up quietly.
+    try {
+      fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+    } catch {
+      // best effort: the OS reclaims its own temp dir
+    }
 
     if (ORIGINAL_DATA_DIR === undefined) delete process.env.DATA_DIR;
     else process.env.DATA_DIR = ORIGINAL_DATA_DIR;

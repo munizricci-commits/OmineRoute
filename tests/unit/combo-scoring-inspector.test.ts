@@ -27,7 +27,8 @@ const { normalizeComboStep } = await import("../../src/lib/combos/steps.ts");
 const { lockModel, clearAllModelLockouts } =
   await import("../../open-sse/services/accountFallback.ts");
 const { resetAllCircuitBreakers } = await import("../../src/shared/utils/circuitBreaker.ts");
-const { DEFAULT_WEIGHTS } = await import("../../open-sse/services/autoCombo/scoring.ts");
+const { DEFAULT_WEIGHTS, normalizeScoringWeights } =
+  await import("../../open-sse/services/autoCombo/scoring.ts");
 const { MODE_PACKS } = await import("../../open-sse/services/autoCombo/modePacks.ts");
 
 async function resetStorage() {
@@ -242,6 +243,32 @@ test("scoring inspector reports valid explicit auto weights", async () => {
   assert.equal(response.combos[0].weightSource, "explicit");
   assert.equal(response.combos[0].modePack, null);
   assert.deepEqual(response.combos[0].weights, explicitWeights);
+});
+test("scoring inspector normalizes partial explicit auto weights like runtime", async () => {
+  const explicitWeights = {
+    quota: 0.3,
+    health: 0.25,
+    costInv: 0.1,
+    latencyInv: 0.1,
+  };
+  const combo = await combosDb.createCombo({
+    name: "combo-scoring-partial-explicit-weights",
+    strategy: "auto",
+    models: ["openai/gpt-4o-mini"],
+    autoConfig: { weights: explicitWeights },
+  });
+
+  const response = await inspector.buildComboScoringInspectorResponse({
+    range: "24h",
+    horizon: "7d",
+    comboId: String(combo.id),
+    combos: [combo],
+    skipAutopilot: true,
+  });
+
+  assert.equal(response.combos[0].weightSource, "explicit");
+  assert.deepEqual(response.combos[0].weights, normalizeScoringWeights(explicitWeights));
+  assert.equal(response.combos[0].warnings.length, 0);
 });
 
 test("scoring inspector marks non-auto combos as explanatory recompute", async () => {

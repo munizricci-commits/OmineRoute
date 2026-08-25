@@ -8,6 +8,7 @@
 import { VISION_BRIDGE_DEFAULTS } from "./visionBridgeDefaults";
 
 export type VisionBridgeMode = "auto" | "describe" | "reroute";
+export type VideoAnalysisMode = "full" | "focused";
 export type VideoSamplingPolicy = "uniform" | "scene_aware" | "segment_aware";
 
 export const VIDEO_BRIDGE_TIMEOUT_MIN_MS = 1_000;
@@ -27,6 +28,7 @@ export const MODALITY_BRIDGE_DEFAULTS = {
   audioMaxClips: 3,
   videoEnabled: false,
   videoModel: "",
+  videoAnalysisMode: "full" as VideoAnalysisMode,
   videoFrameCount: 8,
   videoSamplingPolicy: "uniform" as VideoSamplingPolicy,
   videoMaxVideos: 1,
@@ -60,6 +62,7 @@ export interface AudioBridgeRuntimeSettings {
 export interface VideoBridgeRuntimeSettings {
   enabled: boolean;
   model: string;
+  analysisMode: VideoAnalysisMode;
   frameCount: number;
   samplingPolicy: VideoSamplingPolicy;
   maxVideos: number;
@@ -144,9 +147,12 @@ export function resolveVideoBridgeRuntimeSettings(
   settings: Record<string, unknown> | null | undefined
 ): VideoBridgeRuntimeSettings {
   const s = settings ?? {};
+  const analysisMode = pickString(s.modalityBridgeVideoAnalysisMode);
   return {
     enabled: pickBoolean(s.modalityBridgeVideoEnabled) ?? MODALITY_BRIDGE_DEFAULTS.videoEnabled,
     model: pickString(s.modalityBridgeVideoModel) ?? MODALITY_BRIDGE_DEFAULTS.videoModel,
+    analysisMode:
+      analysisMode === "focused" ? analysisMode : MODALITY_BRIDGE_DEFAULTS.videoAnalysisMode,
     frameCount:
       pickNumber(s.modalityBridgeVideoFrameCount) ?? MODALITY_BRIDGE_DEFAULTS.videoFrameCount,
     samplingPolicy:

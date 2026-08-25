@@ -276,7 +276,7 @@ export async function checkAndRefreshToken(provider: string, credentials: any) {
         updatedCredentials,
         resolveCopilotTokenBaseUrl(provider, updatedCredentials)
       );
-      if (copilotToken) {
+      if (copilotToken?.token) {
         await updateProviderCredentials(updatedCredentials.connectionId, {
           providerSpecificData: {
             ...updatedCredentials.providerSpecificData,
@@ -304,7 +304,7 @@ export async function refreshGitHubAndCopilotTokens(credentials: any) {
   const newGitHubCredentials = await refreshGitHubToken(credentials.refreshToken, credentials);
   if (newGitHubCredentials?.accessToken) {
     const copilotToken = await refreshCopilotToken(newGitHubCredentials.accessToken, credentials);
-    if (copilotToken) {
+    if (copilotToken?.token) {
       return {
         ...newGitHubCredentials,
         providerSpecificData: {

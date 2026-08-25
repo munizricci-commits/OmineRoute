@@ -15,6 +15,16 @@ const SAMPLE = {
       thinking: true,
     },
     {
+      name: "models/gemini-3.5-flash",
+      displayName: "Gemini 3.5 Flash",
+      supportedGenerationMethods: ["generateContent"],
+    },
+    {
+      name: "models/gemini-3.5-flash-lite",
+      displayName: "Gemini 3.5 Flash Lite",
+      supportedGenerationMethods: ["generateContent"],
+    },
+    {
       name: "models/gemini-3-pro-image-preview",
       displayName: "Gemini 3 Pro Image Preview",
       supportedGenerationMethods: ["generateContent", "countTokens"],
@@ -48,6 +58,12 @@ test("parseGeminiModelsList strips the models/ prefix and maps display name", ()
   assert.deepEqual(flash!.supportedEndpoints, ["chat"]);
 });
 
+test("parseGeminiModelsList excludes retired Gemini 3.5 Flash but keeps Flash Lite", () => {
+  const ids = parseGeminiModelsList(SAMPLE).map((model) => model.id);
+  assert.equal(ids.includes("gemini-3.5-flash"), false);
+  assert.equal(ids.includes("gemini-3.5-flash-lite"), true);
+});
+
 test("parseGeminiModelsList maps generateContent image models to the chat endpoint", () => {
   const models = parseGeminiModelsList(SAMPLE);
   const proImage = models.find((m) => m.id === "gemini-3-pro-image-preview");
@@ -66,11 +82,11 @@ test("parseGeminiModelsList maps embedContent and bidiGenerateContent", () => {
   ]);
 });
 
-test("parseGeminiModelsList maps Veo predictLongRunning models to the video endpoint", () => {
+test("parseGeminiModelsList maps Veo predictLongRunning models to the videos endpoint", () => {
   const models = parseGeminiModelsList(SAMPLE);
   const veo = models.find((m) => m.id === "veo-3.0-generate-001");
   assert.ok(veo, "veo-3.0-generate-001 should be present");
-  assert.deepEqual(veo!.supportedEndpoints, ["video"]);
+  assert.deepEqual(veo!.supportedEndpoints, ["videos"]);
 });
 
 test("parseGeminiModelsList defaults to chat and tolerates empty/missing input", () => {

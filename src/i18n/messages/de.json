@@ -974,7 +974,14 @@
     "batchFileUsedByCount": "Verwendet von {count, plural, one {# Batch} other {# Batches}}",
     "batchFilePreview": "Vorschau",
     "batchFilePreviewTruncated": "Zeige die ersten {shown} Zeilen ({total} insgesamt)",
-    "batchFileDownloadFull": "Vollständige Datei herunterladen"
+    "batchFileDownloadFull": "Vollständige Datei herunterladen",
+    "batchHeaderSubtitle": "Run many requests as one job",
+    "batchStep1": "1 · Upload JSONL",
+    "batchStep1Desc": "Add requests",
+    "batchStep2": "2 · Create batch",
+    "batchStep2Desc": "Run job",
+    "batchStep3": "3 · Get results",
+    "batchStep3Desc": "Download output"
   },
   "disabled": "Deaktiviert",
   "featureFlagOmnirouteEmergencyFallbackDescription": "Anfragen mit erschöpftem Budget an den kostenlosen Notfall-Fallback-Anbieter/das Notfall-Fallback-Modell weiterleiten.",
@@ -1259,7 +1266,7 @@
     "agentBridge": "Agent Bridge",
     "agentBridgeSubtitle": "IDE-Agenten-Datenverkehr abfangen",
     "trafficInspector": "Traffic Inspector",
-    "trafficInspectorSubtitle": "LLM-Aufrufe überwachen + beliebigen HTTPS-Datenverkehr debuggen",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "CLI-Code",
     "cliCodeSubtitle": "Code-Tools, die auf OmniRoute verweisen",
     "cliAgents": "CLI-Agenten",
@@ -1293,7 +1300,8 @@
       "open": "öffnen",
       "close": "schließen"
     },
-    "noResults": "Keine Ergebnisse"
+    "noResults": "Keine Ergebnisse",
+    "trafficInspectorPurpose": "See exactly what your application sends to and receives from AI providers. Works with any OpenAI-compatible client."
   },
   "webhooks": {
     "title": "Webhooks",
@@ -1856,7 +1864,21 @@
     "directDownloadHint": "Oder laden Sie das jeweilige Installationsformat direkt herunter:",
     "releaseNotes": "Versionshinweise",
     "readMore": "Mehr Lesen",
-    "noAuthLabel": "Keine Authentifizierung"
+    "noAuthLabel": "Keine Authentifizierung",
+    "recentRequests": "Recent Requests",
+    "recentRequestsEmpty": "No requests yet.",
+    "recentRequestsModel": "Model",
+    "recentRequestsTokens": "In / Out",
+    "recentRequestsWhen": "When",
+    "readinessEyebrow": "Get ready to route",
+    "readinessTitle": "Send your first request",
+    "readinessSubtitle": "Four small steps. OmniRoute checks readiness as you go.",
+    "readinessStep1": "Connect a provider",
+    "readinessStep2": "Configure endpoint authentication",
+    "readinessStep3": "Copy your endpoint",
+    "readinessStep4": "Send a test request",
+    "readinessContinue": "Continue setup",
+    "readinessDismiss": "Dismiss for now"
   },
   "analytics": {
     "title": "Analytik",
@@ -2901,7 +2923,8 @@
       "omp": "Oh My Pi Terminal-Coding-Agent",
       "letta": "Letta CLI-Agent mit persistentem Speicher und Tool-Nutzung",
       "warp": "Warp AI-Terminal mit Unterstützung für benutzerdefinierte Anbieter",
-      "agent-deck": "Agent Deck Multi-Agenten-Orchestrator"
+      "agent-deck": "Agent Deck Multi-Agenten-Orchestrator",
+      "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support"
     },
     "guides": {
       "cursor": {
@@ -4133,7 +4156,10 @@
     "notionIntegrationHelp": "Erstellen Sie eine interne Integration bei",
     "notionIntegrationToken": "Notion Interner Integrations-Token",
     "notionNotConnected": "Nicht verbunden",
-    "notionTokenConfigured": "Token konfiguriert. Notion-Tools sind über MCP verfügbar."
+    "notionTokenConfigured": "Token konfiguriert. Notion-Tools sind über MCP verfügbar.",
+    "subtitle": "Use the OpenAI-compatible endpoint with most SDKs and tools.",
+    "testEndpoint": "Test endpoint →",
+    "advancedProtocols": "Advanced protocols"
   },
   "endpoints": {
     "tabProxy": "Endpoint Proxy",
@@ -4716,7 +4742,14 @@
     "issueCount": "{count} Probleme",
     "score": "Score",
     "lastRequest": "Letzte Anfrage",
-    "lastError": "Letzter Fehler"
+    "lastError": "Letzter Fehler",
+    "healthVerdictReady": "OmniRoute is ready",
+    "healthVerdictActionRequired": "Action required to restore full operation",
+    "healthVerdictCoolingDown": "Cooling down after recent changes",
+    "healthSubtitle": "System health check",
+    "advancedDiagnosticsTitle": "Advanced diagnostics",
+    "hide": "Hide",
+    "show": "Show"
   },
   "telemetry": {
     "title": "Systemtelemetrie",
@@ -5834,6 +5867,8 @@
     "rateLimitOverridesSection": "Rate-Limit-Überschreibungen",
     "rateLimitOverridesMaxConcurrentHint": "Überschreibung der maximalen gleichzeitigen Anfragen für diese Verbindung. Überschreibt die Obergrenze auf Kontoebene.",
     "rateLimitOverridesMaxConcurrentLabel": "Max. gleichzeitig (Rate-Limit)",
+    "rateLimitOverridesMaxWaitMsHint": "__MISSING__:Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "Mindestzeit (ms) zwischen Anfragen. Überschreibt die standardmäßige Rate-Limiter-Verzögerung.",
     "rateLimitOverridesMinTimeLabel": "Min. Intervall (ms)",
     "rateLimitOverridesRpmHint": "Maximale Anfragen pro Minute für diese Verbindung. Überschreibt den Provider-Standard.",
@@ -6111,7 +6146,6 @@
       "glmt": "Voreingestelltes GLM-Profil mit höherem Token-Budget, aktiviertem Denken und längerem Timeout.",
       "getgoapi": "GoAPI mit einem API-Schlüssel verbinden.",
       "groq": "Kostenlose Stufe: 30 RPM / 14,4K RPD — keine Kreditkarte",
-      "hackclub": "Melden Sie sich mit Ihrem Hack Club-Konto unter ai.hackclub.com an.",
       "haiper": "API-Schlüssel unter haiper.ai/haiper-api anfordern",
       "heroku": "Heroku AI mit einem API-Schlüssel verbinden.",
       "hcnsec": "API-Schlüssel unter api.hcnsec.cn anfordern",
@@ -6382,7 +6416,21 @@
     "savedModelEndpointSettings": "Einstellungen für den gespeicherten Modell-Endpunkt",
     "searchByModelAria": "Nach Modell suchen",
     "selectSupportedEndpoint": "Wählen Sie mindestens einen unterstützten Endpunkt aus",
-    "antigravityClientProfileHarness": "Harness / CLI"
+    "antigravityClientProfileHarness": "Harness / CLI",
+    "harImportButtonLabel": "Import .har file",
+    "harImportButtonBusy": "Importing…",
+    "harImportButtonHint": "Export from DevTools Network tab after sending at least one chat message.",
+    "harImportStatusValid": "Imported — valid for ~{minutes}m.",
+    "harImportStatusExpiringSoon": "Imported — valid for only ~{minutes}m more.",
+    "harImportStatusExpired": "Imported, but this token already expired ({minutes}m ago) — export a fresh HAR.",
+    "harImportStatusUnknownExpiry": "Imported. Couldn't read its expiry.",
+    "harImportErrorNotJson": "That file isn't valid JSON — is it really a .har export?",
+    "harImportErrorNoEntries": "This HAR has no network entries recorded.",
+    "harImportErrorNoChathubUrl": "No Copilot chat connection found in this HAR. Send at least one chat message in m365.cloud.microsoft before exporting.",
+    "harImportErrorUnparsableUrl": "Found the chat connection, but couldn't read its URL.",
+    "harImportErrorMissingFields": "Found the chat connection, but the token was missing from it.",
+    "harImportErrorReadFailed": "Couldn't read that file.",
+    "harImportErrorUnknown": "Couldn't extract a credential from that HAR file."
   },
   "settings": {
     "title": "Einstellungen",
@@ -8229,7 +8277,19 @@
     "cliproxyapiHealth": "Gesundheit",
     "cliproxyapiPort": "Port",
     "qdrantHost": "Host",
-    "qdrantCollection": "Sammlung"
+    "qdrantCollection": "Sammlung",
+    "presetAll": "All",
+    "presetAllDesc": "Show everything",
+    "presetEssentials": "Essentials",
+    "presetEssentialsDesc": "Beginner path - Advanced tools stay searchable",
+    "presetMinimal": "Minimal",
+    "presetMinimalDesc": "Core pages only",
+    "presetDeveloper": "Developer",
+    "presetDeveloperDesc": "Dev & proxy tools",
+    "presetAdmin": "Admin",
+    "presetAdminDesc": "Monitoring & audit",
+    "settingsSidebarTitle": "Sidebar Customization",
+    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable."
   },
   "contextRtk": {
     "title": "RTK Engine",
@@ -12016,7 +12076,8 @@
         "title": "ACP-Agenten",
         "phrase": "CLIs, die OmniRoute als Ausführungs-Backend startet (umgekehrter Fluss)",
         "flow": "Client → OmniRoute → CLI starten (stdio/ACP) → Antwort",
-        "seeOther": "Siehe →"
+        "seeOther": "Siehe →",
+        "warning": "Most users can ignore this — use only when an integration requires it."
       }
     },
     "comparison": {
@@ -13416,6 +13477,13 @@
         "modelLockouts": "Modellsperren",
         "count": "Verbindungsanzahl"
       }
+    },
+    "reassuranceTitle": "Your connections recover automatically",
+    "reassuranceDetail": "Usually no action is needed. OmniRoute temporarily rests a connection after failures, then safely tries it again.",
+    "plainStates": {
+      "healthy": "Requests can be sent",
+      "coolingDown": "Trying again soon",
+      "lockedOut": "Needs your attention"
     }
   },
   "featureFlagCapabilityFilterEnabledDescription": "Lehnen Sie Anfragen ab, bevor sie versendet werden, wenn das Zielmodell über die erforderlichen Funktionen (Vision, Werkzeuge, strukturierte Ausgabe, Kontextfenster) nicht verfügt. Schützt direkte Einzelanbieteranfragen, die den Kombo-Schicht-Kompatibilitätsfilter umgehen.",
@@ -13854,5 +13922,12 @@
     "toolsMismatch": "Der Anbieter unterstützt keinen Toolaufruf",
     "structuredOutputMismatch": "Der Anbieter unterstützt keine strukturierten Ausgaben",
     "contextWindowMismatch": "Anfrage überschreitet das Kontextfenster des Anbieters"
+  },
+  "cheaperInferenceSponsorBanner": {
+    "title": "Cheaper Inference is an OmniRoute Open Source Friend",
+    "description": "A cost-ranked gateway reselling dozens of frontier models behind one OpenAI-compatible endpoint — routing each request to the cheapest eligible provider, never above list price.",
+    "cta": "Get an API Key",
+    "partnerLinkNote": "Partner link",
+    "dismissAriaLabel": "Dismiss"
   }
 }

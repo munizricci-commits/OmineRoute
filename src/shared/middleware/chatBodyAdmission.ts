@@ -16,6 +16,7 @@
  */
 
 import { CORS_HEADERS } from "../utils/cors";
+import { createLogger } from "../utils/logger";
 import { createHmac } from "crypto";
 import v8 from "node:v8";
 import { trackRequest } from "../../lib/gracefulShutdown";
@@ -169,6 +170,47 @@ interface AdmissionWaiter {
 }
 
 /**
+ * Why a structural shed (503 `chat_admission_busy`) happened (#11244):
+ * - `queue_timeout`: the bounded wait expired with no heavyweight capacity freed
+ *   (includes the `queueMs=0` legacy immediate-reject path — capacity was busy at
+ *   the instant the request arrived).
+ * - `queued_bytes_budget`: the queued-bytes heap valve (#9654 / U3) refused to
+ *   park the waiter because the buffered-body budget was already exhausted.
+ *
+ * A client abort mid-wait is deliberately NOT a shed: capacity was never denied,
+ * the caller simply left (its 503 is dropped on the dead connection).
+ */
+export type ChatAdmissionShedReason = "queue_timeout" | "queued_bytes_budget";
+
+/**
+ * One structural-shed observation, emitted to the shed sink at warn level.
+ * `lane` is the opaque fairness key — the HMAC fingerprint produced by
+ * `resolveSessionId` (or "anonymous"/"default"), never a raw credential.
+ */
+export interface ChatAdmissionShedEvent {
+  reason: ChatAdmissionShedReason;
+  activeHeavy: number;
+  waiting: number;
+  queuedBytes: number;
+  lane: string;
+}
+
+export type ChatAdmissionShedSink = (event: ChatAdmissionShedEvent) => void;
+
+const shedLog = createLogger("chat-admission");
+
+/**
+ * Default shed sink (#11244): exactly one structured warn per structural shed.
+ * The 503 returns BEFORE request logging, so without this line a shed left no
+ * trace anywhere. No raw credentials — `lane` is already the HMAC fingerprint,
+ * and the shared logger's redaction hook (logRedaction.ts) is the safety net.
+ * Nothing is logged for admitted requests (noise).
+ */
+function defaultChatAdmissionShedSink(event: ChatAdmissionShedEvent): void {
+  shedLog.warn(event, "structural chat admission shed (chat_admission_busy)");
+}
+
+/**
  * Process-local heavyweight reservation. The capacity check and increment execute in one
  * synchronous JavaScript turn, making acquisition atomic within an OmniRoute process.
  * Unavailable capacity is a bounded wait (see `acquireHeavyWithin`) and only then a
@@ -190,6 +232,12 @@ export class ChatAdmissionController {
   /** Keys in creation order; #fairCursor scans them round-robin. */
   #fairKeys: string[] = [];
   #fairCursor = 0;
+  /** #11244: in-memory shed history (total + per reason). The 503 chat_admission_busy
+   * response returns before request logging, so without these counters a structural
+   * shed was invisible. Same in-memory lifetime as the rest of the snapshot state. */
+  #shedTotal = 0;
+  #shedsByReason = new Map<string, number>();
+  readonly #onShed: ChatAdmissionShedSink;
 
   constructor(
     readonly maxHeavyInFlight = 1,
@@ -197,7 +245,10 @@ export class ChatAdmissionController {
     /** #10437: bounded extra capacity for the healthy-heap fast path. `0` disables
      * the bypass entirely — every busy request then falls through to the same
      * bounded-wait/shed path used under real heap pressure. */
-    readonly healthyHeadroom = CHAT_ADMISSION_HEALTHY_HEADROOM
+    readonly healthyHeadroom = CHAT_ADMISSION_HEALTHY_HEADROOM,
+    /** #11244: sink notified once per structural shed. Defaults to the shared pino
+     * logger (warn); tests inject a capture/no-op sink. */
+    onShed: ChatAdmissionShedSink = defaultChatAdmissionShedSink
   ) {
     if (!Number.isSafeInteger(maxHeavyInFlight) || maxHeavyInFlight < 1) {
       throw new RangeError("maxHeavyInFlight must be a positive integer");
@@ -208,6 +259,7 @@ export class ChatAdmissionController {
     if (!Number.isSafeInteger(healthyHeadroom) || healthyHeadroom < 0) {
       throw new RangeError("healthyHeadroom must be a non-negative integer");
     }
+    this.#onShed = onShed;
   }
 
   get activeHeavy(): number {
@@ -264,6 +316,37 @@ export class ChatAdmissionController {
     return out;
   }
 
+  /** Total structural sheds since process start (#11244). */
+  get shedTotal(): number {
+    return this.#shedTotal;
+  }
+
+  /** Structural sheds by reason since process start (#11244). */
+  get shedsByReason(): Record<string, number> {
+    const out: Record<string, number> = {};
+    for (const [reason, count] of this.#shedsByReason) out[reason] = count;
+    return out;
+  }
+
+  /**
+   * Record one structural shed (503 chat_admission_busy) and notify the shed sink
+   * (#11244). Called internally at every capacity-driven give-up point in
+   * `acquireHeavyWithin`; public so the aggregate snapshot wiring and tests can
+   * exercise the same single path. `lane` is the opaque fairness key (HMAC
+   * fingerprint), never a raw credential.
+   */
+  recordShed(reason: ChatAdmissionShedReason, lane = "default"): void {
+    this.#shedTotal += 1;
+    this.#shedsByReason.set(reason, (this.#shedsByReason.get(reason) ?? 0) + 1);
+    this.#onShed({
+      reason,
+      activeHeavy: this.#activeHeavy,
+      waiting: this.waitingCount,
+      queuedBytes: this.#queuedBytes,
+      lane,
+    });
+  }
+
   tryAcquireHeavy(): ChatAdmissionLease | null {
     if (this.#activeHeavy >= this.maxHeavyInFlight) return null;
     this.#activeHeavy += 1;
@@ -318,9 +401,16 @@ export class ChatAdmissionController {
       const lease = this.tryAcquireHeavy();
       if (lease) return lease;
       const remaining = deadline - Date.now();
-      if (remaining <= 0) return null;
+      if (remaining <= 0) {
+        // Wait window exhausted (or queueMs=0 immediate reject) with capacity still
+        // busy — the caller answers the retryable 503. Count it (#11244).
+        this.recordShed("queue_timeout", sessionKey);
+        return null;
+      }
       // Heap valve: refuse to park when the queued-bytes budget is exhausted.
       if (queuedBytes > 0 && this.#queuedBytes + queuedBytes > this.maxQueuedBytes) {
+        // Same retryable 503, distinct cause: the wait itself would amplify the heap.
+        this.recordShed("queued_bytes_budget", sessionKey);
         return null;
       }
       this.#queuedBytes += queuedBytes;
@@ -367,7 +457,13 @@ export class ChatAdmissionController {
       // Cancel the deadline timer when abort/release wins; a fired timer is a no-op.
       if (deadlineTimer) clearTimeout(deadlineTimer);
       if (onAbort) signal?.removeEventListener("abort", onAbort);
-      if (timedOut) return null;
+      if (timedOut) {
+        // The deadline timer won the race: a genuine shed. When the client ABORT
+        // won instead (signal aborted while parked), capacity was never denied —
+        // the 503 is dropped on the dead connection, so it is not counted (#11244).
+        if (!signal?.aborted) this.recordShed("queue_timeout", sessionKey);
+        return null;
+      }
     }
   }
 
@@ -483,11 +579,18 @@ export class PerConnectionAdmissionController {
 
   constructor(
     readonly maxHeavyInFlight = 1,
-    // Deprecated pre-#10110 lane-eviction knobs: accepted for API
-    // compatibility and ignored — there are no per-session lanes to evict.
-    _opts?: { maxSessions?: number; sessionTtlMs?: number }
+    // `maxSessions`/`sessionTtlMs` are deprecated pre-#10110 lane-eviction knobs:
+    // accepted for API compatibility and ignored — there are no per-session lanes
+    // to evict. `onShed` (#11244) is live: it replaces the shed sink of the shared
+    // controller (tests inject a capture/no-op sink; production keeps the pino warn).
+    _opts?: { maxSessions?: number; sessionTtlMs?: number; onShed?: ChatAdmissionShedSink }
   ) {
-    this.#controller = new ChatAdmissionController(maxHeavyInFlight);
+    this.#controller = new ChatAdmissionController(
+      maxHeavyInFlight,
+      undefined,
+      undefined,
+      _opts?.onShed
+    );
   }
 
   /** Returns the process-global budget — the same instance for every session. */
@@ -497,20 +600,26 @@ export class PerConnectionAdmissionController {
 
   /**
    * Process-wide aggregate snapshot for observability: global totals plus
-   * per-key waiter depths. Keys are opaque scheduler keys, never raw
-   * credentials.
+   * per-key waiter depths and the #11244 shed history (total + per reason).
+   * Keys are opaque scheduler keys, never raw credentials.
    */
   snapshot(): {
     activeHeavy: number;
+    activeHealthyHeadroom: number;
     queuedBytes: number;
     waiting: number;
     lanes: ReadonlyArray<{ key: string; waiting: number }>;
+    shedTotal: number;
+    shedsByReason: Record<string, number>;
   } {
     return {
       activeHeavy: this.#controller.activeHeavy,
+      activeHealthyHeadroom: this.#controller.activeHealthyHeadroom,
       queuedBytes: this.#controller.queuedBytes,
       waiting: this.#controller.waitingCount,
       lanes: this.#controller.waitersByKey,
+      shedTotal: this.#controller.shedTotal,
+      shedsByReason: this.#controller.shedsByReason,
     };
   }
 

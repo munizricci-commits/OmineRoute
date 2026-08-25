@@ -90,13 +90,30 @@ export function baselineValue(metric, root = ROOT) {
   }
 }
 
+// A line that is unambiguously a PASS. Test reporters print the file name on BOTH the
+// pass and the fail line, so a green line for a file whose NAME contains "fail"
+// (fail-fast-*.test.ts, failover-*.test.ts) must never be offered as a failure cause.
+const GREEN_LINE_RE = /^[✓✔√]/;
+
+// Markers that are only meaningful at the START of a line: "FAIL" also occurs inside test
+// FILE NAMES and inside summary prose ("Test Files 1 failed"), so matching it anywhere —
+// and case-insensitively — reports a PASSING file as the cause of the red.
+const LINE_START_FAILURE_RE = /^(?:[✖✗×]|FAIL\b|not ok\b|REGRESS)/;
+
+// Markers that are unambiguous ANYWHERE in the line: tsc and Node emit them mid-line
+// ("src/x.ts(10,5): error TS2322: ..."), so these stay unanchored. They are matched
+// case-SENSITIVELY because that is how the emitting tools actually spell them.
+const INLINE_FAILURE_RE = /\berror TS\d+\b|\bAssertionError\b|\bError:|\bREGRESS/;
+
 /** Best-effort "first meaningful failure line" from captured command output. */
 export function firstFailureLine(out) {
   const lines = String(out || "")
     .split("\n")
     .map((l) => l.trim())
     .filter(Boolean);
-  const hit = lines.find((l) => /✖|✗|not ok|AssertionError|error TS|FAIL|Error:|REGRESS/i.test(l));
+  const hit = lines.find(
+    (l) => !GREEN_LINE_RE.test(l) && (LINE_START_FAILURE_RE.test(l) || INLINE_FAILURE_RE.test(l))
+  );
   return (hit || lines[lines.length - 1] || "failed").slice(0, 200);
 }
 
@@ -230,6 +247,36 @@ const FULL_CI_TIMEOUT_OVERRIDES_MS = {
 
 export function fullCiTimeoutFor(gateId) {
   return FULL_CI_TIMEOUT_OVERRIDES_MS[gateId] ?? FULL_CI_DEFAULT_TIMEOUT_MS;
+}
+
+// ci.yml gate scripts whose result the CURATED pass already records under a DIFFERENT id.
+// Without this map the --full-ci pass re-records them unconditionally as kind:"hard" while
+// the curated pass recorded them as kind:"drift", and the SAME gate is printed in BOTH
+// verdict buckets of one report (file-size / compression-budget appeared as a hard failure
+// and as drift simultaneously in the #9985 verdict).
+export const FULL_CI_CURATED_ALIASES = {
+  lint: "lint-errors",
+  "check:workflows": "workflow-lint",
+  "check:complexity-ratchets": "complexity",
+};
+
+/** Curated-pass id equivalent to a ci.yml gate script id ("check:file-size" -> "file-size"). */
+export function curatedEquivalentId(scriptId) {
+  const id = String(scriptId || "");
+  if (Object.hasOwn(FULL_CI_CURATED_ALIASES, id)) return FULL_CI_CURATED_ALIASES[id];
+  return id.startsWith("check:") ? id.slice("check:".length) : id;
+}
+
+/**
+ * Bucket a --full-ci gate must be reported under: the classification the curated pass already
+ * gave the equivalent gate, else "hard" (the --full-ci default for gates the curated list does
+ * not cover). This only changes WHICH BUCKET a result is printed in — it never changes whether
+ * a gate runs, nor whether it passed.
+ */
+export function fullCiKindFor(scriptId, results) {
+  const equivalent = curatedEquivalentId(scriptId);
+  const curated = (results || []).find((r) => r.id === scriptId || r.id === equivalent);
+  return curated?.kind ?? "hard";
 }
 
 /**
@@ -716,7 +763,10 @@ async function main() {
       record({
         id: g.id,
         label: `ci.yml:${g.job} → npm ${g.args.join(" ")}`,
-        kind: "hard",
+        // Respect the curated classification when the curated pass already ran an equivalent
+        // gate under a different id — otherwise the same ratchet is reported as a HARD failure
+        // here AND as drift above, in one self-contradicting verdict.
+        kind: fullCiKindFor(g.id, results),
         ok: code === 0,
         detail: code === 0 ? "pass" : firstFailureLine(out),
       });

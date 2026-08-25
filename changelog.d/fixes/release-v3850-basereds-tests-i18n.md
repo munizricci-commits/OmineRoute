@@ -1,1 +1,0 @@
-- fix(i18n): complete Vietnamese translations for recently added UI strings (#9985)

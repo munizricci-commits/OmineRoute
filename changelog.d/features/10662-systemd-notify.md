@@ -1,1 +1,0 @@
-- feat(server): emit systemd sd_notify READY/WATCHDOG/STOPPING (generated unit becomes Type=notify with WatchdogSec=180) so a frozen server process is killed and restarted by systemd instead of lingering undetected

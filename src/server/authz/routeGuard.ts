@@ -43,6 +43,8 @@ export const LOCAL_ONLY_API_PREFIXES: ReadonlyArray<string> = [
   "/dashboard/providers/services/", // T-07: reverse proxy to embedded service UIs
   "/api/copilot/", // unauthenticated LLM driver — CLI-only by default; admins can opt-in to remote access via manage-scope bypass
   "/api/tools/agent-bridge/", // AgentBridge: spawns MITM server + DNS edits (Hard Rules #15 + #17)
+  "/api/settings/mitm", // "Enable MITM" flow: installs a system-wide trusted root CA (security add-trusted-cert / certutil / update-ca-certificates) and writes /etc/hosts DNS overrides via src/mitm/* — host-level TLS interception. Was MANAGEMENT-only, so requireLogin=false left it remotely reachable (GHSA-x7vm-hp44-9p79, Hard Rules #15 + #17). Same tier as /api/tools/agent-bridge/.
+  "/api/cli-tools/antigravity-mitm", // Antigravity MITM enable flow: same privileged CA-trust + DNS surface as /api/settings/mitm (GHSA-x7vm-hp44-9p79, Hard Rules #15 + #17). Covers the /alias child route by prefix.
   "/api/tools/traffic-inspector/", // Traffic Inspector: http-proxy listener + system proxy (Hard Rules #15 + #17)
   "/api/issue-agent/", // Issue Agent: recorded/local triage executor surface; keep loopback/LAN until sandbox + audit hardening is complete
   "/api/plugins/", // plugins: load/execute via worker_threads + child_process (Hard Rules #15 + #17)
@@ -93,6 +95,7 @@ export const LOCAL_ONLY_API_PREFIXES: ReadonlyArray<string> = [
  */
 export const LOCAL_ONLY_API_PATTERNS: ReadonlyArray<RegExp> = [
   /^\/api\/providers\/[^/]+\/login\/?$/,
+  /^\/api\/providers\/volcengine-plan\/connect(\/.*)?$/, // manual headful flow + session-based phone/SMS auto-login (both spawn Playwright)
   /^\/api\/providers\/[^/]+\/refresh-cursor\/?$/,
   /^\/api\/providers\/[^/]+\/chatgpt-web-codex-doctor\/?$/,
 ];
@@ -126,6 +129,12 @@ export const ALWAYS_PROTECTED_API_PATHS: ReadonlyArray<string> = [
   // /api/settings/database already does. isAlwaysProtectedPath matches on a path
   // boundary, so this covers export, exportAll and import. (GHSA-mghq-58h3-qcqj)
   "/api/db-backups",
+  // Legacy siblings of /api/db-backups left out of the mghq fix: export-json
+  // dumps every stored credential and import-json irreversibly replaces
+  // settings/connections, and both handlers only gate on isAuthRequired() —
+  // which is false under requireLogin=false. (GHSA-v7g9-7f55-5g46)
+  "/api/settings/export-json",
+  "/api/settings/import-json",
 ];
 
 export function isLoopbackHost(hostHeader: string | null): boolean {

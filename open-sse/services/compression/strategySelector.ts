@@ -519,6 +519,28 @@ async function runCompressionAsync(
     cachingContext?: CachingDetectionContext;
   }
 ): Promise<CompressionResult> {
+  const workerOptions = options
+    ? {
+        model: options.model,
+        supportsVision: options.supportsVision,
+        providerTransport: options.providerTransport,
+        provider: options.provider,
+        imageTransportFidelity: options.imageTransportFidelity,
+        sourceFormat: options.sourceFormat,
+        targetFormat: options.targetFormat,
+        compressionStage: options.compressionStage,
+        config: options.config,
+      }
+    : undefined;
+  const { isCompressionWorkerEligible } = await import("./compressionWorkerProtocol.ts");
+  if (isCompressionWorkerEligible(body, mode, workerOptions)) {
+    try {
+      const { runCompressionInWorker } = await import("./compressionWorkerPool.ts");
+      return await runCompressionInWorker(body, mode, workerOptions, options?.onEngineStep);
+    } catch {
+      return { body, compressed: false, stats: null };
+    }
+  }
   if (
     options?.config?.memoizeCompressionResults === true &&
     // Only memoize for an explicit principal — a missing principalId would collapse

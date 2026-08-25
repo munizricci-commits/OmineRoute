@@ -39,7 +39,7 @@ function looksLikeAbsolutePath(tok: string): boolean {
   return (SOURCE_EXT as readonly string[]).includes(ext);
 }
 
-function redactSensitiveErrorText(value: string): string {
+export function redactSensitiveErrorText(value: string): string {
   return value
     .replace(/data:[^,\s]+;base64,[A-Za-z0-9+/=_-]+/gi, "[REDACTED_DATA_URL]")
     .replace(/\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+/gi, "$1 [REDACTED]")

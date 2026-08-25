@@ -974,7 +974,14 @@
     "batchFileUsedByCount": "ใช้โดย {count, plural, one {# ชุด} other {# ชุด}}",
     "batchFilePreview": "ตัวอย่าง",
     "batchFilePreviewTruncated": "แสดง {shown} บรรทัดแรก ({total} บรรทัดรวม)",
-    "batchFileDownloadFull": "ดาวน์โหลดไฟล์ทั้งหมด"
+    "batchFileDownloadFull": "ดาวน์โหลดไฟล์ทั้งหมด",
+    "batchHeaderSubtitle": "Run many requests as one job",
+    "batchStep1": "1 · Upload JSONL",
+    "batchStep1Desc": "Add requests",
+    "batchStep2": "2 · Create batch",
+    "batchStep2Desc": "Run job",
+    "batchStep3": "3 · Get results",
+    "batchStep3Desc": "Download output"
   },
   "disabled": "ปิดใช้งาน",
   "featureFlagOmnirouteEmergencyFallbackDescription": "กำหนดเส้นทางคำขอที่งบประมาณหมดไปยังผู้ให้บริการ/โมเดลสำรองฟรีในกรณีฉุกเฉิน",
@@ -1293,7 +1300,8 @@
       "open": "เปิด",
       "close": "ปิด"
     },
-    "noResults": "ไม่มีผลลัพธ์"
+    "noResults": "ไม่มีผลลัพธ์",
+    "trafficInspectorPurpose": "See exactly what your application sends to and receives from AI providers. Works with any OpenAI-compatible client."
   },
   "webhooks": {
     "title": "เว็บฮุค",
@@ -1856,7 +1864,21 @@
     "directDownloadHint": "หรือดาวน์โหลดรูปแบบติดตั้งที่เกี่ยวข้องโดยตรง:",
     "releaseNotes": "หมายเหตุการปล่อย",
     "readMore": "อ่านเพิ่มเติม",
-    "noAuthLabel": "ไม่มีการตรวจสอบสิทธิ์"
+    "noAuthLabel": "ไม่มีการตรวจสอบสิทธิ์",
+    "recentRequests": "Recent Requests",
+    "recentRequestsEmpty": "No requests yet.",
+    "recentRequestsModel": "Model",
+    "recentRequestsTokens": "In / Out",
+    "recentRequestsWhen": "When",
+    "readinessEyebrow": "Get ready to route",
+    "readinessTitle": "Send your first request",
+    "readinessSubtitle": "Four small steps. OmniRoute checks readiness as you go.",
+    "readinessStep1": "Connect a provider",
+    "readinessStep2": "Configure endpoint authentication",
+    "readinessStep3": "Copy your endpoint",
+    "readinessStep4": "Send a test request",
+    "readinessContinue": "Continue setup",
+    "readinessDismiss": "Dismiss for now"
   },
   "analytics": {
     "title": "การวิเคราะห์",
@@ -2901,7 +2923,8 @@
       "omp": "เอเจนต์เขียนโค้ดบนเทอร์มินัล Oh My Pi",
       "letta": "เอเจนต์ Letta CLI พร้อมหน่วยความจำถาวรและการใช้เครื่องมือ",
       "warp": "เทอร์มินัล Warp AI ที่รองรับผู้ให้บริการแบบกำหนดเอง",
-      "agent-deck": "ตัวประสานงานหลายเอเจนต์ Agent Deck"
+      "agent-deck": "ตัวประสานงานหลายเอเจนต์ Agent Deck",
+      "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support"
     },
     "guides": {
       "cursor": {
@@ -4133,7 +4156,10 @@
     "notionIntegrationHelp": "สร้างการรวมภายในที่",
     "notionIntegrationToken": "โทเค็นการรวมภายใน Notion",
     "notionNotConnected": "ไม่ได้เชื่อมต่อ",
-    "notionTokenConfigured": "กำหนดค่าโทเค็นแล้ว เครื่องมือ Notion สามารถใช้งานได้ผ่าน MCP."
+    "notionTokenConfigured": "กำหนดค่าโทเค็นแล้ว เครื่องมือ Notion สามารถใช้งานได้ผ่าน MCP.",
+    "subtitle": "Use the OpenAI-compatible endpoint with most SDKs and tools.",
+    "testEndpoint": "Test endpoint →",
+    "advancedProtocols": "Advanced protocols"
   },
   "endpoints": {
     "tabProxy": "Endpoint Proxy",
@@ -4716,7 +4742,14 @@
     "issueCount": "{count} ปัญหา",
     "score": "คะแนน",
     "lastRequest": "คำขอล่าสุด",
-    "lastError": "ข้อผิดพลาดล่าสุด"
+    "lastError": "ข้อผิดพลาดล่าสุด",
+    "healthVerdictReady": "OmniRoute is ready",
+    "healthVerdictActionRequired": "Action required to restore full operation",
+    "healthVerdictCoolingDown": "Cooling down after recent changes",
+    "healthSubtitle": "System health check",
+    "advancedDiagnosticsTitle": "Advanced diagnostics",
+    "hide": "Hide",
+    "show": "Show"
   },
   "telemetry": {
     "title": "ระบบโทรมาตร",
@@ -5834,6 +5867,8 @@
     "rateLimitOverridesSection": "การเขียนทับการจำกัดอัตรา",
     "rateLimitOverridesMaxConcurrentHint": "การเขียนทับจำนวนคำขอพร้อมกันสูงสุดสำหรับการเชื่อมต่อนี้ ซึ่งจะเขียนทับขีดจำกัดในระดับบัญชี",
     "rateLimitOverridesMaxConcurrentLabel": "จำนวนพร้อมกันสูงสุด (การจำกัดอัตรา)",
+    "rateLimitOverridesMaxWaitMsHint": "__MISSING__:Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "เวลาขั้นต่ำ (มิลลิวินาที) ระหว่างคำขอ ซึ่งจะเขียนทับการหน่วงเวลาของตัวจำกัดอัตราเริ่มต้น",
     "rateLimitOverridesMinTimeLabel": "ช่วงเวลาขั้นต่ำ (มิลลิวินาที)",
     "rateLimitOverridesRpmHint": "จำนวนคำขอสูงสุดต่อนาทีสำหรับการเชื่อมต่อนี้ ซึ่งจะเขียนทับค่าเริ่มต้นของผู้ให้บริการ",
@@ -6111,7 +6146,6 @@
       "glmt": "โปรไฟล์ GLM ที่ตั้งค่าไว้ล่วงหน้าพร้อมงบประมาณโทเค็นที่สูงขึ้น เปิดใช้งานการคิด และหมดเวลาการทำงานที่นานขึ้น",
       "getgoapi": "เชื่อมต่อ GoAPI ด้วยคีย์ API",
       "groq": "ระดับการใช้งานฟรี: 30 RPM / 14.4K RPD — ไม่ต้องใช้บัตรเครดิต",
-      "hackclub": "ลงชื่อเข้าใช้ด้วยบัญชี Hack Club ของคุณที่ ai.hackclub.com",
       "haiper": "รับคีย์ API ได้ที่ haiper.ai/haiper-api",
       "heroku": "เชื่อมต่อ Heroku AI ด้วยคีย์ API",
       "hcnsec": "รับ API key ได้ที่ api.hcnsec.cn",
@@ -6382,7 +6416,21 @@
     "savedModelEndpointSettings": "การตั้งค่า endpoint ของโมเดลที่บันทึกไว้",
     "searchByModelAria": "ค้นหาตามรุ่น",
     "selectSupportedEndpoint": "เลือกจุดสิ้นสุดที่รองรับอย่างน้อยหนึ่งจุด",
-    "antigravityClientProfileHarness": "Harness / CLI"
+    "antigravityClientProfileHarness": "Harness / CLI",
+    "harImportButtonLabel": "Import .har file",
+    "harImportButtonBusy": "Importing…",
+    "harImportButtonHint": "Export from DevTools Network tab after sending at least one chat message.",
+    "harImportStatusValid": "Imported — valid for ~{minutes}m.",
+    "harImportStatusExpiringSoon": "Imported — valid for only ~{minutes}m more.",
+    "harImportStatusExpired": "Imported, but this token already expired ({minutes}m ago) — export a fresh HAR.",
+    "harImportStatusUnknownExpiry": "Imported. Couldn't read its expiry.",
+    "harImportErrorNotJson": "That file isn't valid JSON — is it really a .har export?",
+    "harImportErrorNoEntries": "This HAR has no network entries recorded.",
+    "harImportErrorNoChathubUrl": "No Copilot chat connection found in this HAR. Send at least one chat message in m365.cloud.microsoft before exporting.",
+    "harImportErrorUnparsableUrl": "Found the chat connection, but couldn't read its URL.",
+    "harImportErrorMissingFields": "Found the chat connection, but the token was missing from it.",
+    "harImportErrorReadFailed": "Couldn't read that file.",
+    "harImportErrorUnknown": "Couldn't extract a credential from that HAR file."
   },
   "settings": {
     "title": "การตั้งค่า",
@@ -8229,7 +8277,19 @@
     "cliproxyapiHealth": "สุขภาพ",
     "cliproxyapiPort": "พอร์ต",
     "qdrantHost": "โฮสต์",
-    "qdrantCollection": "การรวบรวม"
+    "qdrantCollection": "การรวบรวม",
+    "presetAll": "All",
+    "presetAllDesc": "Show everything",
+    "presetEssentials": "Essentials",
+    "presetEssentialsDesc": "Beginner path - Advanced tools stay searchable",
+    "presetMinimal": "Minimal",
+    "presetMinimalDesc": "Core pages only",
+    "presetDeveloper": "Developer",
+    "presetDeveloperDesc": "Dev & proxy tools",
+    "presetAdmin": "Admin",
+    "presetAdminDesc": "Monitoring & audit",
+    "settingsSidebarTitle": "Sidebar Customization",
+    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable."
   },
   "contextRtk": {
     "title": "RTK Engine",
@@ -12016,7 +12076,8 @@
         "title": "เอเจนต์ ACP",
         "phrase": "CLI ที่ OmniRoute สร้างขึ้นเป็นแบ็กเอนด์การประมวลผล (โฟลว์ย้อนกลับ)",
         "flow": "ไคลเอนต์ → OmniRoute → สร้าง CLI (stdio/ACP) → การตอบกลับ",
-        "seeOther": "ดู →"
+        "seeOther": "ดู →",
+        "warning": "Most users can ignore this — use only when an integration requires it."
       }
     },
     "comparison": {
@@ -12840,6 +12901,10 @@
       },
       "SKILLS_SANDBOX_NETWORK_ENABLED": {
         "description": "เปิดใช้งานการเข้าถึงเครือข่ายใน skills sandbox"
+      },
+      "DISABLE_CONTEXT_WINDOW_CHECKS": {
+        "label": "Disable Context Window Checks",
+        "description": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active."
       }
     }
   },
@@ -13412,6 +13477,13 @@
         "modelLockouts": "การล็อกเอาต์โมเดล",
         "count": "จำนวนการเชื่อมต่อ"
       }
+    },
+    "reassuranceTitle": "Your connections recover automatically",
+    "reassuranceDetail": "Usually no action is needed. OmniRoute temporarily rests a connection after failures, then safely tries it again.",
+    "plainStates": {
+      "healthy": "Requests can be sent",
+      "coolingDown": "Trying again soon",
+      "lockedOut": "Needs your attention"
     }
   },
   "featureFlagCapabilityFilterEnabledDescription": "ปฏิเสธคำขอก่อนการส่งเมื่อโมเดลเป้าหมายขาดความสามารถที่จำเป็น (วิสัยทัศน์, เครื่องมือ, ผลลัพธ์ที่มีโครงสร้าง, หน้าต่างบริบท) ป้องกันคำขอจากผู้ให้บริการเดียวที่ข้ามตัวกรองความเข้ากันได้ของเลเยอร์รวม",
@@ -13849,5 +13921,13 @@
     "toolsMismatch": "ผู้ให้บริการไม่รองรับการเรียกเครื่องมือ",
     "structuredOutputMismatch": "ผู้ให้บริการไม่รองรับการส่งออกแบบมีโครงสร้าง",
     "contextWindowMismatch": "คำขอเกินขอบเขตบริบทของผู้ให้บริการ"
+  },
+  "featureFlagDisableContextWindowChecksDescription": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active.",
+  "cheaperInferenceSponsorBanner": {
+    "title": "Cheaper Inference is an OmniRoute Open Source Friend",
+    "description": "A cost-ranked gateway reselling dozens of frontier models behind one OpenAI-compatible endpoint — routing each request to the cheapest eligible provider, never above list price.",
+    "cta": "Get an API Key",
+    "partnerLinkNote": "Partner link",
+    "dismissAriaLabel": "Dismiss"
   }
 }

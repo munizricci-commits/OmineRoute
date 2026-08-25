@@ -4,41 +4,33 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-type CoreModule = typeof import("../../src/lib/db/core.ts");
+// Single shared tempDir for all tests — DATA_DIR/SQLITE_FILE are module-level consts
+// resolved once at first import, so we must create the temp dir and set DATA_DIR
+// BEFORE importing core.ts.
+const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "omniroute-db-test-"));
+const originalDataDir = process.env.DATA_DIR;
+process.env.DATA_DIR = tempDir;
 
-// Shared across all tests — the module caches DATA_DIR / SQLITE_FILE at load time,
-// so we must create the temp dir and import exactly once.
-type CoreModule = typeof import("../../src/lib/db/core.ts");
-let tempDir: string;
-let originalDataDir: string | undefined;
-let getDbInstance: CoreModule["getDbInstance"];
-let resetDbInstance: CoreModule["resetDbInstance"];
-let ensureDbInitialized: CoreModule["ensureDbInitialized"];
-let closeDbInstance: CoreModule["closeDbInstance"];
+// Import resetDbInstance ONCE at the top with the same ESM specifier the tests use,
+// so cleanup() operates on the real singleton (not a stale CJS require).
+// This is the FIRST import of core.ts, so DATA_DIR resolves to our tempDir.
+import {
+  getDbInstance,
+  resetDbInstance,
+  ensureDbInitialized,
+  closeDbInstance,
+} from "../../src/lib/db/core.ts";
 
 before(async () => {
-  tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "omniroute-db-test-"));
-  originalDataDir = process.env.DATA_DIR;
-  process.env.DATA_DIR = tempDir;
-
-  const core = await import("../../src/lib/db/core.ts");
-  getDbInstance = core.getDbInstance;
-  resetDbInstance = core.resetDbInstance;
-  ensureDbInitialized = core.ensureDbInitialized;
-  closeDbInstance = core.closeDbInstance;
-
-  // Clear any singleton left by a previous test file in the same shard
+  // Clear any singleton left by a previous test file in the same shard.
   closeDbInstance();
-  // Create a fresh DB in the temp dir (handles async driver initialization)
+  // Create a fresh DB in the temp dir (handles async driver initialization).
   await ensureDbInitialized();
 });
 
 after(() => {
-  try {
-    resetDbInstance();
-  } catch {
-    // ignore
-  }
+  // Let reset errors surface — no silent swallowing.
+  resetDbInstance();
   if (originalDataDir !== undefined) {
     process.env.DATA_DIR = originalDataDir;
   } else {
@@ -90,9 +82,9 @@ test("getDbInstance creates tables from SCHEMA_SQL (proves initialization succee
   // The preservedCriticalState sentinel is captureSucceeded: true on fresh DB
   // (no existing file = no corruption path = initialized with default sentinel).
   // Verify this indirectly: the DB is fully functional and migrations ran.
-  const migrationCount = db
-    .prepare("SELECT COUNT(*) as c FROM _omniroute_migrations")
-    .get() as { c: number };
+  const migrationCount = db.prepare("SELECT COUNT(*) as c FROM _omniroute_migrations").get() as {
+    c: number;
+  };
   assert.ok(migrationCount.c >= 1, "at least one migration should be recorded");
 });
 
@@ -142,12 +134,14 @@ test("resetDbInstance clears the singleton so next call creates a new DB", async
 
   // Write a marker row so we can prove the post-reset handle reopens the same
   // on-disk file through a freshly opened connection (not the cached one).
-  db1.prepare("INSERT INTO key_value (namespace, key, value) VALUES (?, ?, ?)").run(
-    "reset_ns",
-    "marker",
-    JSON.stringify({ v: 1 })
-  );
+  db1
+    .prepare("INSERT INTO key_value (namespace, key, value) VALUES (?, ?, ?)")
+    .run("reset_ns", "marker", JSON.stringify({ v: 1 }));
 
+  // Close the previous handle explicitly before resetting, so the file descriptor
+  // is released before the next reopen (POSIX allows open fds to survive fs.rmSync,
+  // but we want honest isolation, not accidental survival).
+  closeDbInstance();
   resetDbInstance();
 
   // Re-initialize after reset — drivers may need async pre-init (sql.js WASM)
@@ -169,19 +163,14 @@ test("getDbInstance sets WAL journal mode", async () => {
   const db = getDbInstance();
 
   const mode = db.pragma("journal_mode", { simple: true }) as string;
-  assert.equal(
-    String(mode).toLowerCase(),
-    "wal",
-    "on-disk DB should open in WAL journal mode"
-  );
+  assert.equal(String(mode).toLowerCase(), "wal", "on-disk DB should open in WAL journal mode");
 });
 
 test("getDbInstance stores schema_version in db_meta", async () => {
   const db = getDbInstance();
 
-  const row = db
-    .prepare("SELECT value FROM db_meta WHERE key = 'schema_version'")
-    .get() as { value: string } | undefined;
+  const row = db.prepare("SELECT value FROM db_meta WHERE key = 'schema_version'").get() as
+    { value: string } | undefined;
   assert.ok(row, "db_meta should hold a schema_version row after init");
   assert.equal(row.value, "1", "schema_version should be seeded to '1'");
 });

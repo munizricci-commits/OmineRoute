@@ -152,7 +152,12 @@ test("postExchange attempts onboarding when projectId is empty and returns disco
     }
     if (u.includes("onboardUser")) {
       onboardUserCalled = true;
-      return jsonRes({ done: true });
+      // Real onboarding success: the body carries a cloudaicompanionProject.
+      // #11284 made that the discriminator — a 200 WITHOUT one is Google BYOP
+      // (no project was created, none ever will be) and short-circuits before
+      // the retry. The id here is deliberately NOT the expected one, so the
+      // assertion below still proves the value came from the retry discovery.
+      return jsonRes({ done: true, cloudaicompanionProject: "onboard-body-project" });
     }
     return jsonRes({});
   }) as typeof fetch;

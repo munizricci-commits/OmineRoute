@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import {
   BaseExecutor,
   type ExecuteInput,
@@ -10,7 +11,7 @@ import {
   injectReasoningContentForThinkingModel,
   isThinkingMessageModel,
 } from "../utils/reasoningContentInjector.ts";
-import { runWithProxyContext } from "../utils/proxyFetch.ts";
+import { runWithDirectFetchContext, runWithProxyContext } from "../utils/proxyFetch.ts";
 import { forwardOpencodeClientHeaders } from "../utils/opencodeHeaders.ts";
 import {
   type AccountProxyConfig,
@@ -245,6 +246,17 @@ export function createMuseSparkStreamFinishNormalizer(
   };
 }
 
+function isResponsesTerminalLine(line: string): boolean {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith("data:")) return false;
+  try {
+    const payload = JSON.parse(trimmed.slice(5).trim()) as Record<string, unknown>;
+    return payload.type === "response.completed";
+  } catch {
+    return false;
+  }
+}
+
 export class OpencodeExecutor extends BaseExecutor {
   /** Delegates to `isPremiumOpencodeModel`. Exported for testability. */
   static isPremiumModel(model: string, provider: string): boolean {
@@ -384,24 +396,51 @@ export class OpencodeExecutor extends BaseExecutor {
     const encoder = new TextEncoder();
     let buffer = "";
     const reader = response.body.getReader();
+    let closed = false;
     const stream = new ReadableStream<Uint8Array>({
-      async pull(controller) {
+      async start(controller) {
         try {
-          const { done, value } = await reader.read();
-          if (done) {
-            if (buffer.length > 0) controller.enqueue(encoder.encode(normalizer(buffer)));
-            controller.close();
-            return;
+          while (!closed) {
+            const { done, value } = await reader.read();
+            if (done) {
+              buffer += decoder.decode();
+              if (buffer.length > 0 && !closed) {
+                controller.enqueue(encoder.encode(normalizer(buffer)));
+              }
+              if (!closed) {
+                closed = true;
+                controller.close();
+              }
+              return;
+            }
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() ?? "";
+            for (const line of lines) {
+              const normalized = normalizer(line);
+              controller.enqueue(encoder.encode(normalized + "\n"));
+              if (isResponsesTerminalLine(line)) {
+                // OpenCode Zen sends a ping after response.completed and may keep
+                // the HTTP connection alive. The Responses terminal event is
+                // authoritative; do not let those post-completion pings hold Chat
+                // Completions open.
+                closed = true;
+                void reader.cancel().catch(() => undefined);
+                controller.close();
+                return;
+              }
+            }
           }
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() ?? "";
-          for (const line of lines) controller.enqueue(encoder.encode(normalizer(line) + "\n"));
         } catch (err) {
-          controller.error(err);
+          if (!closed) {
+            closed = true;
+            controller.error(err);
+          }
         }
       },
       cancel(reason) {
+        closed = true;
         reader.cancel(reason).catch(() => undefined);
       },
     });
@@ -450,7 +489,10 @@ export class OpencodeExecutor extends BaseExecutor {
       // 200s ("Provider returned empty content"). Raise tiny budgets to the
       // floor before dispatch (see MUSE_SPARK_MIN_OUTPUT_TOKENS).
       if (input.body && typeof input.body === "object" && !Array.isArray(input.body)) {
-        applyMuseSparkMinOutputTokens(String(input.model ?? ""), input.body as Record<string, unknown>);
+        applyMuseSparkMinOutputTokens(
+          String(input.model ?? ""),
+          input.body as Record<string, unknown>
+        );
       }
 
       this.syncAccountsFromCredentials(input.credentials);
@@ -463,7 +505,9 @@ export class OpencodeExecutor extends BaseExecutor {
       // else passes untouched: this path deliberately preserves BaseExecutor's
       // intra-URL 429 retries (no skipUpstreamRetry here).
       if (this.accounts.length === 1 && !hasProxies) {
-        const single = (await super.execute(input)) as HttpExecuteResult;
+        const single = (await runWithDirectFetchContext(() =>
+          super.execute(input)
+        )) as HttpExecuteResult;
         if (single.response.status === 400) {
           let bodyText: string | null = null;
           try {
@@ -630,10 +674,7 @@ export class OpencodeExecutor extends BaseExecutor {
       }
 
       // All accounts returned 429 (or errored) — surface the last response.
-      return this.normalizeMuseSparkResponse(
-        input,
-        lastResult ?? (await super.execute(input))
-      );
+      return this.normalizeMuseSparkResponse(input, lastResult ?? (await super.execute(input)));
     } finally {
       this._requestFormat = null;
     }
@@ -733,6 +774,18 @@ export class OpencodeExecutor extends BaseExecutor {
             }
           : undefined,
       });
+    }
+
+    // Muse's Responses endpoint rejects the short conversation fingerprint used
+    // by the Chat endpoint in practice. Keep the workaround scoped to Muse.
+    if (
+      this._requestFormat === "openai-responses" &&
+      model.startsWith("muse-spark") &&
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        headers["x-opencode-session"] || ""
+      )
+    ) {
+      headers["x-opencode-session"] = randomUUID();
     }
 
     void model;

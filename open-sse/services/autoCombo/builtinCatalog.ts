@@ -1,3 +1,5 @@
+import type { ModelCapabilityResolutionSnapshot } from "@/lib/modelCapabilities";
+
 import type { AutoVariant } from "./autoPrefix";
 import { VALID_VARIANTS } from "./autoPrefix";
 import type { PreparedVirtualAutoComboInputs } from "./virtualFactory";
@@ -119,8 +121,7 @@ export function isPaidTierAutoId(autoId: string): boolean {
  * a candidate filter so the virtual combo only scores vision-capable models.
  */
 export type BuiltinAutoSpec =
-  | { variant: AutoVariant | undefined }
-  | { category: AutoCategory; tier?: AutoTier };
+  { variant: AutoVariant | undefined } | { category: AutoCategory; tier?: AutoTier };
 
 /**
  * Vision-flavored flat ids that MUST resolve to the `vision` category (candidate
@@ -159,9 +160,14 @@ export function resolveBuiltinAutoSpec(modelStr: string, suffix: string): Builti
   return { variant: undefined };
 }
 
-export async function prepareBuiltinAutoComboInputs(): Promise<PreparedVirtualAutoComboInputs> {
+export async function prepareBuiltinAutoComboInputs(
+  resolutionSnapshot?: ModelCapabilityResolutionSnapshot
+): Promise<PreparedVirtualAutoComboInputs> {
   const { prepareVirtualAutoComboInputs } = await import("./virtualFactory.ts");
-  return prepareVirtualAutoComboInputs({ includeResolvedCapabilities: true });
+  return prepareVirtualAutoComboInputs({
+    includeResolvedCapabilities: true,
+    resolutionSnapshot,
+  });
 }
 
 export async function createBuiltinAutoCombo(

@@ -98,7 +98,11 @@ test("single-target Codex combo advertises a larger model context override", asy
     assert.equal(response.status, 200);
     assert.equal(direct?.context_length, contextWindow);
     assert.equal(combo?.context_length, contextWindow);
-    assert.equal(combo?.max_input_tokens, 272000);
+    // #11179 raised the static codex catalog cap to maxInputTokens=872000 (the real
+    // usable window; the old 272000 was just the first pricing tier). The input cap
+    // can never exceed the total window, so with the 500K override it clamps to it:
+    // min(872000, 500000) = 500000.
+    assert.equal(combo?.max_input_tokens, 500000);
   } finally {
     contextOverrides.removeModelContextOverride("codex", modelId);
   }
@@ -561,5 +565,66 @@ test("mixed DeepSeek combos advertise the efforts accepted by every V4 target", 
       "high",
       "max",
     ]);
+  }
+});
+
+test("Ollama Cloud projects native efforts for base, tagged, and combo models", async () => {
+  const provider = "ollama-cloud";
+  const baseModel = "deepseek-v4-flash";
+  const taggedModel = "deepseek-v4-flash:0731";
+  const narrowModel = "gpt-oss:20b";
+  const nativeEfforts = ["none", "low", "medium", "high", "max"];
+  const narrowEfforts = ["low", "medium", "high"];
+  const connection = await providersDb.createProviderConnection({
+    provider,
+    authType: "apikey",
+    name: "ollama-cloud-native-efforts",
+    apiKey: "ollama-cloud-test-key",
+    isActive: true,
+    testStatus: "active",
+  });
+  await modelsDb.replaceSyncedAvailableModelsForConnection(provider, connection.id, [
+    { id: baseModel, name: "DeepSeek V4 Flash", supportsThinking: true },
+    { id: taggedModel, name: "DeepSeek V4 Flash 0731", supportsThinking: true },
+    {
+      id: narrowModel,
+      name: "GPT-OSS 20B",
+      supportsThinking: true,
+      supportedThinkingEfforts: nativeEfforts,
+    },
+  ]);
+  await combosDb.createCombo({
+    name: "ollama-cloud-native-efforts-combo",
+    strategy: "auto",
+    models: [`${provider}/${baseModel}`, `${provider}/${taggedModel}`],
+  });
+  await combosDb.createCombo({
+    name: "ollama-cloud-narrow-efforts-combo",
+    strategy: "auto",
+    models: [`${provider}/${narrowModel}`],
+  });
+
+  const response = await catalog.getUnifiedModelsResponse(
+    new Request("http://localhost/api/v1/models")
+  );
+  const body = (await response.json()) as { data: Array<Record<string, unknown>> };
+  const capabilitiesFor = (modelId: string) => {
+    const model = body.data.find((item) => item.id === modelId);
+    assert.ok(model, modelId);
+    return model.capabilities as Record<string, unknown>;
+  };
+
+  assert.equal(response.status, 200);
+  for (const modelId of [
+    `ollamacloud/${baseModel}`,
+    `ollamacloud/${taggedModel}`,
+    "ollama-cloud-native-efforts-combo",
+  ]) {
+    const effortTiers = capabilitiesFor(modelId).effort_tiers;
+    assert.deepEqual(effortTiers, nativeEfforts, modelId);
+    assert.equal((effortTiers as string[]).includes("xhigh"), false, modelId);
+  }
+  for (const modelId of [`ollamacloud/${narrowModel}`, "ollama-cloud-narrow-efforts-combo"]) {
+    assert.deepEqual(capabilitiesFor(modelId).effort_tiers, narrowEfforts, modelId);
   }
 });

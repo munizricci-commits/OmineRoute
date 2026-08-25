@@ -10,15 +10,13 @@
  * Auth: Bearer token via Authorization header
  */
 
-import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getTaskManager } from "@/lib/a2a/taskManager";
 import { logRoutingDecision } from "@/lib/a2a/routingLogger";
 import { createA2AStream, SSE_HEADERS } from "@/lib/a2a/streaming";
 import { A2A_SKILL_HANDLERS, executeA2ATaskWithState } from "@/lib/a2a/taskExecution";
 import { getSettings } from "@/lib/db/settings";
-import { isRequireApiKeyEnabled } from "@/shared/utils/featureFlags";
-import { extractApiKey, isValidApiKey } from "@/sse/services/auth";
+import { authenticateA2ARequest, resolveA2AOwner } from "@/lib/a2a/authenticate";
 
 // ============ A2A v1.0 ↔ v0.3 compatibility layer ============
 // A2A 1.0 renamed the JSON-RPC methods (message/send → SendMessage,
@@ -55,7 +53,7 @@ function buildV1Task(
     ? result.artifacts
         .map((a) =>
           a && typeof a === "object" && typeof (a as { content?: unknown }).content === "string"
-            ? ((a as { content: string }).content)
+            ? (a as { content: string }).content
             : ""
         )
         .filter((s) => s.length > 0)
@@ -124,39 +122,13 @@ function toMessageArray(raw: unknown): A2AMessage[] | null {
 
 // ============ Auth ============
 
-/**
- * Constant-time comparison of the presented bearer token against the configured
- * key. A plain `===` short-circuits on the first differing byte, leaking the
- * length of the shared prefix through response timing; `timingSafeEqual` does
- * not. It requires equal-length buffers, so mismatched lengths are rejected up
- * front (the length itself is not secret).
- */
-function tokensMatch(provided: string, expected: string): boolean {
-  const a = Buffer.from(provided);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
-}
-
 async function authenticate(req: NextRequest): Promise<boolean> {
   // /a2a is outside the authz proxy matcher, so the REQUIRE_API_KEY posture the
   // pipeline enforces for /v1 never ran here — the route accepted every caller
   // whenever OMNIROUTE_API_KEY was unset, which is the shipped default
-  // (GHSA-v54m-6rm3-p565). Apply the same posture directly: when a client key is
-  // required, demand a valid OmniRoute key; otherwise honor the legacy explicit
-  // A2A key; otherwise stay keyless (the same local-first default as /v1).
-  const apiKey = extractApiKey(req);
-  if (isRequireApiKeyEnabled()) {
-    return apiKey ? await isValidApiKey(apiKey) : false;
-  }
-
-  const configuredKey = process.env.OMNIROUTE_API_KEY;
-  if (configuredKey) {
-    return apiKey ? tokensMatch(apiKey, configuredKey) : false;
-  }
-
-  // No API key required and none configured — allow (keyless local-first).
-  return true;
+  // (GHSA-v54m-6rm3-p565). The shared helper applies the same posture on both
+  // the JSON-RPC and the REST task surfaces (GHSA-jcm5-6wpp-wjj8).
+  return authenticateA2ARequest(req);
 }
 
 // ============ JSON-RPC Helpers ============
@@ -213,6 +185,9 @@ export async function POST(req: NextRequest) {
   if (disabledResponse) return disabledResponse;
 
   const tm = getTaskManager();
+  // GHSA-jcm5-6wpp-wjj8: scope every task read/mutation below to the caller's
+  // owner id (hashed API key; undefined under the keyless local-first posture).
+  const callerOwner = resolveA2AOwner(req);
 
   // A2A 1.0 method-name compatibility (SendMessage → message/send, etc.)
   const isV1Method = method in V1_METHOD_ALIASES;
@@ -236,7 +211,7 @@ export async function POST(req: NextRequest) {
         return jsonRpcError(id, -32601, `Unknown skill: ${skill}`);
       }
 
-      const task = tm.createTask({ skill, messages, metadata: params?.metadata });
+      const task = tm.createTask({ skill, messages, metadata: params?.metadata }, callerOwner);
       try {
         tm.updateTask(task.id, "working");
         const result = await handler(task);
@@ -302,7 +277,7 @@ export async function POST(req: NextRequest) {
         return jsonRpcError(id, -32601, `Unknown skill: ${skill}`);
       }
 
-      const task = tm.createTask({ skill, messages, metadata: params?.metadata });
+      const task = tm.createTask({ skill, messages, metadata: params?.metadata }, callerOwner);
       tm.updateTask(task.id, "working");
 
       const stream = createA2AStream(
@@ -323,7 +298,7 @@ export async function POST(req: NextRequest) {
       const taskId = params?.taskId || params?.id;
       if (!taskId) return jsonRpcError(id, -32602, "Invalid params: taskId required");
 
-      const task = tm.getTask(taskId);
+      const task = tm.getTask(taskId, callerOwner);
       if (!task) return jsonRpcError(id, -32601, `Task not found: ${taskId}`);
 
       return jsonRpcResult(id, { task });
@@ -335,7 +310,7 @@ export async function POST(req: NextRequest) {
       if (!taskId) return jsonRpcError(id, -32602, "Invalid params: taskId required");
 
       try {
-        const task = tm.cancelTask(taskId);
+        const task = tm.cancelTask(taskId, callerOwner);
         return jsonRpcResult(id, { task: { id: task.id, state: task.state } });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);

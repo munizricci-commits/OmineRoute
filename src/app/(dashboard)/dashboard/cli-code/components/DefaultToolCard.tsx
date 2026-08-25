@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Card, Button, ModelSelectModal } from "@/shared/components";
-import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { copyToClipboard } from "@/shared/utils/clipboard";
 import { buildOpenCodeConfigDocument } from "@/shared/services/opencodeConfig";
@@ -643,38 +642,32 @@ export default function DefaultToolCard({
   };
 
   const renderIcon = () => {
+    // Tool SVGs are non-square (e.g. opencode is 234×42, cursor is 467×532).
+    // next/image's dev check warns whenever the rendered aspect-ratio size
+    // differs from the square width/height attributes, so these render as a
+    // plain <img> capped at 32px on both axes — true ratio, no dev noise.
+    const renderImg = (src: string) => (
+      // eslint-disable-next-line @next/next/no-img-element -- local static SVG asset
+      <img
+        src={src}
+        alt={tool.name}
+        width={32}
+        height={32}
+        className="size-8 object-contain rounded-lg"
+        style={{ width: "auto", height: "auto", maxWidth: 32, maxHeight: 32 }}
+        onError={(e) => {
+          (e.currentTarget as HTMLElement).style.display = "none";
+        }}
+      />
+    );
     if (tool.image) {
-      return (
-        <Image
-          src={tool.image}
-          alt={tool.name}
-          width={32}
-          height={32}
-          className="size-8 object-contain rounded-lg"
-          sizes="32px"
-          onError={(e) => {
-            (e.currentTarget as HTMLElement).style.display = "none";
-          }}
-        />
-      );
+      return renderImg(tool.image);
     }
     if (tool.imageLight || tool.imageDark) {
       const themedSrc = isDark
         ? tool.imageDark || tool.imageLight
         : tool.imageLight || tool.imageDark;
-      return (
-        <Image
-          src={themedSrc}
-          alt={tool.name}
-          width={32}
-          height={32}
-          className="size-8 object-contain rounded-lg"
-          sizes="32px"
-          onError={(e) => {
-            (e.currentTarget as HTMLElement).style.display = "none";
-          }}
-        />
-      );
+      return renderImg(themedSrc);
     }
     if (tool.icon) {
       return (

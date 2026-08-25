@@ -2468,39 +2468,42 @@
         "Authorization": "Bearer <TOK>",
         "Content-Type": "application/json",
         "X-Initiator": "user",
-        "copilot-integration-id": "vscode-chat",
-        "editor-plugin-version": "copilot-chat/0.54.0",
-        "editor-version": "vscode/1.126.0",
-        "openai-intent": "conversation-panel",
-        "user-agent": "GitHubCopilotChat/0.54.0",
-        "x-github-api-version": "2026-06-01",
-        "x-vscode-user-agent-library-version": "electron-fetch"
+        "copilot-harness-id": "copilot-sdk",
+        "copilot-integration-id": "copilot-developer-cli",
+        "editor-version": "copilot/1.0.81-6",
+        "openai-intent": "conversation-agent",
+        "user-agent": "copilot/1.0.81-6",
+        "x-client-machine-id": "<UUID>",
+        "x-github-api-version": "2026-08-01",
+        "x-interaction-type": "conversation-user"
       },
       "nonStream": {
         "Accept": "application/json",
         "Authorization": "Bearer <TOK>",
         "Content-Type": "application/json",
         "X-Initiator": "user",
-        "copilot-integration-id": "vscode-chat",
-        "editor-plugin-version": "copilot-chat/0.54.0",
-        "editor-version": "vscode/1.126.0",
-        "openai-intent": "conversation-panel",
-        "user-agent": "GitHubCopilotChat/0.54.0",
-        "x-github-api-version": "2026-06-01",
-        "x-vscode-user-agent-library-version": "electron-fetch"
+        "copilot-harness-id": "copilot-sdk",
+        "copilot-integration-id": "copilot-developer-cli",
+        "editor-version": "copilot/1.0.81-6",
+        "openai-intent": "conversation-agent",
+        "user-agent": "copilot/1.0.81-6",
+        "x-client-machine-id": "<UUID>",
+        "x-github-api-version": "2026-08-01",
+        "x-interaction-type": "conversation-user"
       },
       "oauth": {
         "Accept": "text/event-stream",
         "Authorization": "Bearer <TOK>",
         "Content-Type": "application/json",
         "X-Initiator": "user",
-        "copilot-integration-id": "vscode-chat",
-        "editor-plugin-version": "copilot-chat/0.54.0",
-        "editor-version": "vscode/1.126.0",
-        "openai-intent": "conversation-panel",
-        "user-agent": "GitHubCopilotChat/0.54.0",
-        "x-github-api-version": "2026-06-01",
-        "x-vscode-user-agent-library-version": "electron-fetch"
+        "copilot-harness-id": "copilot-sdk",
+        "copilot-integration-id": "copilot-developer-cli",
+        "editor-version": "copilot/1.0.81-6",
+        "openai-intent": "conversation-agent",
+        "user-agent": "copilot/1.0.81-6",
+        "x-client-machine-id": "<UUID>",
+        "x-github-api-version": "2026-08-01",
+        "x-interaction-type": "conversation-user"
       }
     },
     "url": {
@@ -2539,42 +2542,45 @@
         "Authorization": "Bearer <TOK>",
         "Content-Type": "application/json",
         "X-Initiator": "user",
-        "copilot-integration-id": "vscode-chat",
-        "editor-plugin-version": "copilot-chat/0.54.0",
-        "editor-version": "vscode/1.126.0",
-        "openai-intent": "conversation-panel",
-        "user-agent": "GitHubCopilotChat/0.54.0",
-        "x-github-api-version": "2026-06-01",
-        "x-request-id": "<UUID>",
-        "x-vscode-user-agent-library-version": "electron-fetch"
+        "copilot-harness-id": "copilot-sdk",
+        "copilot-integration-id": "copilot-developer-cli",
+        "editor-version": "copilot/1.0.81-6",
+        "openai-intent": "conversation-agent",
+        "user-agent": "copilot/1.0.81-6",
+        "x-client-machine-id": "<UUID>",
+        "x-github-api-version": "2026-08-01",
+        "x-interaction-type": "conversation-user",
+        "x-request-id": "<UUID>"
       },
       "nonStream": {
         "Accept": "application/json",
         "Authorization": "Bearer <TOK>",
         "Content-Type": "application/json",
         "X-Initiator": "user",
-        "copilot-integration-id": "vscode-chat",
-        "editor-plugin-version": "copilot-chat/0.54.0",
-        "editor-version": "vscode/1.126.0",
-        "openai-intent": "conversation-panel",
-        "user-agent": "GitHubCopilotChat/0.54.0",
-        "x-github-api-version": "2026-06-01",
-        "x-request-id": "<UUID>",
-        "x-vscode-user-agent-library-version": "electron-fetch"
+        "copilot-harness-id": "copilot-sdk",
+        "copilot-integration-id": "copilot-developer-cli",
+        "editor-version": "copilot/1.0.81-6",
+        "openai-intent": "conversation-agent",
+        "user-agent": "copilot/1.0.81-6",
+        "x-client-machine-id": "<UUID>",
+        "x-github-api-version": "2026-08-01",
+        "x-interaction-type": "conversation-user",
+        "x-request-id": "<UUID>"
       },
       "oauth": {
         "Accept": "text/event-stream",
         "Authorization": "Bearer <TOK>",
         "Content-Type": "application/json",
         "X-Initiator": "user",
-        "copilot-integration-id": "vscode-chat",
-        "editor-plugin-version": "copilot-chat/0.54.0",
-        "editor-version": "vscode/1.126.0",
-        "openai-intent": "conversation-panel",
-        "user-agent": "GitHubCopilotChat/0.54.0",
-        "x-github-api-version": "2026-06-01",
-        "x-request-id": "<UUID>",
-        "x-vscode-user-agent-library-version": "electron-fetch"
+        "copilot-harness-id": "copilot-sdk",
+        "copilot-integration-id": "copilot-developer-cli",
+        "editor-version": "copilot/1.0.81-6",
+        "openai-intent": "conversation-agent",
+        "user-agent": "copilot/1.0.81-6",
+        "x-client-machine-id": "<UUID>",
+        "x-github-api-version": "2026-08-01",
+        "x-interaction-type": "conversation-user",
+        "x-request-id": "<UUID>"
       }
     },
     "url": {
@@ -6019,6 +6025,52 @@
     "url": {
       "nonStream": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
       "stream": "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
+    }
+  },
+  "volcengine-agent-plan": {
+    "format": "openai",
+    "headers": {
+      "apiKey": {
+        "Accept": "text/event-stream",
+        "Authorization": "Bearer <TOK>",
+        "Content-Type": "application/json"
+      },
+      "nonStream": {
+        "Authorization": "Bearer <TOK>",
+        "Content-Type": "application/json"
+      },
+      "oauth": {
+        "Accept": "text/event-stream",
+        "Authorization": "Bearer <TOK>",
+        "Content-Type": "application/json"
+      }
+    },
+    "url": {
+      "nonStream": "https://ark.cn-beijing.volces.com/api/plan/v3/chat/completions",
+      "stream": "https://ark.cn-beijing.volces.com/api/plan/v3/chat/completions"
+    }
+  },
+  "volcengine-coding-plan": {
+    "format": "openai",
+    "headers": {
+      "apiKey": {
+        "Accept": "text/event-stream",
+        "Authorization": "Bearer <TOK>",
+        "Content-Type": "application/json"
+      },
+      "nonStream": {
+        "Authorization": "Bearer <TOK>",
+        "Content-Type": "application/json"
+      },
+      "oauth": {
+        "Accept": "text/event-stream",
+        "Authorization": "Bearer <TOK>",
+        "Content-Type": "application/json"
+      }
+    },
+    "url": {
+      "nonStream": "https://ark.cn-beijing.volces.com/api/coding/v3/chat/completions",
+      "stream": "https://ark.cn-beijing.volces.com/api/coding/v3/chat/completions"
     }
   },
   "wafer": {

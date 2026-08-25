@@ -30,6 +30,7 @@ import { providerAllowsOptionalApiKey } from "@/shared/constants/providers";
 import { shouldUseApiKeyConnectionTest } from "./webSessionTestDispatch";
 import { testCodexAppServerConnection, makeDiagnosis } from "./codexAppServerHealth";
 import { removeConnectionHealth } from "@omniroute/open-sse/services/apiKeyRotator.ts";
+import { shouldClearErrorStateOnValidProbe } from "@/lib/usage/providerLimits";
 import { isConnectionUnavailableToAuxiliaryActivity } from "@/lib/exclusiveLeaseIsolation";
 import { classifyAmbiguousOrAuthError, type ClassifyFailureArgs } from "./mistralAmbiguousAuth";
 import { buildApiKeyConnectionTestResult } from "./apiKeyTestResult";
@@ -1082,23 +1083,46 @@ export async function testSingleConnection(connectionId: string, validationModel
     terminalTestStatuses.has(String(diagnosis.code ?? diagnosis.type ?? "").toLowerCase());
   const testFailureCooldownMs = result.valid ? 0 : 30_000; // 30s retry window
 
+  // A successful credential probe proves the KEY is valid. It does NOT prove the
+  // quota window reopened: the probe is a cheap auth/models call that never touches
+  // the chat quota a weekly cap applies to. Clearing an ACTIVE cooldown here — which
+  // the credential-health scheduler triggers for every connection every 300s — put
+  // `zai/glm-5.3` back to `active` / `rate_limited_until = NULL` within 30s of every
+  // restart, so combo dispatched it straight into the same weekly 429. Same rule as
+  // maybeClearRecoveredQuotaState: a future rateLimitedUntil is the 429 handler's
+  // hard statement and no poller may overrule it. Once it elapses, the next probe
+  // clears it normally.
+  const clearErrorState = shouldClearErrorStateOnValidProbe(
+    connection as { rateLimitedUntil?: string | null },
+    result.valid
+  );
+
   const updateData: Record<string, any> = {
-    testStatus: result.valid ? "active" : "error",
-    lastError: result.valid ? null : result.error,
-    lastErrorAt: result.valid ? null : now,
+    testStatus: clearErrorState ? "active" : result.valid ? connection.testStatus : "error",
+    lastError: clearErrorState ? null : result.valid ? connection.lastError : result.error,
+    lastErrorAt: clearErrorState ? null : result.valid ? connection.lastErrorAt : now,
     lastTested: now,
-    lastErrorType: result.valid ? null : diagnosis.type,
-    lastErrorSource: result.valid ? null : diagnosis.source,
-    errorCode: result.valid ? null : diagnosis.code || result.statusCode || null,
-    rateLimitedUntil:
-      result.valid || isTerminalFailure
-        ? result.valid
-          ? null
-          : connection.rateLimitedUntil || null
-        : new Date(Date.now() + testFailureCooldownMs).toISOString(),
+    lastErrorType: clearErrorState ? null : result.valid ? connection.lastErrorType : diagnosis.type,
+    lastErrorSource: clearErrorState
+      ? null
+      : result.valid
+        ? connection.lastErrorSource
+        : diagnosis.source,
+    errorCode: clearErrorState
+      ? null
+      : result.valid
+        ? connection.errorCode
+        : diagnosis.code || result.statusCode || null,
+    rateLimitedUntil: clearErrorState
+      ? null
+      : isTerminalFailure
+        ? connection.rateLimitedUntil || null
+        : result.valid
+          ? connection.rateLimitedUntil || null
+          : new Date(Date.now() + testFailureCooldownMs).toISOString(),
   };
 
-  if (result.valid) {
+  if (clearErrorState) {
     updateData.backoffLevel = 0;
 
     const psd = connection?.providerSpecificData as Record<string, unknown> | undefined;

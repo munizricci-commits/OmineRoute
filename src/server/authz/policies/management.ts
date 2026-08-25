@@ -15,6 +15,7 @@ import { evaluateAccessTokenAuth } from "../accessTokenAuth";
 import { isInternalServiceRequest } from "../../../lib/api/internalServiceAuth";
 import {
   VIDEO_BRIDGE_BROKER_PATH,
+  VIDEO_BRIDGE_DRILLDOWN_PATH,
   isVideoBridgeBrokerTokenRequest,
 } from "../../../lib/guardrails/videoBridgeBrokerAuth";
 import { CLI_TOKEN_HEADER, PEER_IP_HEADER, VIA_PROXY_HEADER } from "../headers";
@@ -246,19 +247,20 @@ export const managementPolicy: RoutePolicy = {
       return allow({ kind: "management_key", id: "model-sync", label: "internal-model-sync" });
     }
 
-    // Exact-path, per-process authenticated self-hop used by the public Video
-    // Bridge guardrail. The unconditional LOCAL_ONLY gate above has already
-    // rejected remote peers; this carve-out is deliberately not valid for the
-    // adjacent runtime-status route or any future child path.
+    // Exact-path, per-process authenticated self-hops used by the public Video
+    // Bridge guardrail and its isolated drill-down lifecycle. The unconditional
+    // LOCAL_ONLY gate above has already rejected remote peers; this carve-out is
+    // deliberately not valid for runtime status or any future adjacent path.
     if (
-      path === VIDEO_BRIDGE_BROKER_PATH &&
+      (path === VIDEO_BRIDGE_BROKER_PATH || path === VIDEO_BRIDGE_DRILLDOWN_PATH) &&
       isLoopbackRequest(ctx) &&
       isVideoBridgeBrokerTokenRequest(ctx.request as unknown as Request, path)
     ) {
+      const drilldown = path === VIDEO_BRIDGE_DRILLDOWN_PATH;
       return allow({
         kind: "management_key",
-        id: "video-bridge-broker",
-        label: "internal-video-bridge-broker",
+        id: drilldown ? "video-bridge-drilldown" : "video-bridge-broker",
+        label: drilldown ? "internal-video-bridge-drilldown" : "internal-video-bridge-broker",
       });
     }
 

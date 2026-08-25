@@ -1,1 +1,0 @@
-- feat(command-code): advertise low/medium/high/xhigh/max reasoning-effort suffixes for reasoning-capable models in the catalog and Combo Builder, with request-time resolution to reasoning_effort

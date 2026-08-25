@@ -10,7 +10,7 @@
  *   GET https://g4f.space/api/groq/...              → live Groq backend
  *
  * Verifies each of the 5 sub-path providers is wired end-to-end the same way as
- * the other no-key gateway providers (hackclub, uncloseai):
+ * the other no-key gateway providers (uncloseai):
  *   - present in the executor REGISTRY with a no-key OpenAI-compatible shape
  *   - resolvable through getExecutor() (falls through to DefaultExecutor)
  *   - listed in AGGREGATOR_PROVIDER_IDS so it shows up in the aggregator
@@ -84,7 +84,7 @@ for (const [id, subPath] of Object.entries(SUB_PATHS)) {
   test(`#6650 ${id} is classified as an aggregator/gateway provider`, () => {
     assert.ok(
       AGGREGATOR_PROVIDER_IDS.has(id),
-      `${id} must be listed in AGGREGATOR_PROVIDER_IDS alongside hackclub/uncloseai`
+      `${id} must be listed in AGGREGATOR_PROVIDER_IDS alongside uncloseai`
     );
   });
 

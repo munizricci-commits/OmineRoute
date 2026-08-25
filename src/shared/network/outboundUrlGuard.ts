@@ -39,7 +39,7 @@ export class OutboundUrlGuardError extends Error {
 // `http://[::ffff:169.254.169.254]/` reaches these helpers as `::ffff:a9fe:a9fe`.
 // Matching the dotted spelling alone therefore misses every mapped address that
 // arrives through a parsed URL. Fold the embedded IPv4 back out before deciding.
-function mappedIpv4Host(hostname: string): string | null {
+export function mappedIpv4Host(hostname: string): string | null {
   const normalized = normalizeHost(hostname);
   if (!normalized.startsWith("::ffff:")) return null;
   const embedded = normalized.slice("::ffff:".length);

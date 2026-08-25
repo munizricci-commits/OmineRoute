@@ -21,7 +21,7 @@ import { errorResponseWithComboDiagnostics } from "../../utils/error.ts";
 import { parseModel } from "../model.ts";
 import { handlePipelineChat, type PipelineStep } from "../pipeline.ts";
 import type { resolveComboSetupConfig } from "../comboConfig.ts";
-import { clampComboDepth, MAX_GLOBAL_ATTEMPTS, resolveDelayMs } from "./comboPredicates.ts";
+import { clampComboDepth, clampGlobalAttempts, resolveDelayMs } from "./comboPredicates.ts";
 import {
   deriveRequestCompatibilityRequirements,
   isVisionIncompatibleTarget,
@@ -192,7 +192,7 @@ export function normalizeNestedComboMode(value: unknown): NestedComboMode {
   return value === "execute" ? "execute" : "flatten";
 }
 
-function buildDefaultNesting(
+export function buildDefaultNesting(
   nesting: ComboNestingContext | null | undefined,
   comboName: string,
   config: ComboSetupConfig
@@ -203,7 +203,9 @@ function buildDefaultNesting(
       maxDepth: clampComboDepth(config.maxComboDepth),
       visitedComboNames: [comboName],
       rootComboName: comboName,
-      attemptBudget: { count: 0, limit: MAX_GLOBAL_ATTEMPTS },
+      // #11134: honor the operator-configured shared budget (clamped to the
+      // hard cap) instead of the hardcoded MAX_GLOBAL_ATTEMPTS.
+      attemptBudget: { count: 0, limit: clampGlobalAttempts(config.maxGlobalAttempts) },
     }
   );
 }
@@ -327,12 +329,13 @@ export async function tryPinnedModelDispatch(args: {
       const pinnedTarget = comboTargets.find((t) => t.modelStr === pinnedModel);
       const pinnedBody = expandComboSystemPromptIfPresent(body, combo, {
         modelId: pinnedModel,
-        providerId: pinnedTarget && pinnedTarget.provider !== "unknown" ? pinnedTarget.provider : "",
+        providerId:
+          pinnedTarget && pinnedTarget.provider !== "unknown" ? pinnedTarget.provider : "",
         account:
           typeof pinnedTarget?.label === "string" && pinnedTarget.label.trim().length > 0
             ? pinnedTarget.label.trim()
             : "",
-        fingerprint: pinnedTarget ? resolveTargetFingerprint(pinnedTarget) ?? "" : "",
+        fingerprint: pinnedTarget ? (resolveTargetFingerprint(pinnedTarget) ?? "") : "",
       });
       pinnedResult = await handleSingleModelWithTimeout(pinnedBody, pinnedModel, {
         modelPinned: true,

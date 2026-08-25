@@ -108,6 +108,7 @@ export default function EditConnectionModal({
     tpm: "",
     tpd: "",
     minTime: "",
+    maxWaitMs: "",
     rateLimitMaxConcurrent: "",
     apiKey: "",
     healthCheckInterval: 60,
@@ -289,6 +290,13 @@ export default function EditConnectionModal({
         connection.providerSpecificData?.quotaPerUnit != null
           ? String(connection.providerSpecificData.quotaPerUnit)
           : "";
+      // Modal-open form initialization from the loaded connection (sync with an
+      // external system on `isOpen`); remounting the 30+ field form per
+      // connection id is a behavior-risking restructure out of scope here
+      // (#11251 follow-up, #9985).
+      // NOTE: no react-hooks/set-state-in-effect suppression needed — the rule
+      // only fires on unconditional synchronous setState, and this one is
+      // guarded by the isOpen/connection condition above.
       setFormData({
         name: connection.name || "",
         priority: connection.priority || 1,
@@ -311,6 +319,10 @@ export default function EditConnectionModal({
         minTime:
           connection.rateLimitOverrides?.minTime != null
             ? String(connection.rateLimitOverrides.minTime)
+            : "",
+        maxWaitMs:
+          connection.rateLimitOverrides?.maxWaitMs != null
+            ? String(connection.rateLimitOverrides.maxWaitMs)
             : "",
         rateLimitMaxConcurrent:
           connection.rateLimitOverrides?.maxConcurrent != null
@@ -528,6 +540,7 @@ export default function EditConnectionModal({
       if (formData.tpm.trim()) overrides.tpm = Number(formData.tpm);
       if (formData.tpd.trim()) overrides.tpd = Number(formData.tpd);
       if (formData.minTime.trim()) overrides.minTime = Number(formData.minTime);
+      if (formData.maxWaitMs.trim()) overrides.maxWaitMs = Number(formData.maxWaitMs);
       if (formData.rateLimitMaxConcurrent.trim())
         overrides.maxConcurrent = Number(formData.rateLimitMaxConcurrent);
       updates.rateLimitOverrides = Object.keys(overrides).length > 0 ? overrides : null;
@@ -1223,6 +1236,15 @@ export default function EditConnectionModal({
                       onChange={(e) => setFormData({ ...formData, minTime: e.target.value })}
                       placeholder={t("inherit")}
                       hint={t("rateLimitOverridesMinTimeHint")}
+                    />
+                    <Input
+                      label={t("rateLimitOverridesMaxWaitMsLabel")}
+                      type="number"
+                      min={0}
+                      value={formData.maxWaitMs}
+                      onChange={(e) => setFormData({ ...formData, maxWaitMs: e.target.value })}
+                      placeholder={t("inherit")}
+                      hint={t("rateLimitOverridesMaxWaitMsHint")}
                     />
                     <Input
                       label={t("rateLimitOverridesMaxConcurrentLabel")}

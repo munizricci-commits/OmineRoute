@@ -111,7 +111,13 @@ describe("injectMemory system-must-be-first (#6135)", () => {
 
   it("regression: a NON-flagged provider keeps the existing cache-safe placement", () => {
     const req = multiTurn();
-    const out = injectMemory(req, [mem("dark mode")], "anthropic", { cacheSafe: true });
+    // #11290/#11303 added a Claude-family-specific reroute to injectSystemFirst()
+    // for the mid-array splice (a system message right after a plain-text
+    // assistant turn is rejected by Claude Opus 5), so "anthropic" no longer
+    // exercises the plain cache-safe splice path this test targets. Use a
+    // provider outside both the strict-system-first set AND the Claude family
+    // to keep testing the original (still-current) cache-safe behavior.
+    const out = injectMemory(req, [mem("dark mode")], "openai", { cacheSafe: true });
     // Existing behavior: memory inserted just before the last user message (index 3).
     assert.equal(out.messages[3].role, "system");
     assert.ok(out.messages[3].content.includes("Memory context"));

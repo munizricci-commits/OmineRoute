@@ -58,6 +58,7 @@ export const DEFAULT_INTELLIGENT_WEIGHTS: IntelligentRoutingWeights = {
 };
 
 export const MODE_PACK_OPTIONS = [
+  { id: "custom", label: "Custom / None (Use Sliders)", emoji: "tune" },
   { id: "ship-fast", label: "Ship Fast", emoji: "rocket_launch" },
   { id: "cost-saver", label: "Cost Saver", emoji: "savings" },
   { id: "quality-first", label: "Quality First", emoji: "target" },

@@ -3,6 +3,7 @@ import { printHeading } from "../io.mjs";
 import { withRuntime } from "../runtime.mjs";
 import { t } from "../i18n.mjs";
 import { apiFetch } from "../api.mjs";
+import { mcpCallTool } from "../mcpClient.mjs";
 import { emit } from "../output.mjs";
 import { resolveComboModels, collectModel } from "./comboModels.mjs";
 
@@ -63,15 +64,7 @@ export function extendComboSuggest(combo) {
         weights: opts.weights ? JSON.parse(opts.weights) : undefined,
         top: opts.top,
       };
-      const res = await apiFetch("/api/mcp/tools/call", {
-        method: "POST",
-        body: { name: "omniroute_best_combo_for_task", arguments: body },
-      });
-      if (!res.ok) {
-        process.stderr.write(`Error: ${res.status}\n`);
-        process.exit(1);
-      }
-      const data = await res.json();
+      const data = await mcpCallTool("omniroute_best_combo_for_task", body);
       const candidates = data.candidates ?? data;
       const rows = (Array.isArray(candidates) ? candidates : []).map((c, i) => ({
         rank: i + 1,

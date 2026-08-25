@@ -219,5 +219,18 @@ export const opencode_goProvider: RegistryEntry = {
       supportedThinkingEfforts: ["none", "low", "high", "max"],
       targetFormat: "openai-responses",
     },
+    // Console Go free GLM-tier model (live-verified 2026-08-23): the upstream
+    // rejects every reasoning_effort outside {low, high, max} whenever tools
+    // are present — "[1210] This model always engages in thinking and cannot
+    // be disabled; please use low, high, or max" — which broke clients that
+    // default to reasoning_effort:"medium" (Hermes). Declaring the exact
+    // vocabulary lets sanitizeReasoningEffortForProvider clamp off-vocabulary
+    // requests to the nearest accepted tier instead of burning a 400.
+    {
+      id: "ox-alpha-free",
+      name: "ox-alpha (free)",
+      supportsReasoning: true,
+      supportedThinkingEfforts: ["low", "high", "max"],
+    },
   ],
 };

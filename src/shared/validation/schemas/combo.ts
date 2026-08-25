@@ -183,6 +183,9 @@ export const comboRuntimeConfigSchema = z
     handoffProviders: z.array(z.string().trim().min(1).max(100)).max(10).optional(),
     maxMessagesForSummary: z.coerce.number().int().min(5).max(100).optional(),
     maxComboDepth: z.coerce.number().int().min(1).max(10).optional(),
+    // #11134: shared per-request attempt budget. Bounds mirror
+    // MAX_GLOBAL_ATTEMPTS_HARD_CAP (200) in comboPredicates.ts.
+    maxGlobalAttempts: z.coerce.number().int().min(1).max(200).optional(),
     nestedComboMode: z.enum(["flatten", "execute"]).optional(),
     trackMetrics: z.boolean().optional(),
     reasoningTokenBufferEnabled: z.boolean().optional(),

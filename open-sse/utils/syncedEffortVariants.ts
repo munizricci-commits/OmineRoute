@@ -33,7 +33,8 @@ export const SYNCED_EFFORT_SKIP_PROVIDERS = new Set(["codex", "glm", "glm-cn", "
 /** Provider-id prefixes covering that mechanism's multiple connection variants (kimi-coding, kimi-coding-apikey). */
 const SYNCED_EFFORT_SKIP_PROVIDER_PREFIXES = ["kimi"];
 
-function isSkippedEffortProvider(ownedBy: string): boolean {
+/** Whether `ownedBy` already owns its own `-{effort}` suffix mechanism (never synthesize/expose another). */
+export function isSkippedEffortProvider(ownedBy: string): boolean {
   return (
     SYNCED_EFFORT_SKIP_PROVIDERS.has(ownedBy) ||
     SYNCED_EFFORT_SKIP_PROVIDER_PREFIXES.some((prefix) => ownedBy.startsWith(prefix))

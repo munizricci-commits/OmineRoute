@@ -20,6 +20,7 @@ import { checkSemanticCache } from "./chatCore/semanticCache.ts";
 import { checkLifecycle, resolveLifecycle } from "./chatCore/modelLifecyclePolicy.ts";
 import {
   shouldDefaultAllowClassifier,
+  detectClassifierFormat,
   buildDefaultAllowClaudeMessage,
 } from "./chatCore/claudeClassifierCompat.ts";
 import { applyClientUsageBuffer } from "./chatCore/clientUsageBuffer.ts";
@@ -379,6 +380,7 @@ import { isCompactResponsesEndpoint } from "../executors/codex.ts";
 import { persistCodexChildQuotaResponse } from "../services/codexAccount/index.ts";
 import { invalidateCodexQuotaCache } from "../services/codexQuotaFetcher.ts";
 import { translateNonStreamingResponse } from "./responseTranslator.ts";
+import { extractToolSchemaMap } from "../translator/response/openai-responses/toolSchemas.ts";
 import { unwrapClineNonStreamingEnvelope } from "./chatCore/clineResponseEnvelope.ts";
 import { extractUsageFromResponse } from "./usageExtractor.ts";
 import {
@@ -778,11 +780,12 @@ export async function handleChatCore({
         classifierSettings.claudeClassifierCompat as string | undefined
       )
     ) {
+      const classifierFormat = detectClassifierFormat(body as Record<string, unknown>);
       log?.warn?.(
         "CHAT",
-        `classifier compat=${classifierSettings.claudeClassifierCompat} | short-circuit default-allow`
+        `classifier compat=${classifierSettings.claudeClassifierCompat} format=${classifierFormat} | short-circuit default-allow`
       );
-      return buildDefaultAllowClaudeMessage(requestedModel);
+      return buildDefaultAllowClaudeMessage(requestedModel, classifierFormat);
     }
   }
 
@@ -1218,7 +1221,12 @@ export async function handleChatCore({
           credentials?.providerSpecificData?.preserveEncryptedReasoning === true,
         onIncompatibleReasoning: resolveIncompatibleReasoningAction({
           reasoningTransportFallback,
-          isComboStep: Boolean(comboStepId || comboExecutionKey),
+          // #11178 regressed combo steps whose combo record carries no explicit
+          // stepId/executionKey (plain model-list combos): their explicit
+          // `reasoningTransportFallback: "skip"` config was silently degraded to
+          // "drop". `isCombo` is the combo marker; step ids are optional
+          // finer-grained metadata that plain combos never set.
+          isComboStep: Boolean(isCombo) || Boolean(comboStepId || comboExecutionKey),
           headers: clientRawRequest?.headers ?? null,
         }),
       }
@@ -4905,12 +4913,14 @@ export async function handleChatCore({
 
     // Translate response to client's expected format (usually OpenAI)
     // Pass toolNameMap so Claude OAuth proxy_ prefix is stripped in tool_use blocks (#605)
+    const responseToolSchemas = extractToolSchemaMap(finalBody || translatedBody || body);
     let translatedResponse = needsTranslation(responsePayloadFormat, clientResponseFormat)
       ? translateNonStreamingResponse(
           responseBody,
           responsePayloadFormat,
           clientResponseFormat,
-          responseToolNameMap
+          responseToolNameMap,
+          responseToolSchemas
         )
       : responseBody;
     const memoryExtractionResponse = translatedResponse;
@@ -4937,7 +4947,8 @@ export async function handleChatCore({
               responseBody,
               responsePayloadFormat,
               FORMATS.OPENAI,
-              responseToolNameMap
+              responseToolNameMap,
+              responseToolSchemas
             )
           : responseBody;
       const firstChoice = cacheResponse?.choices?.[0];
@@ -5460,7 +5471,8 @@ export async function handleChatCore({
                 streamBody,
                 clientResponseFormat,
                 FORMATS.OPENAI,
-                responseToolNameMap
+                responseToolNameMap,
+                extractToolSchemaMap(finalBody || translatedBody || body)
               ) as Record<string, unknown>)
             : streamBody;
         const choices = cacheStreamBody.choices as

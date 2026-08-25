@@ -685,6 +685,14 @@ jobs:
       - run: npm run build:cli
       - name: Assert dist/server.js exists
         run: test -f dist/server.js || (echo "dist/server.js missing — build:cli did not assemble correctly" && exit 1)
+      # `build:cli` monta dist/ mas NAO grava dist/BUILD_SHA — so `build:release` faz
+      # isso, chamando write-build-sha.mjs. O guard de proveniencia do #10427, dentro
+      # de check:pack-artifact, rejeita um artefato sem SHA (e rejeita mesmo com
+      # OMNIROUTE_ALLOW_CANARY_BUILD=1: o que nao da para identificar nao da para
+      # vouchear). Sem este passo o par build+validate deste job e estruturalmente
+      # incompativel e falha 100% das vezes.
+      - name: Stamp dist/BUILD_SHA for the provenance guard (#10427)
+        run: node scripts/build/write-build-sha.mjs
       - run: npm run check:pack-artifact
       # WS1.2 (#7065 class): pack the real tarball, install it into a clean prefix and
       # BOOT it to a healthy /api/monitoring/health — the gate that structure checks
@@ -792,9 +800,23 @@ jobs:
       # D3 (plano mestre): a coverage é coletada NESTE mesmo run (c8/NODE_V8_COVERAGE propaga
       # aos filhos através do npm) — elimina a matrix Coverage Shard ×8, que re-executava a
       # suíte inteira só para medir o gate. Padrão usado pelo CI do próprio nodejs/node.
+      # Heap: os shards rodam sob instrumentacao de cobertura do V8, que retem muito
+      # mais memoria que a suite crua. Com o teto antigo de 4096 MB os shards passaram
+      # a abortar com SIGABRT (exit 134, "Ineffective mark-compacts near heap limit")
+      # ao redor de 4086 MB conforme o catalogo de providers cresceu no ciclo v3.8.50 —
+      # todos os testes passavam e o processo morria no fim, o que le como falha de
+      # teste sem ser. O teto vive em `test:unit:ci:shard` (package.json) e agora
+      # acompanha os 8192 MB ja usados pelas variantes nao-shardadas; os runners
+      # GitHub-hosted tem 16 GB.
       - name: Unit tests (shard ${{ matrix.shard }}/8) with V8 coverage
         env:
           TEST_SHARD: ${{ matrix.shard }}/8
+          # NODE_OPTIONS (nao so o flag em test:unit:ci:shard) porque quem estoura o
+          # heap e o processo `c8` que embrulha a suite — ele agrega ~577 MB de JSON
+          # de cobertura bruta. Subir o teto so no node filho deixa o pai no default
+          # do V8 (~4 GB) e o OOM continua igual, em ~4083 MB. Mesmo padrao ja usado
+          # pelo job de merge de cobertura mais abaixo.
+          NODE_OPTIONS: --max-old-space-size=8192
         run: |
           rm -rf coverage-shard coverage-shard-report
           npx c8 \

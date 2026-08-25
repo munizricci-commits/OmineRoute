@@ -1,6 +1,7 @@
 import { randomUUID, createHash } from "crypto";
 import { nodeTypeFromId } from "@/lib/db/providerNodeSelect";
 import { extractGoogApiKeyHeader } from "./googApiKeyAuth.ts";
+import { describeUpstreamFailure } from "@/shared/utils/upstreamError";
 import { buildAllExpiredCredentials } from "./authExpiredCredentials.ts";
 import {
   getCachedRawProviderConnections,
@@ -1710,7 +1711,8 @@ export async function getProviderCredentials(
       if (terminalConnections.length === connections.length) {
         return buildAllExpiredCredentials(terminalConnections);
       }
-      invalidateManagedLease(options, "CONNECTION_INELIGIBLE");      log.warn("AUTH", `${provider} | all ${connections.length} accounts unavailable`);
+      invalidateManagedLease(options, "CONNECTION_INELIGIBLE");
+      log.warn("AUTH", `${provider} | all ${connections.length} accounts unavailable`);
       return null;
     }
 
@@ -2274,6 +2276,11 @@ export async function getProviderCredentialsWithQuotaPreflight(
     //   • a per-connection override on this row
     //   • a per-(provider, window) default in resilience settings
     //   • the legacy `quotaPreflightEnabled` flag in providerSpecificData
+    //   • the operator-enabled quota cutoff (resilience.quotaPreflight.enabled /
+    //     QUOTA_PREFLIGHT_CUTOFF_ENABLED) — #11234: it previously only armed the
+    //     auto-strategy candidate builder and the per-target cutoff for pinned
+    //     connections, so priority combos over sibling connections (no pinned
+    //     connectionId) never filtered an exhausted sister
     //   • the global default is stricter than the factory no-op level
     //     (factory = 2% remaining, basically "right before 429" — anything
     //     stricter means the operator wants enforcement everywhere)
@@ -2295,10 +2302,12 @@ export async function getProviderCredentialsWithQuotaPreflight(
 
     const hasConnectionOverrides = Object.keys(perConnectionWindowOverrides).length > 0;
     const legacyForceEnable = isQuotaPreflightEnabled(credentials as Record<string, unknown>);
+    const globalCutoffEnabled = resilience.quotaPreflight.enabled === true;
     if (
       !hasConnectionOverrides &&
       !providerHasDefaults &&
       !legacyForceEnable &&
+      !globalCutoffEnabled &&
       !globalDefaultIsRestrictive
     ) {
       const committed = await commitLease();
@@ -3056,7 +3065,7 @@ export async function markAccountUnavailable(
       return { shouldFallback: true, cooldownMs: lockout.cooldownMs };
     }
 
-    const errorMsg = typeof errorText === "string" ? errorText.slice(0, 100) : "Provider error";
+    const errorMsg = describeUpstreamFailure(errorText);
 
     // T09: Codex per-scope lockout (do not block the whole account globally).
     if (

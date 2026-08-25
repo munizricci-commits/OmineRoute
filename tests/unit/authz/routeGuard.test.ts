@@ -22,6 +22,22 @@ test("isLocalOnlyPath: /api/cli-tools/runtime/ is local-only", () => {
   assert.equal(isLocalOnlyPath("/api/cli-tools/runtime/claude"), true);
 });
 
+test("isLocalOnlyPath: MITM management routes are local-only (GHSA-x7vm-hp44-9p79)", () => {
+  // The "Enable MITM" flow installs a system-wide trusted root CA and writes
+  // /etc/hosts DNS overrides (src/mitm/*) — host-level TLS interception. Both
+  // routes were MANAGEMENT-classified only, so requireLogin=false left them
+  // remotely reachable. They belong to the same loopback tier as
+  // /api/tools/agent-bridge/ (also MITM + DNS).
+  assert.equal(isLocalOnlyPath("/api/settings/mitm"), true);
+  assert.equal(isLocalOnlyPath("/api/cli-tools/antigravity-mitm"), true);
+  assert.equal(isLocalOnlyPath("/api/cli-tools/antigravity-mitm/alias"), true);
+});
+
+test("isLocalOnlyBypassableByManageScope: MITM routes are NOT bypassable (GHSA-x7vm-hp44-9p79)", () => {
+  assert.equal(isLocalOnlyBypassableByManageScope("/api/settings/mitm"), false);
+  assert.equal(isLocalOnlyBypassableByManageScope("/api/cli-tools/antigravity-mitm"), false);
+});
+
 test("isLocalOnlyPath: regular management routes are not local-only", () => {
   assert.equal(isLocalOnlyPath("/api/settings"), false);
   assert.equal(isLocalOnlyPath("/api/providers"), false);
@@ -87,6 +103,19 @@ test("isAlwaysProtectedPath: /api/db-backups is always protected (GHSA-mghq-58h3
   assert.equal(isAlwaysProtectedPath("/api/db-backups/export"), true);
   assert.equal(isAlwaysProtectedPath("/api/db-backups/exportAll"), true);
   assert.equal(isAlwaysProtectedPath("/api/db-backups/import"), true);
+});
+
+test("isAlwaysProtectedPath: legacy settings export/import-json are always protected (GHSA-v7g9-7f55-5g46)", () => {
+  // The mghq fix covered /api/db-backups but left the legacy sibling routes out:
+  // export-json dumps every credential and import-json irreversibly replaces
+  // settings/connections. Both handlers only check isAuthRequired(), which
+  // returns false under requireLogin=false — so they must sit in Tier 2 like
+  // /api/settings/database and /api/db-backups.
+  assert.equal(isAlwaysProtectedPath("/api/settings/export-json"), true);
+  assert.equal(isAlwaysProtectedPath("/api/settings/import-json"), true);
+  // The matcher is a plain startsWith (fail-closed: covers more, never less),
+  // so a hypothetical export-json2 sibling would also be protected — fine.
+  assert.equal(isAlwaysProtectedPath("/api/settings/proxy"), false);
 });
 
 test("isAlwaysProtectedPath: ordinary settings routes are not always protected", () => {

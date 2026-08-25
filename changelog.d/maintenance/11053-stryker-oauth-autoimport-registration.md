@@ -1,1 +1,0 @@
-- fix(quality): register `tests/unit/authz/oauth-autoimport-local-only.test.ts` in stryker `tap.testFiles` (residual of #11053)

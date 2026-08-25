@@ -6,6 +6,7 @@ import {
   buildSessionsSummary,
   buildTelemetryPayload,
   projectAdaptiveAdmissionSummary,
+  projectChatAdmissionSummary,
 } from "../../src/lib/monitoring/observability.ts";
 
 test("buildSessionsSummary returns sticky counts and ordered top sessions", () => {
@@ -335,4 +336,72 @@ test("buildHealthPayload projects allowlisted adaptiveAdmission aggregates only"
   // Direct projector also null-safe.
   assert.equal(projectAdaptiveAdmissionSummary(null), null);
   assert.equal(projectAdaptiveAdmissionSummary(undefined), null);
+});
+
+// #11244: the STRUCTURAL chat-admission gate (chatBodyAdmission.ts) must surface in
+// the health payload next to — never instead of — the adaptive snapshot, with only
+// the documented low-cardinality fields projected.
+test("buildHealthPayload projects allowlisted structural chatAdmission fields only", () => {
+  const snapshot = {
+    activeHeavy: 1,
+    activeHealthyHeadroom: 1,
+    waiting: 2,
+    queuedBytes: 524_288,
+    shedTotal: 3,
+    shedsByReason: { queue_timeout: 2, queued_bytes_budget: 1 },
+    lanes: [
+      { key: "key_c49d1c242feda590", waiting: 1 },
+      { key: "anonymous", waiting: 1 },
+    ],
+    // Extra keys that must never leak into the public payload.
+    internalController: { secret: "controller-state" },
+    rawAuthorization: "Bearer raw-SHOULD-NOT-LEAK",
+  } as unknown as import("../../src/lib/monitoring/observability.ts").ChatAdmissionSnapshot;
+
+  const payload = buildHealthPayload({
+    appVersion: "9.9.9",
+    settings: { setupComplete: false },
+    connections: [],
+    circuitBreakers: [],
+    rateLimitStatus: {},
+    learnedLimits: {},
+    lockouts: {},
+    localProviders: {},
+    inflightRequests: 0,
+    quotaMonitorSummary: {
+      active: 0,
+      alerting: 0,
+      exhausted: 0,
+      errors: 0,
+      statusCounts: { starting: 0, idle: 0, healthy: 0, warning: 0, exhausted: 0, error: 0 },
+      byProvider: {},
+    },
+    quotaMonitorMonitors: [],
+    activeSessions: [],
+    chatAdmission: snapshot,
+  });
+
+  assert.deepEqual(payload.chatAdmission, {
+    activeHeavy: 1,
+    activeHealthyHeadroom: 1,
+    waiting: 2,
+    queuedBytes: 524_288,
+    shedTotal: 3,
+    shedsByReason: { queue_timeout: 2, queued_bytes_budget: 1 },
+    lanes: [
+      { key: "key_c49d1c242feda590", waiting: 1 },
+      { key: "anonymous", waiting: 1 },
+    ],
+  });
+  // The adaptive projection is untouched by the new key.
+  assert.equal(payload.adaptiveAdmission, null);
+
+  const json = JSON.stringify(payload);
+  assert.equal(json.includes("controller-state"), false);
+  assert.equal(json.includes("raw-SHOULD-NOT-LEAK"), false);
+  assert.equal(json.includes("internalController"), false);
+
+  // Absent / null snapshot projects to null (degraded path parity).
+  assert.equal(projectChatAdmissionSummary(null), null);
+  assert.equal(projectChatAdmissionSummary(undefined), null);
 });

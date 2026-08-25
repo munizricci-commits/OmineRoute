@@ -1,5 +1,9 @@
 {
   "_comment": "Allowlist anti-slopsquatting (check-deps.mjs). Toda dep nova exige adicao EXPLICITA aqui apos verificar que e legitima.",
+  "_justifications": {
+    "@testing-library/dom": "Peer dep obrigatoria de @testing-library/react v16 (adicionada no PR #11224); Refs #9985.",
+    "@testing-library/user-event": "Utilitario oficial do ecossistema testing-library para testes de UI (adicionada no PR #11224); Refs #9985."
+  },
   "allowed": [
     "@atjsh/llmlingua-2",
     "@aws-sdk/client-bedrock-runtime",
@@ -20,8 +24,10 @@
     "@stryker-mutator/tap-runner",
     "@swc/helpers",
     "@tailwindcss/postcss",
+    "@testing-library/dom",
     "@testing-library/jest-dom",
     "@testing-library/react",
+    "@testing-library/user-event",
     "@toon-format/toon",
     "@types/better-sqlite3",
     "@types/bun",

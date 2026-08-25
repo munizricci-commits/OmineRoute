@@ -71,7 +71,7 @@ test("buildUrl uses responses endpoint for gpt-5.4-mini and gpt-5.6-sol", () => 
   );
 });
 
-test("buildUrl uses chat/completions endpoint for claude and gemini models", () => {
+test("buildUrl routes Claude to the native /v1/messages shim (not chat/completions)", () => {
   const executor = new GheCopilotExecutor({
     gheUrl: "https://ghe.company.com",
     clientId: "test-client",
@@ -80,12 +80,26 @@ test("buildUrl uses chat/completions endpoint for claude and gemini models", () 
   const credentials: ProviderCredentials = {
     providerSpecificData: { gheUrl: "https://ghe.company.com" },
   };
+  // Claude must ALWAYS use the Anthropic-native shim (prompt-cache token counts +
+  // lossless tool_use/tool_result/thinking blocks), same as github.com Copilot.
   assert.strictEqual(
     executor.buildUrl("claude-opus-5", true, 0, credentials),
-    "https://ghe.company.com/chat/completions"
+    "https://ghe.company.com/v1/messages"
   );
+});
+
+test("buildUrl uses chat/completions endpoint for gemini models", () => {
+  const executor = new GheCopilotExecutor({
+    gheUrl: "https://ghe.company.com",
+    clientId: "test-client",
+    clientSecret: "test-secret",
+  });
+  const credentials: ProviderCredentials = {
+    providerSpecificData: { gheUrl: "https://ghe.company.com" },
+  };
+  // Gemini has no native shim on Copilot — it stays on /chat/completions.
   assert.strictEqual(
-    executor.buildUrl("gemini-3.5-flash", true, 0, credentials),
+    executor.buildUrl("gemini-3.7-flash", true, 0, credentials),
     "https://ghe.company.com/chat/completions"
   );
 });

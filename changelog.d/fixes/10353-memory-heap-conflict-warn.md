@@ -1,1 +1,0 @@
-- **fix(docker):** warn at boot when `OMNIROUTE_MEMORY_MB` disagrees with `NODE_OPTIONS --max-old-space-size`, and document that the standalone/Docker launcher appends `OMNIROUTE_MEMORY_MB` last ([#10353](https://github.com/diegosouzapw/OmniRoute/issues/10353))

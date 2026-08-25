@@ -255,7 +255,9 @@ test("vscode combos route resolves combo names through Ollama api/show", async (
   assert.equal(body.model, "show-combo");
   assert.equal(body.modelfile, "FROM show-combo");
   assert.equal(body.details.family, "show-combo");
-  assert.equal(body.model_info.context_length, 272000);
+  // #11179: codex static catalog advertises the usable 872K window (max_context_window),
+  // not the old 272K pricing tier.
+  assert.equal(body.model_info.context_length, 872000);
   assert.deepEqual(body.supportsReasoningEffort, ["none", "low", "medium", "high", "xhigh"]);
   assert.equal(body.model_info.capabilities.reasoning, true);
 });
@@ -290,7 +292,8 @@ test("vscode tokenized combos root route exposes importable combo metadata", asy
   assert.equal(response.status, 200);
   assert.ok(combo, "expected balanced-load in combo root response");
   assert.equal(combo.url.includes("/responses#models.ai.azure.com"), true);
-  assert.equal(combo.maxInputTokens, 272000);
+  // #11179: codex static catalog maxInputTokens is now the usable 872K window.
+  assert.equal(combo.maxInputTokens, 872000);
   assert.equal(combo.toolCalling, true);
   assert.deepEqual(combo.supportsReasoningEffort, ["none", "low", "medium", "high", "xhigh"]);
 });
@@ -1073,7 +1076,9 @@ test("vscode tokenized api/show route exposes explicit reasoning effort metadata
   assert.equal(body.configurationSchema?.properties?.reasoningEffort?.default, "low");
   assert.equal(body.model_info["general.basename"], "Codex GPT 5.6 Sol (Default)");
   assert.equal(body.model_info["general.architecture"], "codex");
-  assert.equal(body.model_info["codex.context_length"], 272000);
+  // #11179: codex static catalog advertises the usable 872K window (max_context_window),
+  // not the old 272K pricing tier.
+  assert.equal(body.model_info["codex.context_length"], 872000);
   assert.deepEqual(body.model_info.supports_reasoning_effort, [
     "low",
     "medium",

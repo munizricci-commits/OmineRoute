@@ -1,1 +1,0 @@
-- fix(codex): prefer `max_context_window` over the `context_window` pricing tier as the usable input limit in discovery, and raise the static Codex OAuth catalog to the same usable window so the conservative discovery merge no longer caps live values at the 272K pricing tier

@@ -103,7 +103,7 @@ function resolveLiveKieMarketCatalog() {
   }));
 }
 
-test("KIE Market resolver changes exactly one id in the live market catalog", () => {
+test("KIE Market resolver changes exactly the 4 google-imagen ids in the live market catalog", () => {
   const roundTrips = resolveLiveKieMarketCatalog();
   const changed = roundTrips.filter(({ publicModelId, upstreamModelId }) => {
     return upstreamModelId !== publicModelId;
@@ -114,12 +114,31 @@ test("KIE Market resolver changes exactly one id in the live market catalog", ()
       publicModelId: "google-imagen/nano-banana-2",
       upstreamModelId: "nano-banana-2",
     },
+    {
+      publicModelId: "google-imagen/nano-banana",
+      upstreamModelId: "google/nano-banana",
+    },
+    {
+      publicModelId: "google-imagen/nano-banana-pro",
+      upstreamModelId: "nano-banana-pro",
+    },
+    {
+      publicModelId: "google-imagen/nano-banana-edit",
+      upstreamModelId: "google/nano-banana-edit",
+    },
   ]);
 });
 
+const REWRITTEN_GOOGLE_IMAGEN_MARKET_IDS = new Set([
+  "google-imagen/nano-banana",
+  "google-imagen/nano-banana-2",
+  "google-imagen/nano-banana-pro",
+  "google-imagen/nano-banana-edit",
+]);
+
 test("KIE Market resolver preserves every other live market catalog id byte-identically", () => {
   for (const { publicModelId, upstreamModelId } of resolveLiveKieMarketCatalog()) {
-    if (publicModelId !== "google-imagen/nano-banana-2") {
+    if (!REWRITTEN_GOOGLE_IMAGEN_MARKET_IDS.has(publicModelId)) {
       assert.equal(
         upstreamModelId,
         publicModelId,
@@ -129,8 +148,8 @@ test("KIE Market resolver preserves every other live market catalog id byte-iden
   }
 });
 
-test("KIE Market resolver keeps exactly one explicit upstream id mapping", () => {
-  assert.equal(KIE_MARKET_UPSTREAM_MODEL_IDS.size, 1);
+test("KIE Market resolver keeps exactly the explicit google-imagen upstream id mappings (#11296)", () => {
+  assert.equal(KIE_MARKET_UPSTREAM_MODEL_IDS.size, 4);
 });
 
 test("KIE Market resolver passes an unknown namespaced id through byte-identically", () => {
@@ -158,6 +177,36 @@ test("KIE Market createTask sends the bare upstream model id for Nano Banana 2 (
   assert.equal(new URL(captured.pollUrl).searchParams.get("taskId"), "kie-market-task-1");
   assert.ok("data" in captured.result, "successful KIE generation must return image data");
   assert.equal(captured.result.data.data[0].url, "https://example.com/kie-market-image.png");
+});
+
+test("KIE Market createTask sends the KIE upstream id for Nano Banana (#11296)", async () => {
+  const captured = await runKieMarketGeneration("kie/google-imagen/nano-banana");
+
+  assert.equal(
+    captured.create.body.model,
+    "google/nano-banana",
+    "KIE Market createTask must send the KIE-documented google/nano-banana upstream id"
+  );
+});
+
+test("KIE Market createTask sends the bare upstream model id for Nano Banana Pro (#11296)", async () => {
+  const captured = await runKieMarketGeneration("kie/google-imagen/nano-banana-pro");
+
+  assert.equal(
+    captured.create.body.model,
+    "nano-banana-pro",
+    "KIE Market createTask must send the KIE-documented nano-banana-pro upstream id"
+  );
+});
+
+test("KIE Market createTask sends the KIE upstream id for Nano Banana Edit (#11296)", async () => {
+  const captured = await runKieMarketGeneration("kie/google-imagen/nano-banana-edit");
+
+  assert.equal(
+    captured.create.body.model,
+    "google/nano-banana-edit",
+    "KIE Market createTask must send the KIE-documented google/nano-banana-edit upstream id"
+  );
 });
 
 test("KIE Market createTask leaves genuinely namespaced upstream ids untouched (#11225 control)", async () => {

@@ -17,6 +17,7 @@ import {
   parseLsofPid,
   parseNetstatPid,
   parseSsPid,
+  parseWindowsNetstatPid,
   resolvePortPid,
 } from "@/lib/services/portProbe";
 
@@ -65,8 +66,7 @@ test("parseNetstatPid matches on the local address, not the foreign one", () => 
 });
 
 test("parseNetstatPid reads macOS process:pid output", () => {
-  const stdout =
-    "tcp4 0 0 127.0.0.1.20128 *.* LISTEN 0 0 131072 131072 node:596922 00100\n";
+  const stdout = "tcp4 0 0 127.0.0.1.20128 *.* LISTEN 0 0 131072 131072 node:596922 00100\n";
   assert.equal(parseNetstatPid(stdout, 20128), 596922);
 });
 
@@ -75,6 +75,42 @@ test("parseNetstatPid ignores non-listening rows and unknown ports", () => {
     "tcp        0      0 127.0.0.1:20128         1.2.3.4:5555            ESTABLISHED 596922/node\n";
   assert.equal(parseNetstatPid(stdout, 20128), null);
   assert.equal(parseNetstatPid("", 20128), null);
+});
+
+/**
+ * Realistic `netstat -ano` sample from Windows 11 (#11236 bug 6): the pid is
+ * the last whitespace-separated column and only exists on rows whose state is
+ * LISTENING. This is the only pid probe available on a stock Windows host —
+ * neither lsof nor ss nor net-tools `netstat -tlnp` exist there, so a Windows
+ * service adopted by the supervisor reported `pid: null` while healthy.
+ */
+const WINDOWS_NETSTAT_ANO = [
+  "Active Connections",
+  "",
+  "  Proto  Local Address          Foreign Address        State           PID",
+  "  TCP    0.0.0.0:135            0.0.0.0:0              LISTENING       1244",
+  "  TCP    0.0.0.0:20128          0.0.0.0:0              LISTENING       12345",
+  "  TCP    127.0.0.1:8317         0.0.0.0:0              LISTENING       5678",
+  "  TCP    192.168.1.10:52413     140.82.121.4:443       ESTABLISHED     9012",
+  "  TCP    [::]:20128             [::]:0                 LISTENING       12345",
+  "  UDP    0.0.0.0:5353           *:*                                    3460",
+  "",
+].join("\r\n");
+
+test("parseWindowsNetstatPid reads the pid from a LISTENING row (#11236)", () => {
+  assert.equal(parseWindowsNetstatPid(WINDOWS_NETSTAT_ANO, 20128), 12345);
+  assert.equal(parseWindowsNetstatPid(WINDOWS_NETSTAT_ANO, 8317), 5678);
+});
+
+test("parseWindowsNetstatPid matches the local address, not the foreign one", () => {
+  // 443 appears only as a foreign address on an ESTABLISHED row.
+  assert.equal(parseWindowsNetstatPid(WINDOWS_NETSTAT_ANO, 443), null);
+  // 5353 appears only on a UDP row, which has no LISTENING state.
+  assert.equal(parseWindowsNetstatPid(WINDOWS_NETSTAT_ANO, 5353), null);
+  // A port that shares a suffix with a listening one must not match: 0128 vs
+  // 20128 — the `:` anchor on the local address prevents the partial hit.
+  assert.equal(parseWindowsNetstatPid(WINDOWS_NETSTAT_ANO, 128), null);
+  assert.equal(parseWindowsNetstatPid("", 20128), null);
 });
 
 test("resolvePortPid finds the pid holding a port", async () => {

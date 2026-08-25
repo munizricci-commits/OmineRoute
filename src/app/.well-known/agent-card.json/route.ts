@@ -11,19 +11,21 @@
  */
 
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 import { getFleetSkills } from "@/lib/conductor/fleetSkills";
+import { getBaseUrl } from "@/lib/wellKnown";
 
 const PACKAGE_VERSION = process.env.npm_package_version || "1.8.1";
-const BASE_URL = process.env.OMNIROUTE_BASE_URL || "http://localhost:20128";
 
 /**
  * GET /.well-known/agent-card.json
  *
  * Returns the OmniRoute Agent Card (A2A v1.0).
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   const fleetSkills = await getFleetSkills();
+  const baseUrl = getBaseUrl(request);
 
   const agentCard = {
     name: "OmniRoute AI Gateway",
@@ -31,16 +33,16 @@ export async function GET() {
       "Intelligent AI routing gateway with 36+ providers, smart fallback, quota tracking, " +
       "format translation, and auto-managed combos. Routes AI requests to the optimal " +
       "provider based on cost, latency, quota availability, and task requirements.",
-    url: `${BASE_URL}/a2a`,
+    url: `${baseUrl}/a2a`,
     version: PACKAGE_VERSION,
     supportedInterfaces: [
       {
-        url: `${BASE_URL}/a2a`,
+        url: `${baseUrl}/a2a`,
         protocolBinding: "JSONRPC",
         protocolVersion: "1.0",
       },
       {
-        url: `${BASE_URL}/a2a`,
+        url: `${baseUrl}/a2a`,
         protocolBinding: "JSONRPC",
         protocolVersion: "0.3",
       },

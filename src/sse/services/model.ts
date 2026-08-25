@@ -10,36 +10,19 @@ import {
 import { getCachedSettings } from "@/lib/localDb";
 import { getActiveSyncedCatalog } from "@/lib/db/models/activeSyncedCatalog";
 import { getModelCompatOverrides } from "@/lib/db/models/compat";
+import { getNoAuthHydrationProviderIds } from "./noAuthProviderSiblings";
 import {
   parseModel,
   getModelInfoCore,
   splitSyncedEffortSuffix,
   stripContextWindowSuffix,
 } from "@omniroute/open-sse/services/model.ts";
+import { getLearnedReasoningEffortForModel } from "@omniroute/open-sse/services/learnedReasoningEffortCaps.ts";
 import { REGISTRY } from "@omniroute/open-sse/config/providerRegistry.ts";
 import { getRegisteredProviderEffortBaseModelId } from "@omniroute/open-sse/utils/registeredEffortVariants.ts";
+import { getReservedProviderPrefixes } from "@/shared/constants/reservedProviderPrefixes";
 
 export { parseModel, stripContextWindowSuffix };
-
-/**
- * Reserved provider prefixes — built-in provider ids + aliases. User-defined
- * compatible-node prefixes must not be allowed to shadow these, otherwise a
- * node with prefix="cf" would hijack cloudflare-ai requests (and similar for
- * every built-in provider). Ported from upstream 9router 047fdc89.
- *
- * Built lazily so the registry is only walked once per process.
- */
-let _reservedProviderPrefixes: Set<string> | null = null;
-function getReservedProviderPrefixes(): Set<string> {
-  if (_reservedProviderPrefixes) return _reservedProviderPrefixes;
-  const reserved = new Set<string>();
-  for (const entry of Object.values(REGISTRY)) {
-    if (entry?.id) reserved.add(entry.id);
-    if (entry?.alias) reserved.add(entry.alias);
-  }
-  _reservedProviderPrefixes = reserved;
-  return reserved;
-}
 
 /**
  * Fold `settings.wildcardAliases` ({pattern,target}[]) — the store the Settings
@@ -124,6 +107,20 @@ function isSyncedEffortSkippedProvider(providerId: string): boolean {
   return SYNCED_EFFORT_SKIP_PROVIDER_PREFIXES.some((prefix) => providerId.startsWith(prefix));
 }
 
+/**
+ * C1: effective tier set for suffix validation = learned ?? sync. The catalog
+ * advertises variants from the learned set; validating the suffix against raw
+ * synced metadata would strand learned-only tiers (dead-on-arrival ids).
+ */
+function effectiveKnownEfforts(
+  modelId: string,
+  syncedEfforts: readonly string[] | null | undefined
+): string[] {
+  const learned = getLearnedReasoningEffortForModel(modelId);
+  if (learned) return [...learned];
+  return Array.isArray(syncedEfforts) ? [...syncedEfforts] : [];
+}
+
 /** Resolve a suffix against an explicitly tiered static registry model. */
 function resolveRegistryModelIdAndEffort(
   providerId: string,
@@ -139,7 +136,10 @@ function resolveRegistryModelIdAndEffort(
 
   for (const candidate of registryModels) {
     if (!Array.isArray(candidate?.supportedThinkingEfforts)) continue;
-    const attempt = splitSyncedEffortSuffix(modelId, candidate.supportedThinkingEfforts);
+    const attempt = splitSyncedEffortSuffix(
+      modelId,
+      effectiveKnownEfforts(candidate.id, candidate.supportedThinkingEfforts)
+    );
     if (attempt.effort && attempt.baseModel === candidate.id) {
       return { modelId: attempt.baseModel, effort: attempt.effort };
     }
@@ -183,7 +183,7 @@ function resolveSyncedModelIdAndEffort(
     }
     const attempt = splitSyncedEffortSuffix(
       modelId,
-      candidate.supportedThinkingEfforts as string[]
+      effectiveKnownEfforts(candidate.id, candidate.supportedThinkingEfforts as string[])
     );
     if (attempt.effort && attempt.baseModel === candidate.id) {
       return { modelId: attempt.baseModel, effort: attempt.effort };
@@ -232,7 +232,9 @@ function resolveRuntimeFormats(
 ): RuntimeModelMeta {
   const apiFormat =
     (typeof customMatch?.apiFormat === "string" ? customMatch.apiFormat : undefined) ||
-    (typeof compatOverrideMatch?.apiFormat === "string" ? compatOverrideMatch.apiFormat : undefined) ||
+    (typeof compatOverrideMatch?.apiFormat === "string"
+      ? compatOverrideMatch.apiFormat
+      : undefined) ||
     (syncedMatch?.apiFormat === "responses" ? "responses" : undefined);
   const targetFormat =
     typeof customMatch?.targetFormat === "string"
@@ -309,7 +311,17 @@ async function lookupModelMeta(
     const [customModels, liveCatalog, compatOverrides] = await Promise.all([
       getCustomModels(providerId),
       getActiveSyncedCatalog(providerId),
-      Promise.resolve(getModelCompatOverrides(providerId)),
+      // #10898 / #7620: model-compat overrides (apiFormat/targetFormat/
+      // supportsVision, isHidden, ...) are stored keyed on the id the operator
+      // wrote them under. For a no-auth alias the model prefix resolves to the
+      // APIKEY gateway id (e.g. "opencode/x" -> providerId "opencode-zen") but
+      // the override was written on the sibling "opencode" row. Merge overrides
+      // across the provider AND its no-auth sibling ids (requested id first)
+      // instead of canonicalizing the low-level compat key, which would break
+      // paths that legitimately key on the raw id (e.g. getHiddenModelsByProvider).
+      Promise.resolve(
+        getNoAuthHydrationProviderIds(providerId).flatMap((id) => getModelCompatOverrides(id))
+      ),
     ]);
     const syncedModels = liveCatalog.models;
 
@@ -359,7 +371,12 @@ async function lookupModelMeta(
     const available =
       !liveCatalog.authoritative || Boolean(customMatch || syncedMatch || liveBackedEffortVariant);
 
-    const metadata = buildRuntimeModelMeta(customMatch, syncedMatch, registryMatch, compatOverrideMatch);
+    const metadata = buildRuntimeModelMeta(
+      customMatch,
+      syncedMatch,
+      registryMatch,
+      compatOverrideMatch
+    );
     if (effort) metadata.resolvedThinkingEffort = effort;
 
     return { modelId: resolvedModelId, metadata, available };
@@ -424,9 +441,11 @@ export async function getModelInfo(modelStr) {
     // node prefix lookup so the request still routes to the built-in provider.
     // Internal UUID-prefixed node ids (e.g. "openai-compatible-responses-...")
     // are never in the reserved set, so the #2778 combo path still works.
-    // Ported from upstream 9router 047fdc89.
-    const reserved = getReservedProviderPrefixes();
-    const isReservedPrefix = typeof prefixToCheck === "string" && reserved.has(prefixToCheck);
+    // Ported from upstream 9router 047fdc89. Set shared with the write-path
+    // validation guard (src/shared/constants/reservedProviderPrefixes.ts) so
+    // both sides can never drift apart.
+    const isReservedPrefix =
+      typeof prefixToCheck === "string" && getReservedProviderPrefixes().has(prefixToCheck);
 
     if (!isReservedPrefix) {
       // Check OpenAI Compatible nodes

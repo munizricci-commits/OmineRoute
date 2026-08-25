@@ -1,1 +1,0 @@
-- fix(compression): preserve unfenced raw code (e.g. Copilot #file references) from Caveman's prose recapitalization/whitespace cleanup, which was corrupting keyword casing and indentation (#9144)

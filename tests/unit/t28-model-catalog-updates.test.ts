@@ -30,6 +30,7 @@ test("T28: antigravity static catalog exposes only callable Gemini tier IDs", ()
   assert.ok(!staticIds.includes("gemini-3.6-flash-high"));
   assert.ok(!staticIds.includes("gemini-3.6-flash-medium"));
   assert.ok(!staticIds.includes("gemini-3.6-flash-low"));
+  assert.ok(!staticIds.includes("gemini-3.5-flash"));
   assert.ok(!staticIds.includes("gemini-3.5-flash-extra-low"));
   assert.ok(!staticIds.includes("gemini-3.5-flash-low"));
   assert.ok(!staticIds.includes("gemini-3-flash-agent"));

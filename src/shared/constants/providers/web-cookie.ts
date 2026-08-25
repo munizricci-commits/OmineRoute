@@ -262,7 +262,8 @@ export const WEB_COOKIE_PROVIDERS = {
   },
   huggingchat: {
     id: "huggingchat",
-    // "hc" belongs to the hackclub provider; huggingchat uses its own id as alias.
+    // huggingchat is addressed by its own id as alias (stable routing; the
+    // historical "hc" alias collided with another provider and was retired).
     alias: "huggingchat",
     name: "HuggingChat (Free)",
     icon: "auto_awesome",

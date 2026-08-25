@@ -25,7 +25,12 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { formatResetCountdown } from "@/shared/utils/formatting";
 import type { ConnectionRowConnection } from "./ConnectionRow";
-import { providerText } from "../providerPageHelpers";
+// `providerText` is DEFINED in ./providerCredentialText (a leaf whose only
+// import is type-only) and merely re-exported by providerPageHelpers. Going
+// through that barrel pulls the whole provider-page graph — providerRegistry
+// (352 providers), shared provider constants, requestDefaults — into this tiny
+// client component for one string helper. Import from the real home instead.
+import { providerText } from "../providerCredentialText";
 
 export interface CoolingConnectionsPanelProps {
   readonly connections: readonly ConnectionRowConnection[];

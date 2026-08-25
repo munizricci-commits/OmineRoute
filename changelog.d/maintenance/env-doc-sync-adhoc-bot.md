@@ -1,1 +1,0 @@
-- **chore(ci):** ignore ad-hoc `BOT_TOKEN`/`BOT_URL` in env-doc-sync (scripts/ad-hoc mesh helpers, not runtime config)

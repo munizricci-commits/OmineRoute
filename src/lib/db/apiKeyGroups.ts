@@ -304,11 +304,35 @@ export function checkKeyModelAccess(
   return { allowed: false, matchedRules: permissions, deniedBy: null };
 }
 
+/**
+ * Compile a group model pattern.
+ *
+ * `*` is the only wildcard this syntax has, so every other regex
+ * metacharacter must be escaped before the pattern is compiled. Interpolating
+ * it raw made an operator's pattern behave as a regex in two ways:
+ *
+ *   - `gpt-4.1*` matched `gpt-4o1-preview`, because `.` is "any character".
+ *     On a deny rule that blocks unrelated models; on an allow rule it grants
+ *     models the pattern was never meant to cover.
+ *   - `gpt-4(*`, `claude-3[*` and `*+*` threw `SyntaxError` (unterminated
+ *     group / unterminated character class / nothing to repeat) out of
+ *     `checkKeyModelAccess()`, which runs on the completion and /v1/models
+ *     paths — one malformed pattern broke every request for keys in that
+ *     group.
+ *
+ * Escaping keeps the semantics this function already had (case-sensitive,
+ * `*`-only) and matches how the rest of the repo compiles operator patterns
+ * (`globToRegex`, `matchesWildcardPattern`).
+ */
+function modelPatternToRegex(pattern: string): RegExp {
+  const escaped = pattern.replace(/[.+^${}()|[\]\\?]/g, "\\$&").replace(/\*/g, ".*");
+  return new RegExp(`^${escaped}$`);
+}
+
 function matchesModelPattern(pattern: string, model: string): boolean {
   if (pattern === "*") return true;
   if (pattern.includes("*")) {
-    const regex = new RegExp("^" + pattern.replace(/\*/g, ".*") + "$");
-    return regex.test(model);
+    return modelPatternToRegex(pattern).test(model);
   }
   return pattern === model;
 }

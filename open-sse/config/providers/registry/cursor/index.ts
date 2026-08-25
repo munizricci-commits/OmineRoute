@@ -228,14 +228,14 @@ export const cursorProvider: RegistryEntry = {
     { id: "gpt-5.1-low", name: "GPT-5.1 Low" },
     { id: "gpt-5.1", name: "GPT-5.1" },
     { id: "gpt-5.1-high", name: "GPT-5.1 High" },
-    { id: "gemini-3.5-flash", name: "Gemini 3.5 Flash" },
     { id: "claude-4-sonnet", name: "Sonnet 4" },
     { id: "claude-4-sonnet-thinking", name: "Sonnet 4 Thinking" },
     { id: "gpt-5-mini", name: "GPT-5 Mini" },
     { id: "kimi-k3-low", name: "Kimi K3 Low" },
     { id: "kimi-k3-max", name: "Kimi K3" },
     { id: "glm-5.2-high", name: "GLM 5.2" },
-    { id: "glm-5.2-max", name: "GLM 5.2 Max" },  ],
+    { id: "glm-5.2-max", name: "GLM 5.2 Max" },
+  ],
 };
 
 /**

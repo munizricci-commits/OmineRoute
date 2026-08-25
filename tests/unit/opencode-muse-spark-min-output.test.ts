@@ -16,13 +16,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-const { applyMuseSparkMinOutputTokens, MUSE_SPARK_MIN_OUTPUT_TOKENS } = await import(
-  "../../open-sse/executors/opencode.ts"
-);
-const {
-  normalizeMuseSparkFinishReason,
-  createMuseSparkStreamFinishNormalizer,
-} = await import("../../open-sse/executors/opencode.ts");
+const { applyMuseSparkMinOutputTokens, MUSE_SPARK_MIN_OUTPUT_TOKENS } =
+  await import("../../open-sse/executors/opencode.ts");
+const { normalizeMuseSparkFinishReason, createMuseSparkStreamFinishNormalizer, OpencodeExecutor } =
+  await import("../../open-sse/executors/opencode.ts");
 
 test("RED: muse-spark tiny max_tokens is raised to the floor", () => {
   const body: Record<string, unknown> = { model: "x", max_tokens: 64, messages: [] };
@@ -97,8 +94,7 @@ test("RED: stream normalizer rewrites the finish frame after the usage frame", (
   const usageLine =
     'data: {"id":"r","object":"chat.completion.chunk","choices":[],"usage":{"completion_tokens":270}}';
   assert.equal(norm(usageLine), usageLine, "usage frame itself must not change");
-  const finishLine =
-    'data: {"choices":[{"index":0,"delta":{},"finish_reason":"length"}]}';
+  const finishLine = 'data: {"choices":[{"index":0,"delta":{},"finish_reason":"length"}]}';
   const out = JSON.parse(norm(finishLine).slice(5).trim());
   assert.equal(out.choices[0].finish_reason, "stop");
 });
@@ -108,4 +104,47 @@ test("RED: stream normalizer passes through [DONE], comments and non-JSON lines"
   assert.equal(norm("data: [DONE]"), "data: [DONE]");
   assert.equal(norm(": keepalive"), ": keepalive");
   assert.equal(norm("data: not-json"), "data: not-json");
+});
+
+test("closes the Muse Responses stream at response.completed before post-completion pings", async () => {
+  const originalFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = (async () =>
+      new Response(
+        [
+          "event: response.output_text.delta",
+          'data: {"type":"response.output_text.delta","delta":"OK"}',
+          "event: response.completed",
+          'data: {"type":"response.completed","response":{"usage":{"input_tokens":1,"output_tokens":1}}}',
+          "event: ping",
+          'data: {"type":"ping"}',
+          "",
+        ].join("\n"),
+        { status: 200, headers: { "Content-Type": "text/event-stream" } }
+      )) as typeof fetch;
+
+    const result = await new OpencodeExecutor("opencode").execute({
+      model: "muse-spark-1.2-contributor-free",
+      body: {
+        model: "muse-spark-1.2-contributor-free",
+        max_output_tokens: 512,
+        stream: true,
+      },
+      stream: true,
+      credentials: {
+        providerSpecificData: {
+          fingerprints: ["test-account-a", "test-account-b"],
+          accountProxies: [],
+        },
+      },
+    });
+    const text = await Promise.race([
+      result.response.text(),
+      new Promise<string>((_, reject) => setTimeout(() => reject(new Error("stream hung")), 1000)),
+    ]);
+    assert.match(text, /response.completed/);
+    assert.doesNotMatch(text, /\"type\":\"ping\"/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });

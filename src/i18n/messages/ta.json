@@ -974,7 +974,14 @@
     "batchFileUsedByCount": "{count, plural, one {# தொகுப்பு} other {# தொகுப்புகள்}}",
     "batchFilePreview": "முன்காட்சி",
     "batchFilePreviewTruncated": "முதல் {shown} வரிகளை காட்டு ({total} மொத்த வரிகள்)",
-    "batchFileDownloadFull": "முழு கோப்பை பதிவிறக்கம் செய்க"
+    "batchFileDownloadFull": "முழு கோப்பை பதிவிறக்கம் செய்க",
+    "batchHeaderSubtitle": "Run many requests as one job",
+    "batchStep1": "1 · Upload JSONL",
+    "batchStep1Desc": "Add requests",
+    "batchStep2": "2 · Create batch",
+    "batchStep2Desc": "Run job",
+    "batchStep3": "3 · Get results",
+    "batchStep3Desc": "Download output"
   },
   "disabled": "முடக்கப்பட்டது",
   "featureFlagOmnirouteEmergencyFallbackDescription": "பட்ஜெட் தீர்ந்த கோரிக்கைகளை அவசரகால இலவச ஃபால்பேக் வழங்குநர்/மாடலுக்கு வழிசெலுத்துங்கள்.",
@@ -1293,7 +1300,8 @@
       "open": "திறக்கவும்",
       "close": "மூடு"
     },
-    "noResults": "எந்த முடிவுகளும் இல்லை"
+    "noResults": "எந்த முடிவுகளும் இல்லை",
+    "trafficInspectorPurpose": "See exactly what your application sends to and receives from AI providers. Works with any OpenAI-compatible client."
   },
   "webhooks": {
     "title": "வெப்ஹூக்ஸ்",
@@ -1856,7 +1864,21 @@
     "directDownloadHint": "அல்லது தொடர்புடைய நிறுவுநர் வடிவத்தை நேரடியாக பதிவிறக்கவும்:",
     "releaseNotes": "வெளியீட்டு குறிப்புகள்",
     "readMore": "மேலும் வாசிக்க",
-    "noAuthLabel": "அங்கீகாரம் இல்லை"
+    "noAuthLabel": "அங்கீகாரம் இல்லை",
+    "recentRequests": "Recent Requests",
+    "recentRequestsEmpty": "No requests yet.",
+    "recentRequestsModel": "Model",
+    "recentRequestsTokens": "In / Out",
+    "recentRequestsWhen": "When",
+    "readinessEyebrow": "Get ready to route",
+    "readinessTitle": "Send your first request",
+    "readinessSubtitle": "Four small steps. OmniRoute checks readiness as you go.",
+    "readinessStep1": "Connect a provider",
+    "readinessStep2": "Configure endpoint authentication",
+    "readinessStep3": "Copy your endpoint",
+    "readinessStep4": "Send a test request",
+    "readinessContinue": "Continue setup",
+    "readinessDismiss": "Dismiss for now"
   },
   "analytics": {
     "title": "Analytics",
@@ -2901,7 +2923,8 @@
       "omp": "Oh My Pi டெர்மினல் குறியீட்டு முகவர்",
       "letta": "நிலையான நினைவகம் மற்றும் கருவிப் பயன்பாட்டுடன் கூடிய Letta CLI முகவர்",
       "warp": "தனிப்பயன் வழங்குநர் ஆதரவுடன் கூடிய Warp AI டெர்மினல்",
-      "agent-deck": "Agent Deck பல-முகவர் ஒருங்கிணைப்பாளர்"
+      "agent-deck": "Agent Deck பல-முகவர் ஒருங்கிணைப்பாளர்",
+      "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support"
     },
     "guides": {
       "cursor": {
@@ -4133,7 +4156,10 @@
     "notionIntegrationHelp": "உள்ளக ஒருங்கிணைப்பை உருவாக்கவும்",
     "notionIntegrationToken": "Notion உள்நாட்டு ஒருங்கிணைப்பு டோக்கன்",
     "notionNotConnected": "இணைக்கப்படவில்லை",
-    "notionTokenConfigured": "டோக்கன் கட்டமைக்கப்பட்டுள்ளது. Notion கருவிகள் MCP மூலம் கிடைக்கின்றன."
+    "notionTokenConfigured": "டோக்கன் கட்டமைக்கப்பட்டுள்ளது. Notion கருவிகள் MCP மூலம் கிடைக்கின்றன.",
+    "subtitle": "Use the OpenAI-compatible endpoint with most SDKs and tools.",
+    "testEndpoint": "Test endpoint →",
+    "advancedProtocols": "Advanced protocols"
   },
   "endpoints": {
     "tabProxy": "Endpoint Proxy",
@@ -4716,7 +4742,14 @@
     "issueCount": "{count} சிக்கல்கள்",
     "score": "மதிப்பெண்",
     "lastRequest": "கடைசி கோரிக்கை",
-    "lastError": "கடைசி பிழை"
+    "lastError": "கடைசி பிழை",
+    "healthVerdictReady": "OmniRoute is ready",
+    "healthVerdictActionRequired": "Action required to restore full operation",
+    "healthVerdictCoolingDown": "Cooling down after recent changes",
+    "healthSubtitle": "System health check",
+    "advancedDiagnosticsTitle": "Advanced diagnostics",
+    "hide": "Hide",
+    "show": "Show"
   },
   "telemetry": {
     "title": "சிஸ்டம் டெலிமெட்ரி",
@@ -5834,6 +5867,8 @@
     "rateLimitOverridesSection": "விகித வரம்பு மேலெழுதுதல்கள்",
     "rateLimitOverridesMaxConcurrentHint": "இந்த இணைப்பிற்கான அதிகபட்ச ஒரே நேரத்தில் நிகழும் கோரிக்கைகளின் மேலெழுதுதல். கணக்கு அளவிலான வரம்பை மேலெழுதுகிறது.",
     "rateLimitOverridesMaxConcurrentLabel": "அதிகபட்ச ஒரே நேரத்தில் நிகழும் கோரிக்கைகள் (விகித வரம்பு)",
+    "rateLimitOverridesMaxWaitMsHint": "__MISSING__:Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "கோரிக்கைகளுக்கு இடையிலான குறைந்தபட்ச நேரம் (மில்லிசெகண்ட்). இயல்புநிலை விகித வரம்பியின் தாமதத்தை மேலெழுதுகிறது.",
     "rateLimitOverridesMinTimeLabel": "குறைந்தபட்ச இடைவெளி (ms)",
     "rateLimitOverridesRpmHint": "இந்த இணைப்பிற்கான நிமிடத்திற்கு அதிகபட்ச கோரிக்கைகள். வழங்குநரின் இயல்புநிலையை மேலெழுதுகிறது.",
@@ -6111,7 +6146,6 @@
       "glmt": "அதிக டோக்கன் பட்ஜெட், சிந்தனை இயக்கப்பட்டது மற்றும் நீண்ட காலாவதி நேரத்துடன் கூடிய முன்னமைக்கப்பட்ட GLM சுயவிவரம்.",
       "getgoapi": "GoAPI ஐ ஒரு API விசையுடன் இணைக்கவும்.",
       "groq": "இலவச அடுக்கு: 30 RPM / 14.4K RPD — கிரெடிட் கார்டு தேவையில்லை",
-      "hackclub": "ai.hackclub.com இல் உங்கள் Hack Club கணக்குடன் உள்நுழையவும்.",
       "haiper": "haiper.ai/haiper-api இல் API விசையைப் பெறவும்",
       "heroku": "Heroku AI ஐ ஒரு API விசையுடன் இணைக்கவும்.",
       "hcnsec": "api.hcnsec.cn இல் API விசையைப் பெறுக",
@@ -6382,7 +6416,21 @@
     "savedModelEndpointSettings": "சேமிக்கப்பட்ட மாதிரி முடிவுறுப்பு அமைப்புகள்",
     "searchByModelAria": "மாதிரியில் தேடு",
     "selectSupportedEndpoint": "குறைந்தது ஒரு ஆதரிக்கப்படும் முடிவுகளைத் தேர்ந்தெடுக்கவும்",
-    "antigravityClientProfileHarness": "Harness / CLI"
+    "antigravityClientProfileHarness": "Harness / CLI",
+    "harImportButtonLabel": "Import .har file",
+    "harImportButtonBusy": "Importing…",
+    "harImportButtonHint": "Export from DevTools Network tab after sending at least one chat message.",
+    "harImportStatusValid": "Imported — valid for ~{minutes}m.",
+    "harImportStatusExpiringSoon": "Imported — valid for only ~{minutes}m more.",
+    "harImportStatusExpired": "Imported, but this token already expired ({minutes}m ago) — export a fresh HAR.",
+    "harImportStatusUnknownExpiry": "Imported. Couldn't read its expiry.",
+    "harImportErrorNotJson": "That file isn't valid JSON — is it really a .har export?",
+    "harImportErrorNoEntries": "This HAR has no network entries recorded.",
+    "harImportErrorNoChathubUrl": "No Copilot chat connection found in this HAR. Send at least one chat message in m365.cloud.microsoft before exporting.",
+    "harImportErrorUnparsableUrl": "Found the chat connection, but couldn't read its URL.",
+    "harImportErrorMissingFields": "Found the chat connection, but the token was missing from it.",
+    "harImportErrorReadFailed": "Couldn't read that file.",
+    "harImportErrorUnknown": "Couldn't extract a credential from that HAR file."
   },
   "settings": {
     "title": "Settings",
@@ -8229,7 +8277,19 @@
     "cliproxyapiHealth": "ஆரோக்கியம்",
     "cliproxyapiPort": "போர்ட்",
     "qdrantHost": "விருந்தினர்",
-    "qdrantCollection": "கலெக்ஷன்"
+    "qdrantCollection": "கலெக்ஷன்",
+    "presetAll": "All",
+    "presetAllDesc": "Show everything",
+    "presetEssentials": "Essentials",
+    "presetEssentialsDesc": "Beginner path - Advanced tools stay searchable",
+    "presetMinimal": "Minimal",
+    "presetMinimalDesc": "Core pages only",
+    "presetDeveloper": "Developer",
+    "presetDeveloperDesc": "Dev & proxy tools",
+    "presetAdmin": "Admin",
+    "presetAdminDesc": "Monitoring & audit",
+    "settingsSidebarTitle": "Sidebar Customization",
+    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable."
   },
   "contextRtk": {
     "title": "RTK Engine",
@@ -12016,7 +12076,8 @@
         "title": "ACP முகவர்கள்",
         "phrase": "OmniRoute செயல்படுத்தும் பின்தளமாக உருவாக்கும் CLIகள் (தலைகீழ் ஓட்டம்)",
         "flow": "வாடிக்கையாளர் → OmniRoute → CLI உருவாக்கு (stdio/ACP) → பதில்",
-        "seeOther": "பார்க்க →"
+        "seeOther": "பார்க்க →",
+        "warning": "Most users can ignore this — use only when an integration requires it."
       }
     },
     "comparison": {
@@ -12840,6 +12901,10 @@
       },
       "SKILLS_SANDBOX_NETWORK_ENABLED": {
         "description": "skills சாண்ட்பாக்ஸில் நெட்வொர்க் அணுகலை இயக்கவும்."
+      },
+      "DISABLE_CONTEXT_WINDOW_CHECKS": {
+        "label": "Disable Context Window Checks",
+        "description": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active."
       }
     }
   },
@@ -13412,6 +13477,13 @@
         "modelLockouts": "மாதிரி பூட்டுகள்",
         "count": "இணைப்புகளின் எண்ணிக்கை"
       }
+    },
+    "reassuranceTitle": "Your connections recover automatically",
+    "reassuranceDetail": "Usually no action is needed. OmniRoute temporarily rests a connection after failures, then safely tries it again.",
+    "plainStates": {
+      "healthy": "Requests can be sent",
+      "coolingDown": "Trying again soon",
+      "lockedOut": "Needs your attention"
     }
   },
   "featureFlagCapabilityFilterEnabledDescription": "விருப்பமான மாதிரி தேவையான திறன்களை (காணல், கருவிகள், கட்டமைக்கப்பட்ட வெளியீடு, சூழல் ஜன்னல்) இன்றி இருந்தால், அனுப்புவதற்கு முன் கோரிக்கைகளை நிராகரிக்கவும். கம்போ-லேயர் ஒத்திசைவு வடிகட்டியை தவிர்க்கும் நேரடி ஒற்றை வழங்குநர் கோரிக்கைகளை பாதுகாக்கிறது.",
@@ -13849,5 +13921,13 @@
     "toolsMismatch": "சேவையாளர் கருவி அழைப்பை ஆதரிக்கவில்லை",
     "structuredOutputMismatch": "சேவையாளர் கட்டமைக்கப்பட்ட வெளியீட்டை ஆதரிக்கவில்லை",
     "contextWindowMismatch": "விண்ணப்பம் வழங்குநர் சூழல் ஜன்னலை மீறுகிறது"
+  },
+  "featureFlagDisableContextWindowChecksDescription": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active.",
+  "cheaperInferenceSponsorBanner": {
+    "title": "Cheaper Inference is an OmniRoute Open Source Friend",
+    "description": "A cost-ranked gateway reselling dozens of frontier models behind one OpenAI-compatible endpoint — routing each request to the cheapest eligible provider, never above list price.",
+    "cta": "Get an API Key",
+    "partnerLinkNote": "Partner link",
+    "dismissAriaLabel": "Dismiss"
   }
 }

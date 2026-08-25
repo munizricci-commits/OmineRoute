@@ -185,6 +185,26 @@ const RAW_CONFIGS: TokenExtractionConfig[] = [
     { cookieDomain: ".chat.qwen.ai" }
   ),
 
+  // ── Volcano Engine Ark Console ───────────────────────────
+  config(
+    "volcengine-console",
+    "Volcano Engine Ark Console",
+    "https://console.volcengine.com/ark/region:cn-beijing/subscription/coding-plan",
+    "https://console.volcengine.com",
+    [
+      { type: "cookie", name: "digest", domain: ".volcengine.com" },
+      { type: "cookie", name: "AccountID", domain: ".volcengine.com" },
+      { type: "cookie", name: "csrfToken", domain: ".volcengine.com" },
+      { type: "cookie", name: "userInfo", domain: ".volcengine.com" },
+    ],
+    "Log in to the Volcano Engine Ark console. The console session is used to discover Agent/Coding Plan API keys and live quota usage.",
+    {
+      cookieDomain: ".volcengine.com",
+      successUrlPattern: /console\.volcengine\.com\/ark/i,
+      pollingConfig: { timeout: 300_000, minLoginTime: 3000 },
+    }
+  ),
+
   // ── Kimi Web ──────────────────────────────────────────────
   config(
     "kimi-web",

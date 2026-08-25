@@ -1,1 +1,0 @@
-- fix(command-code): route chat to the documented /provider/v1/chat/completions endpoint instead of the CLI-only /alpha/generate, which Command Code gates/blocks for external callers (#10265)

@@ -1,1 +1,0 @@
-- **Combo routing:** await each connection's token limit before reserving quota. The old lookup treated the `Promise` as a connection and dropped `rateLimitOverrides.tpm` ([#10686](https://github.com/diegosouzapw/OmniRoute/pull/10686)).

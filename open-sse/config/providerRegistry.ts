@@ -181,6 +181,29 @@ export function getRegistryEntry(provider: string): RegistryEntry | null {
   return REGISTRY[provider] || _byAlias.get(provider) || null;
 }
 
+/** Resolve only a model's explicit reasoning vocabulary. */
+export function getRegistryModelThinkingEfforts(
+  provider: string,
+  modelId: string
+): readonly string[] | undefined {
+  const entry = getRegistryEntry(provider);
+  if (!entry) return undefined;
+  const model = entry.models.find((candidate) => candidate.id === modelId);
+  return model?.supportedThinkingEfforts;
+}
+
+/** Resolve a model's explicit reasoning vocabulary before its provider fallback. */
+export function getRegistryThinkingEfforts(
+  provider: string,
+  modelId: string
+): readonly string[] | undefined {
+  const entry = getRegistryEntry(provider);
+  if (!entry) return undefined;
+  const modelEfforts = getRegistryModelThinkingEfforts(provider, modelId);
+  if (modelEfforts !== undefined) return modelEfforts;
+  return entry.defaultSupportedThinkingEfforts;
+}
+
 /**
  * Decide whether a non-empty live catalog may exclude omitted static models
  * during request routing and wildcard expansion.

@@ -1,1 +1,0 @@
-- **fix(db):** Remove stale MiMoCode provider configuration, including the legacy `mcode` alias, left after provider retirement while preserving historical usage and call logs ([#10873](https://github.com/diegosouzapw/OmniRoute/pull/10873)) — thanks @Zartharas

@@ -85,10 +85,7 @@ import {
 } from "@/lib/providerModels/modelDiscovery";
 import { buildProviderModelsUrl, getDiscoveryClientVersionOptions } from "./discoveryClientVersion";
 import { getAdobeModels } from "./adobeFireflyDiscovery";
-import {
-  parseGeminiModelsList,
-  type GeminiDiscoveryModel,
-} from "@/lib/providerModels/geminiModelsParser";
+import { parseGeminiModelsList } from "@/lib/providerModels/geminiModelsParser";
 import { getSyncedAvailableModels, getCustomModels } from "@/lib/db/models";
 import { isConnectionUnavailableToAuxiliaryActivity } from "@/lib/exclusiveLeaseIsolation";
 import { fetchCursorAgentModels } from "@/lib/providerModels/cursorAgent";
@@ -1648,10 +1645,19 @@ export async function GET(
       if (autoFetchDisabledResponse) return autoFetchDisabledResponse;
 
       const psd = asRecord(connection.providerSpecificData);
-      // The /models endpoint requires the short-lived Copilot token (same as the
-      // chat executor), not the raw GitHub OAuth access token.
+      // Catalog discovery must present the RAW GitHub OAuth token (gho_...), not
+      // the exchanged short-lived Copilot token. The full entitled model catalog
+      // (incl. grok-4.x and mai-code) is only unlocked when the
+      // `copilot-integration-id: copilot-developer-cli` header rides on a raw
+      // GitHub Bearer; the exchanged copilot_internal/v2/token bearer is minted
+      // WITHOUT the developer-cli identity and unlocks only the narrower default
+      // set, so grok/mai silently vanish. api.githubcopilot.com accepts the raw
+      // token directly as Bearer. (Chat/inference in the executor may still use
+      // the exchanged token; only DISCOVERY needs the raw token.) This mirrors the
+      // Copilot CLI + Hermes "de-gate model discovery" fix. Exchanged token stays
+      // as a fallback for connections that only captured that.
       const copilotToken =
-        toNonEmptyString(psd.copilotToken) || toNonEmptyString(accessToken) || null;
+        toNonEmptyString(accessToken) || toNonEmptyString(psd.copilotToken) || null;
 
       const discovery = await fetchGitHubCopilotModels({
         token: copilotToken,
@@ -1851,7 +1857,7 @@ export async function GET(
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (bearerToken) headers["Authorization"] = `Bearer ${bearerToken}`;
 
-      const allModels: GeminiDiscoveryModel[] = [];
+      const allModels: any[] = [];
       let pageUrl = queryKey ? `${baseUrl}&key=${encodeURIComponent(queryKey)}` : baseUrl;
       let pageCount = 0;
       const MAX_PAGES = 20;
@@ -1895,6 +1901,60 @@ export async function GET(
         const fallback = buildDiscoveryErrorFallbackResponse(error);
         if (fallback) return fallback;
         throw error;
+      }
+
+      // ponytail: Anthropic partner models via Model Garden publisher endpoint (Bearer only)
+      if (bearerToken) {
+        const psd = asRecord(connection.providerSpecificData);
+        const region =
+          (typeof psd.region === "string" && psd.region.trim()) || "us-central1";
+
+        // Extract project_id from SA JSON for project-scoped listing (mirrors executor URL pattern).
+        // Falls back to global publisher endpoint if no project available.
+        let anthropicModelsUrl: string;
+        let projectId: string | null = null;
+        if (credential) {
+          try {
+            const sa = JSON.parse(credential);
+            if (sa?.project_id) projectId = sa.project_id;
+          } catch { /* not SA JSON, skip */ }
+        }
+        if (projectId) {
+          anthropicModelsUrl = `https://aiplatform.googleapis.com/v1/projects/${projectId}/locations/${region}/publishers/anthropic/models`;
+        } else {
+          anthropicModelsUrl = `https://aiplatform.googleapis.com/v1/publishers/anthropic/models`;
+        }
+
+        try {
+          const anthropicResponse = await safeOutboundFetch(anthropicModelsUrl, {
+            ...SAFE_OUTBOUND_FETCH_PRESETS.modelsDiscovery,
+            guard: getProviderOutboundGuard(),
+            proxyConfig: proxy,
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${bearerToken}`,
+            },
+          });
+          if (anthropicResponse.ok) {
+            const anthropicData = await anthropicResponse.json();
+            const { parseVertexAnthropicModels } = await import(
+              "@/lib/providerModels/vertexAnthropicModelsParser"
+            );
+            allModels.push(...parseVertexAnthropicModels(anthropicData));
+          } else {
+            console.log("[models] Vertex Anthropic partner discovery failed", {
+              provider,
+              region,
+              status: anthropicResponse.status,
+            });
+          }
+        } catch (err) {
+          console.log("[models] Vertex Anthropic partner discovery error", {
+            provider,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
       }
 
       if (allModels.length > 0) {

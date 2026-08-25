@@ -114,6 +114,11 @@ const DEFAULT_COMBO_CONFIG = {
   handoffProviders: ["codex"],
   maxMessagesForSummary: 30,
   maxComboDepth: 3,
+  // #11134: shared per-request combo attempt budget. Previously the hardcoded
+  // MAX_GLOBAL_ATTEMPTS with no override — operators could neither fail fast on
+  // a dead pool nor raise it for large combos. Clamped by clampGlobalAttempts to
+  // [1, MAX_GLOBAL_ATTEMPTS_HARD_CAP] at every read site.
+  maxGlobalAttempts: 30,
   nestedComboMode: "flatten",
   trackMetrics: true,
   reasoningTokenBufferEnabled: true,

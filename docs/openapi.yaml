@@ -5577,6 +5577,32 @@ paths:
         "200":
           description: Circuit breakers reset
 
+  /api/health:
+    get:
+      tags: [System]
+      summary: Liveness probe
+      description: >-
+        Unauthenticated liveness probe. Returns `{ status, timestamp }` and nothing
+        else — version, uptime and memory stay behind the authenticated
+        `GET /api/monitoring/health`. Sent with
+        `Cache-Control: no-store, no-cache, must-revalidate`.
+      security: []
+      responses:
+        "200":
+          description: Service is alive.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, timestamp]
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+                  timestamp:
+                    type: string
+                    format: date-time
+
   /api/monitoring/health:
     get:
       tags: [System]
@@ -5719,17 +5745,28 @@ paths:
       x-loopback-only: true
       tags: [System]
       summary: Read a bounded Video Bridge drill-down slice
-      description: Internal loopback/token-authenticated lookup into a short-lived per-session frame cache. It never downloads media or starts a subprocess; start/end and frame count only select already materialized frames.
+      description: Internal loopback/token-authenticated lookup into a short-lived cache isolated by an opaque principal, session, and media reference. It never downloads media or starts a subprocess; start/end and frame count only select already materialized, canonicalized JPEG frames whose dimensions were derived from their bytes. This cache substrate is not yet wired to the transparent Video Bridge request path and does not yet expose multi-resolution selection.
       security: []
       parameters:
+        - in: header
+          name: x-omniroute-video-bridge-principal
+          required: true
+          description: Canonical visible-ASCII, opaque non-secret principal ID; production tenant derivation is required before enabling a caller
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 256
+            pattern: "^[!-~]{1,256}$"
         - in: query
           name: sessionId
           required: true
-          schema: { type: string, maxLength: 128 }
+          description: Canonical opaque ID without surrounding whitespace
+          schema: { type: string, minLength: 1, maxLength: 128 }
         - in: query
           name: videoRef
           required: true
-          schema: { type: string, maxLength: 4096 }
+          description: Canonical opaque reference without surrounding whitespace
+          schema: { type: string, minLength: 1, maxLength: 4096 }
         - in: query
           name: start
           required: false
@@ -5743,25 +5780,58 @@ paths:
           required: false
           schema: { type: integer, minimum: 1, maximum: 16 }
       responses:
-        "200": { description: Bounded cached frame slice }
-        "403": { description: Trusted loopback/token identity required }
+        "200": { description: Bounded cached frame slice with derivation audit metadata }
+        "403": { description: Trusted loopback/token identity and principal required }
         "404": { description: Drill-down session or media key was not found }
     post:
       x-loopback-only: true
       tags: [System]
       summary: Store a bounded Video Bridge drill-down result
-      description: Internal lifecycle operation for explicitly authorized callers. The short-lived session cache is isolated by session and media reference and does not alter the primary request cost.
+      description: Internal lifecycle operation for explicitly authorized callers. The short-lived cache is isolated by principal, session, and media reference; enforces independent per-principal and global retained-byte quotas; accepts canonical Base64 only after a warning-sensitive bounded full JPEG decode/re-encode; strips trailing polyglot bytes; retains and charges only the canonical JPEG output; derives resolution from decoded bytes; and does not alter the primary request cost. The JSON wire budget includes Base64 overhead for the 32 MiB decoded-input ceiling.
       security: []
+      parameters:
+        - in: header
+          name: x-omniroute-video-bridge-principal
+          required: true
+          description: Canonical visible-ASCII, opaque non-secret principal ID; production tenant derivation is required before enabling a caller
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 256
+            pattern: "^[!-~]{1,256}$"
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [sessionId, videoRef, durationSeconds, frames]
+              additionalProperties: false
+              required: [sessionId, videoRef, derivation, durationSeconds, frames]
               properties:
-                sessionId: { type: string, maxLength: 128 }
-                videoRef: { type: string, maxLength: 4096 }
+                sessionId:
+                  type: string
+                  minLength: 1
+                  maxLength: 128
+                  description: Canonical opaque ID without surrounding whitespace
+                videoRef:
+                  type: string
+                  minLength: 1
+                  maxLength: 4096
+                  description: Canonical opaque reference without surrounding whitespace
+                derivation:
+                  type: object
+                  additionalProperties: false
+                  required: [parentContentHash, policy, version]
+                  properties:
+                    parentContentHash:
+                      type: string
+                      pattern: "^sha256:[a-f0-9]{64}$"
+                    policy:
+                      type: string
+                      pattern: "^[A-Za-z0-9][A-Za-z0-9._/-]{0,63}$"
+                    version:
+                      type: string
+                      pattern: "^[A-Za-z0-9][A-Za-z0-9._/-]{0,63}$"
                 durationSeconds: { type: number, exclusiveMinimum: 0, maximum: 600 }
                 frames:
                   type: array
@@ -5769,27 +5839,43 @@ paths:
                   maxItems: 16
                   items:
                     type: object
+                    additionalProperties: false
                     required: [timestampSeconds, dataUri]
                     properties:
                       timestampSeconds: { type: number, minimum: 0 }
-                      dataUri: { type: string, pattern: "^data:image/jpeg;base64," }
+                      dataUri:
+                        type: string
+                        minLength: 27
+                        maxLength: 5592431
+                        description: Canonical Base64 data URI whose decoded bytes pass a warning-sensitive bounded full JPEG decode/re-encode; trailing bytes are discarded and width and height are derived server-side
       responses:
         "201": { description: Drill-down result stored }
-        "403": { description: Trusted loopback/token identity required }
+        "403": { description: Trusted loopback/token identity and principal required }
         "413": { description: Payload exceeds the bounded session budget }
+        "499": { description: Caller cancelled before the derivation was committed }
     delete:
       x-loopback-only: true
       tags: [System]
       summary: Delete a Video Bridge drill-down session
       security: []
       parameters:
+        - in: header
+          name: x-omniroute-video-bridge-principal
+          required: true
+          description: Canonical visible-ASCII, opaque non-secret principal ID; production tenant derivation is required before enabling a caller
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 256
+            pattern: "^[!-~]{1,256}$"
         - in: query
           name: sessionId
           required: true
-          schema: { type: string, maxLength: 128 }
+          description: Canonical opaque ID without surrounding whitespace
+          schema: { type: string, minLength: 1, maxLength: 128 }
       responses:
         "200": { description: Session entries removed }
-        "403": { description: Trusted loopback/token identity required }
+        "403": { description: Trusted loopback/token identity and principal required }
 
   /api/cache/stats:
     get:
@@ -6866,7 +6952,11 @@ paths:
         Returns a structured JSON catalog parsed from this `openapi.yaml`,
         including info, servers, tags, schemas, and a flat list of endpoints
         (method, path, tags, summary, security, parameters, responses).
-        Used by the in-app API explorer.
+        Used by the in-app API explorer. When `requireLogin` is enabled, this
+        management endpoint requires an authenticated dashboard session;
+        otherwise it is available without authentication.
+      security:
+        - ManagementSessionAuth: []
       responses:
         "200":
           description: Parsed OpenAPI catalog
@@ -6920,8 +7010,110 @@ paths:
                       type: string
         "404":
           description: openapi.yaml file not found on disk
+        "401":
+          $ref: "#/components/responses/ManagementAuthenticationRequired"
+        "403":
+          $ref: "#/components/responses/ManagementInvalidToken"
         "500":
           description: Failed to parse OpenAPI spec
+
+  /api/openapi/try:
+    post:
+      tags: [System]
+      summary: Proxy an API Explorer request to an OmniRoute endpoint
+      description: >-
+        Executes an API Explorer request through a server-side, same-origin proxy. The target
+        must start with `/api/`, `/v1/`, `/v1beta/`, `/a2a`, or
+        `/.well-known/agent.json`; protocol-relative and cross-origin targets are rejected.
+        Hop-by-hop, proxy, host, cookie, and forwarding headers supplied in `headers` are
+        stripped, while any dashboard cookie on the original request is forwarded separately.
+        When `requireLogin` is disabled, the management-auth bypass mirrors the runtime setting;
+        otherwise a management Bearer credential or dashboard session is required. Failures
+        caught after authentication, including request JSON parsing, fetch, and response-body
+        parsing failures, are returned in the normal HTTP 200 result envelope so the Explorer
+        can display them; `status: 0` identifies that caught-failure path.
+      security:
+        - BearerAuth: []
+        - ManagementSessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [path]
+              properties:
+                method:
+                  type: string
+                  enum: [GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS]
+                  default: GET
+                path:
+                  type: string
+                  minLength: 1
+                  pattern: "^/(?:api/|v1/|v1beta/|a2a|\\.well-known/agent\\.json)"
+                  description: Same-origin OmniRoute API path, optionally including a query string.
+                headers:
+                  type: object
+                  default: {}
+                  additionalProperties:
+                    type: string
+                  description: >-
+                    Headers to forward after removing connection, content-length, cookie, host,
+                    keep-alive, proxy-authenticate, proxy-authorization, te, trailer,
+                    transfer-encoding, upgrade, x-forwarded-for, x-forwarded-host, and
+                    x-forwarded-proto headers.
+                body:
+                  description: >-
+                    Optional JSON value. A truthy value is serialized unless it is already a
+                    string, and is not forwarded when `method` is `GET`.
+      responses:
+        "200":
+          description: Upstream response or displayable caught-failure envelope
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [status, statusText, headers, body, latencyMs, contentType]
+                properties:
+                  status:
+                    type: integer
+                    minimum: 0
+                    description: Upstream HTTP status, or 0 when request processing throws.
+                  statusText:
+                    type: string
+                  headers:
+                    type: object
+                    additionalProperties:
+                      type: string
+                  body:
+                    description: >-
+                      Parsed JSON, response text truncated after 10,000 characters, or a sanitized
+                      caught-error object.
+                  latencyMs:
+                    type: integer
+                    minimum: 0
+                  contentType:
+                    type: string
+        "400":
+          description: Invalid request body or non-same-origin path
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ValidationErrorResponse"
+                  - type: object
+                    required: [error]
+                    properties:
+                      error:
+                        type: string
+                        example: Path must be same-origin
+        "401":
+          $ref: "#/components/responses/ManagementAuthenticationRequired"
+        "403":
+          $ref: "#/components/responses/ManagementInvalidToken"
+        "503":
+          $ref: "#/components/responses/InternalError"
 
   # ─── Agent Skills Catalog ────────────────────────────────────────────────────
 
@@ -7225,6 +7417,145 @@ paths:
           description: English translation of the audio.
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /api/v1/voices:
+    get:
+      tags: [Audio]
+      summary: List ElevenLabs voices
+      description: >-
+        Proxies `GET https://api.elevenlabs.io/v1/voices` using the stored
+        `elevenlabs` provider credentials (the caller never sends `xi-api-key`).
+        The incoming query string is forwarded unchanged.
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: ElevenLabs voice list, relayed verbatim.
+        "401":
+          description: No usable `elevenlabs` credential is configured.
+        "429":
+          description: Every configured `elevenlabs` credential is rate limited.
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /api/v1/speech-to-text:
+    post:
+      tags: [Audio]
+      summary: ElevenLabs speech-to-text
+      description: >-
+        Streams the request body to `POST https://api.elevenlabs.io/v1/speech-to-text`
+        using the stored `elevenlabs` provider credentials. `content-type` and
+        `accept` are forwarded; the upstream body is relayed unchanged.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Transcription payload, relayed verbatim from ElevenLabs.
+        "401":
+          description: No usable `elevenlabs` credential is configured.
+        "429":
+          description: Every configured `elevenlabs` credential is rate limited.
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /api/v1/text-to-speech/{voiceId}:
+    post:
+      tags: [Audio]
+      summary: ElevenLabs text-to-speech
+      description: >-
+        Streams the request body to
+        `POST https://api.elevenlabs.io/v1/text-to-speech/{voiceId}` using the stored
+        `elevenlabs` provider credentials. `voiceId` must match `^[A-Za-z0-9_-]+$`
+        or the request is rejected with 400 before any upstream call.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: voiceId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[A-Za-z0-9_-]+$"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+      responses:
+        "200":
+          description: Audio stream, relayed verbatim from ElevenLabs.
+        "400":
+          description: Invalid ElevenLabs voice ID.
+        "401":
+          description: No usable `elevenlabs` credential is configured.
+        "429":
+          description: Every configured `elevenlabs` credential is rate limited.
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /api/v1/explain/routing:
+    get:
+      tags: [Telemetry]
+      summary: Routing explainability snapshot
+      description: >-
+        Returns the most recent routing events (bounded in-memory ring buffer) plus
+        the per-provider/model quality snapshot from `open-sse/services/routing`.
+        Routing metadata only — never prompts, bodies, headers or credentials.
+        Auth mirrors `/api/v1/combos`: a valid Bearer API key or a dashboard
+        session; with `REQUIRE_API_KEY=false` anonymous reads are allowed.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: Events/quality rows to return; clamped to 1–500 (default 50).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 50
+      responses:
+        "200":
+          description: Routing explain payload.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  object:
+                    type: string
+                    enum: [routing_explain]
+                  sinks:
+                    type: array
+                    items:
+                      type: string
+                  otelEnabled:
+                    type: boolean
+                  events:
+                    type: array
+                    items:
+                      type: object
+                  quality:
+                    type: array
+                    items:
+                      type: object
+                  otel:
+                    type: object
         "401":
           $ref: "#/components/responses/Unauthorized"
         "500":

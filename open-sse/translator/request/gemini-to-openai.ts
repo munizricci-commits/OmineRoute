@@ -137,7 +137,7 @@ function convertGeminiContent(content) {
 
     if (part.functionCall) {
       toolCalls.push({
-        id: `call_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        id: part.functionCall.id || `call_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
         type: "function",
         function: {
           name: part.functionCall.name,

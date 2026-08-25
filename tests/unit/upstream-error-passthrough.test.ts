@@ -30,6 +30,50 @@ test("upstream error passthrough", async (t) => {
       assert.equal(shouldPassthroughUpstreamError(401, { error: { message: "bad key" } }), false);
     }
   );
+  await t.test(
+    "corpo que ecoa uma credencial (Bearer/api_key/sk-) NÃO é elegível (#secret-leak hardening)",
+    () => {
+      // Some providers echo the offending request inside a 400/422 validation
+      // body. Passthrough must refuse so the key is not relayed to the client.
+      assert.equal(
+        shouldPassthroughUpstreamError(400, {
+          error: { message: "invalid request: Authorization: Bearer sk-live-abc123def456ghi" },
+        }),
+        false
+      );
+      assert.equal(
+        shouldPassthroughUpstreamError(422, {
+          error: { message: "bad field", received: { api_key: "sk-abc123def456" } },
+        }),
+        false
+      );
+      assert.equal(
+        shouldPassthroughUpstreamError(429, {
+          error: { message: 'rejected: {"api-key":"xyzabc123secret"}' },
+        }),
+        false
+      );
+    }
+  );
+  await t.test(
+    "corpo de capacidade/quota sem segredo continua elegível (contrato Claude Code preservado)",
+    () => {
+      // The common case must still relay verbatim so Claude Code can match the
+      // wording to auto-disable capabilities.
+      assert.equal(
+        shouldPassthroughUpstreamError(400, {
+          error: { message: "thinking.type: adaptive is not supported" },
+        }),
+        true
+      );
+      assert.equal(
+        shouldPassthroughUpstreamError(429, {
+          error: { type: "rate_limit_error", message: "slow down, retry after 60s" },
+        }),
+        true
+      );
+    }
+  );
   await t.test("buildPassthroughErrorResponse preserva corpo byte-a-byte", async () => {
     const body = {
       type: "error",

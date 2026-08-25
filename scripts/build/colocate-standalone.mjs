@@ -33,6 +33,14 @@ const STANDALONE = process.env.OMNIROUTE_STANDALONE_DIR
 
 const CALL_LOG_WORKER_REL = join("src", "lib", "usage", "callLogArtifactWorker.js");
 const CALL_LOG_WORKER_SRC = join(ROOT, "src", "lib", "usage", "callLogArtifactWorker.ts");
+const COMPRESSION_WORKER_REL = join("open-sse", "services", "compression", "compressionWorker.js");
+const COMPRESSION_WORKER_SRC = join(
+  ROOT,
+  "open-sse",
+  "services",
+  "compression",
+  "compressionWorker.ts"
+);
 const WORKER_REL = join(
   "open-sse",
   "services",
@@ -107,9 +115,26 @@ function main() {
   );
   console.log("[colocate-standalone] ✅ call-log artifact worker bundled");
 
+  const compressionWorkerDest = join(STANDALONE, COMPRESSION_WORKER_REL);
+  mkdirSync(dirname(compressionWorkerDest), { recursive: true });
+  runBuildTool(
+    "esbuild",
+    "esbuild",
+    [
+      COMPRESSION_WORKER_SRC,
+      "--bundle",
+      "--platform=node",
+      "--packages=external",
+      "--format=esm",
+      `--outfile=${compressionWorkerDest}`,
+    ],
+    { stdio: "inherit" }
+  );
+  console.log("[colocate-standalone] ✅ compression worker bundled");
+
   // The call-log worker is always present; scope it to ESM immediately. The
   // optional LLMLingua worker dir is added below only when its deps are installed.
-  const workerDirs = [dirname(callLogWorkerDest)];
+  const workerDirs = [dirname(callLogWorkerDest), dirname(compressionWorkerDest)];
 
   if (!hasOptionals) {
     console.log(

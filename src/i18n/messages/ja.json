@@ -974,7 +974,14 @@
     "batchFileUsedByCount": "{count, plural, one {# バッチ} other {# バッチ}}",
     "batchFilePreview": "プレビュー",
     "batchFilePreviewTruncated": "最初の {shown} 行を表示中 ({total} 行中)",
-    "batchFileDownloadFull": "フルファイルをダウンロード"
+    "batchFileDownloadFull": "フルファイルをダウンロード",
+    "batchHeaderSubtitle": "Run many requests as one job",
+    "batchStep1": "1 · Upload JSONL",
+    "batchStep1Desc": "Add requests",
+    "batchStep2": "2 · Create batch",
+    "batchStep2Desc": "Run job",
+    "batchStep3": "3 · Get results",
+    "batchStep3Desc": "Download output"
   },
   "disabled": "無効",
   "featureFlagOmnirouteEmergencyFallbackDescription": "予算を使い果たしたリクエストを、緊急用の無料フォールバックプロバイダー/モデルにルーティングします。",
@@ -1259,7 +1266,7 @@
     "agentBridge": "Agent Bridge",
     "agentBridgeSubtitle": "IDEエージェントのトラフィックをインターセプト",
     "trafficInspector": "Traffic Inspector",
-    "trafficInspectorSubtitle": "LLM呼び出しの監視とHTTPSトラフィックのデバッグ",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "CLIコード",
     "cliCodeSubtitle": "OmniRouteを指すコードツール",
     "cliAgents": "CLIエージェント",
@@ -1293,7 +1300,8 @@
       "open": "開く",
       "close": "閉じる"
     },
-    "noResults": "結果がありません"
+    "noResults": "結果がありません",
+    "trafficInspectorPurpose": "See exactly what your application sends to and receives from AI providers. Works with any OpenAI-compatible client."
   },
   "webhooks": {
     "title": "Webhook",
@@ -1856,7 +1864,21 @@
     "directDownloadHint": "または、それぞれのインストーラ形式を直接ダウンロードしてください：",
     "releaseNotes": "リリースノート",
     "readMore": "続きを読む",
-    "noAuthLabel": "認証なし"
+    "noAuthLabel": "認証なし",
+    "recentRequests": "Recent Requests",
+    "recentRequestsEmpty": "No requests yet.",
+    "recentRequestsModel": "Model",
+    "recentRequestsTokens": "In / Out",
+    "recentRequestsWhen": "When",
+    "readinessEyebrow": "Get ready to route",
+    "readinessTitle": "Send your first request",
+    "readinessSubtitle": "Four small steps. OmniRoute checks readiness as you go.",
+    "readinessStep1": "Connect a provider",
+    "readinessStep2": "Configure endpoint authentication",
+    "readinessStep3": "Copy your endpoint",
+    "readinessStep4": "Send a test request",
+    "readinessContinue": "Continue setup",
+    "readinessDismiss": "Dismiss for now"
   },
   "analytics": {
     "title": "分析",
@@ -2901,7 +2923,8 @@
       "omp": "Oh My Piターミナルコーディングエージェント",
       "letta": "永続メモリとツール使用を備えたLetta CLIエージェント",
       "warp": "カスタムプロバイダーをサポートするWarp AIターミナル",
-      "agent-deck": "Agent Deckマルチエージェントオーケストレーター"
+      "agent-deck": "Agent Deckマルチエージェントオーケストレーター",
+      "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support"
     },
     "guides": {
       "cursor": {
@@ -4133,7 +4156,10 @@
     "notionIntegrationHelp": "内部統合を作成する at",
     "notionIntegrationToken": "Notion内部統合トークン",
     "notionNotConnected": "接続されていません",
-    "notionTokenConfigured": "トークンが設定されました。NotionツールはMCPを介して利用可能です。"
+    "notionTokenConfigured": "トークンが設定されました。NotionツールはMCPを介して利用可能です。",
+    "subtitle": "Use the OpenAI-compatible endpoint with most SDKs and tools.",
+    "testEndpoint": "Test endpoint →",
+    "advancedProtocols": "Advanced protocols"
   },
   "endpoints": {
     "tabProxy": "エンドポイント プロキシ",
@@ -4716,7 +4742,14 @@
     "issueCount": "{count} 件の問題",
     "score": "スコア",
     "lastRequest": "最終リクエスト",
-    "lastError": "最終エラー"
+    "lastError": "最終エラー",
+    "healthVerdictReady": "OmniRoute is ready",
+    "healthVerdictActionRequired": "Action required to restore full operation",
+    "healthVerdictCoolingDown": "Cooling down after recent changes",
+    "healthSubtitle": "System health check",
+    "advancedDiagnosticsTitle": "Advanced diagnostics",
+    "hide": "Hide",
+    "show": "Show"
   },
   "telemetry": {
     "title": "システムテレメトリ",
@@ -5834,6 +5867,8 @@
     "rateLimitOverridesSection": "レート制限のオーバーライド",
     "rateLimitOverridesMaxConcurrentHint": "この接続の最大同時リクエスト数のオーバーライド。アカウントレベルの上限をオーバーライドします。",
     "rateLimitOverridesMaxConcurrentLabel": "最大同時実行数 (レート制限)",
+    "rateLimitOverridesMaxWaitMsHint": "__MISSING__:Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "リクエスト間の最小時間 (ミリ秒)。デフォルトのレートリミッター遅延をオーバーライドします。",
     "rateLimitOverridesMinTimeLabel": "最小間隔 (ミリ秒)",
     "rateLimitOverridesRpmHint": "この接続の 1 分あたりの最大リクエスト数。プロバイダーのデフォルトをオーバーライドします。",
@@ -6111,7 +6146,6 @@
       "glmt": "より大きなトークンバジェット、思考の有効化、およびより長いタイムアウトを備えたプリセットGLMプロファイル。",
       "getgoapi": "APIキーでGoAPIに接続します。",
       "groq": "無料枠: 30 RPM / 14.4K RPD — クレジットカード不要",
-      "hackclub": "ai.hackclub.com でHack Clubアカウントを使用してサインインします。",
       "haiper": "haiper.ai/haiper-api でAPIキーを取得",
       "heroku": "APIキーでHeroku AIに接続します。",
       "hcnsec": "api.hcnsec.cn でAPIキーを取得",
@@ -6382,7 +6416,21 @@
     "savedModelEndpointSettings": "保存されたモデルエンドポイント設定",
     "searchByModelAria": "モデルで検索",
     "selectSupportedEndpoint": "サポートされているエンドポイントを少なくとも1つ選択してください",
-    "antigravityClientProfileHarness": "Harness / CLI"
+    "antigravityClientProfileHarness": "Harness / CLI",
+    "harImportButtonLabel": "Import .har file",
+    "harImportButtonBusy": "Importing…",
+    "harImportButtonHint": "Export from DevTools Network tab after sending at least one chat message.",
+    "harImportStatusValid": "Imported — valid for ~{minutes}m.",
+    "harImportStatusExpiringSoon": "Imported — valid for only ~{minutes}m more.",
+    "harImportStatusExpired": "Imported, but this token already expired ({minutes}m ago) — export a fresh HAR.",
+    "harImportStatusUnknownExpiry": "Imported. Couldn't read its expiry.",
+    "harImportErrorNotJson": "That file isn't valid JSON — is it really a .har export?",
+    "harImportErrorNoEntries": "This HAR has no network entries recorded.",
+    "harImportErrorNoChathubUrl": "No Copilot chat connection found in this HAR. Send at least one chat message in m365.cloud.microsoft before exporting.",
+    "harImportErrorUnparsableUrl": "Found the chat connection, but couldn't read its URL.",
+    "harImportErrorMissingFields": "Found the chat connection, but the token was missing from it.",
+    "harImportErrorReadFailed": "Couldn't read that file.",
+    "harImportErrorUnknown": "Couldn't extract a credential from that HAR file."
   },
   "settings": {
     "title": "設定",
@@ -8229,7 +8277,19 @@
     "cliproxyapiHealth": "健康",
     "cliproxyapiPort": "ポート",
     "qdrantHost": "ホスト",
-    "qdrantCollection": "コレクション"
+    "qdrantCollection": "コレクション",
+    "presetAll": "All",
+    "presetAllDesc": "Show everything",
+    "presetEssentials": "Essentials",
+    "presetEssentialsDesc": "Beginner path - Advanced tools stay searchable",
+    "presetMinimal": "Minimal",
+    "presetMinimalDesc": "Core pages only",
+    "presetDeveloper": "Developer",
+    "presetDeveloperDesc": "Dev & proxy tools",
+    "presetAdmin": "Admin",
+    "presetAdminDesc": "Monitoring & audit",
+    "settingsSidebarTitle": "Sidebar Customization",
+    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable."
   },
   "contextRtk": {
     "title": "RTK Engine",
@@ -12016,7 +12076,8 @@
         "title": "ACPエージェント",
         "phrase": "OmniRouteが実行バックエンドとして起動するCLI（逆フロー）",
         "flow": "クライアント → OmniRoute → CLI起動 (stdio/ACP) → レスポンス",
-        "seeOther": "詳細 →"
+        "seeOther": "詳細 →",
+        "warning": "Most users can ignore this — use only when an integration requires it."
       }
     },
     "comparison": {
@@ -12840,6 +12901,10 @@
       },
       "SKILLS_SANDBOX_NETWORK_ENABLED": {
         "description": "Enable network access in the skills sandbox."
+      },
+      "DISABLE_CONTEXT_WINDOW_CHECKS": {
+        "label": "Disable Context Window Checks",
+        "description": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active."
       }
     }
   },
@@ -13412,6 +13477,13 @@
         "modelLockouts": "モデルロックアウト",
         "count": "接続数"
       }
+    },
+    "reassuranceTitle": "Your connections recover automatically",
+    "reassuranceDetail": "Usually no action is needed. OmniRoute temporarily rests a connection after failures, then safely tries it again.",
+    "plainStates": {
+      "healthy": "Requests can be sent",
+      "coolingDown": "Trying again soon",
+      "lockedOut": "Needs your attention"
     }
   },
   "featureFlagCapabilityFilterEnabledDescription": "ディスパッチ前にリクエストを拒否します。ターゲットモデルに必要な機能（ビジョン、ツール、構造化出力、コンテキストウィンドウ）が欠けている場合。コンボレイヤーの互換性フィルターをバイパスする直接の単一プロバイダーリクエストを保護します。",
@@ -13849,5 +13921,13 @@
     "toolsMismatch": "プロバイダーはツール呼び出しをサポートしていません",
     "structuredOutputMismatch": "プロバイダーは構造化出力をサポートしていません",
     "contextWindowMismatch": "リクエストがプロバイダーのコンテキストウィンドウを超えています"
+  },
+  "featureFlagDisableContextWindowChecksDescription": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active.",
+  "cheaperInferenceSponsorBanner": {
+    "title": "Cheaper Inference is an OmniRoute Open Source Friend",
+    "description": "A cost-ranked gateway reselling dozens of frontier models behind one OpenAI-compatible endpoint — routing each request to the cheapest eligible provider, never above list price.",
+    "cta": "Get an API Key",
+    "partnerLinkNote": "Partner link",
+    "dismissAriaLabel": "Dismiss"
   }
 }

@@ -23,6 +23,7 @@ test("Video Bridge settings default to a bounded disabled runtime and accept val
   assert.deepEqual(resolveVideoBridgeRuntimeSettings({}), {
     enabled: false,
     model: "",
+    analysisMode: "full",
     frameCount: 8,
     samplingPolicy: "uniform",
     maxVideos: 1,
@@ -34,6 +35,7 @@ test("Video Bridge settings default to a bounded disabled runtime and accept val
 
   const valid = updateSettingsSchema.safeParse({
     modalityBridgeVideoEnabled: true,
+    modalityBridgeVideoAnalysisMode: "focused",
     modalityBridgeVideoModel: "openai/gpt-4o-mini",
     modalityBridgeVideoFrameCount: 16,
     modalityBridgeVideoSamplingPolicy: "scene_aware",
@@ -42,6 +44,16 @@ test("Video Bridge settings default to a bounded disabled runtime and accept val
   });
   assert.equal(valid.success, true);
   assert.equal(
+    resolveVideoBridgeRuntimeSettings({ modalityBridgeVideoAnalysisMode: "focused" }).analysisMode,
+    "focused"
+  );
+  assert.equal(
+    resolveVideoBridgeRuntimeSettings({
+      modalityBridgeVideoAnalysisMode: "instructions-from-media",
+    }).analysisMode,
+    "full"
+  );
+  assert.equal(
     updateSettingsSchema.safeParse({ modalityBridgeVideoSamplingPolicy: "segment_aware" }).success,
     true
   );
@@ -49,6 +61,7 @@ test("Video Bridge settings default to a bounded disabled runtime and accept val
 
 test("Video Bridge settings schema rejects values outside extraction bounds", () => {
   for (const [field, value] of Object.entries({
+    modalityBridgeVideoAnalysisMode: "instructions-from-media",
     modalityBridgeVideoFrameCount: 17,
     modalityBridgeVideoMaxVideos: 0,
     modalityBridgeVideoTimeout: 120_001,

@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ollama_cloudProvider } from "../../open-sse/config/providers/registry/ollama-cloud/index.ts";
+import { getRegistryThinkingEfforts } from "../../open-sse/config/providerRegistry.ts";
 
 // #10788: ollama-cloud declared supportsReasoning:true on several models
 // (glm-5.1/5.2, deepseek-v4-pro/flash) but never declared
@@ -19,6 +20,7 @@ test("#10788: ollama-cloud reasoning-capable models declare supportedThinkingEff
     Array.isArray(control?.supportedThinkingEfforts) && control.supportedThinkingEfforts.length > 0,
     "control: gpt-oss:20b should already declare supportedThinkingEfforts"
   );
+  assert.deepEqual(control.supportedThinkingEfforts, ["low", "medium", "high"]);
 
   const reasoningModelIds = ["glm-5.1", "glm-5.2", "deepseek-v4-pro", "deepseek-v4-flash"];
   for (const id of reasoningModelIds) {
@@ -33,8 +35,29 @@ test("#10788: ollama-cloud reasoning-capable models declare supportedThinkingEff
     // low|medium|high|max|none — xhigh is rejected and mapped to max.
     assert.deepEqual(
       [...(model?.supportedThinkingEfforts ?? [])],
-      ["low", "medium", "high", "max"],
-      `${id} should declare Ollama Cloud's documented low/medium/high/max vocabulary`
+      ["none", "low", "medium", "high", "max"],
+      `${id} should declare Ollama Cloud's documented none/low/medium/high/max vocabulary`
     );
   }
+});
+
+test("#10788: provider fallback preserves explicit and unrelated vocabularies", () => {
+  assert.deepEqual(getRegistryThinkingEfforts("ollama-cloud", "deepseek-v4-flash:0731"), [
+    "none",
+    "low",
+    "medium",
+    "high",
+    "max",
+  ]);
+  assert.deepEqual(getRegistryThinkingEfforts("ollama-cloud", "gpt-oss:20b"), [
+    "low",
+    "medium",
+    "high",
+  ]);
+  assert.deepEqual(getRegistryThinkingEfforts("deepseek", "deepseek-v4-flash"), [
+    "none",
+    "low",
+    "high",
+    "max",
+  ]);
 });

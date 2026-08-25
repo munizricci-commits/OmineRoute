@@ -290,6 +290,7 @@ export function shouldProtectOriginalFirst(
   return (
     stickyStuck ||
     autoUsedExplicitRouter ||
+    strategy === "auto" ||
     strategy === "quota-share" ||
     strategy === "weighted" ||
     strategy === "priority" ||

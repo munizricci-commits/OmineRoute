@@ -93,6 +93,14 @@ const ENV_VAR_ALLOWLIST = new Set([
   "DATA_DIR",
   "REQUIRE_API_KEY",
   "OMNIROUTE_BUILD_PROFILE", // build-time only
+  // Docker builder-stage knobs. Both are documented in docs/guides/DOCKER_GUIDE.md
+  // because they are the two levers for a memory-constrained build host, but
+  // neither is read through process.env in this repo: OMNIROUTE_BUILD_WORKERS is
+  // a Dockerfile ARG that only feeds CIRCLE_NODE_TOTAL, and CIRCLE_NODE_TOTAL is
+  // read by Next itself (node_modules) to size the page-data worker pool. Pinned
+  // by tests/unit/docker-build-memory-budget.test.ts.
+  "OMNIROUTE_BUILD_WORKERS",
+  "CIRCLE_NODE_TOTAL",
   "OMNIROUTE_BUILD_SHA",
   "OMNIROUTE_URL", // used by ad-hoc tooling, validated elsewhere
   "OMNIROUTE_KEY", // ditto

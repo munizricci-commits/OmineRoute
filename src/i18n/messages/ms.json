@@ -974,7 +974,14 @@
     "batchFileUsedByCount": "Digunakan oleh {count, plural, one {# batch} other {# batches}}",
     "batchFilePreview": "Pratonton",
     "batchFilePreviewTruncated": "Menunjukkan {shown} baris pertama ({total} jumlah baris)",
-    "batchFileDownloadFull": "Muat Turun Fail Penuh"
+    "batchFileDownloadFull": "Muat Turun Fail Penuh",
+    "batchHeaderSubtitle": "Run many requests as one job",
+    "batchStep1": "1 · Upload JSONL",
+    "batchStep1Desc": "Add requests",
+    "batchStep2": "2 · Create batch",
+    "batchStep2Desc": "Run job",
+    "batchStep3": "3 · Get results",
+    "batchStep3Desc": "Download output"
   },
   "disabled": "Disabled",
   "featureFlagOmnirouteEmergencyFallbackDescription": "Route budget-exhausted requests to the emergency free fallback provider/model.",
@@ -1259,7 +1266,7 @@
     "agentBridge": "Agent Bridge",
     "agentBridgeSubtitle": "Pintas trafik ejen IDE",
     "trafficInspector": "Pemeriksa Trafik",
-    "trafficInspectorSubtitle": "Pantau panggilan LLM + nyahpepijat sebarang trafik HTTPS",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "Kod CLI",
     "cliCodeSubtitle": "Alatan kod yang menghala ke OmniRoute",
     "cliAgents": "Ejen CLI",
@@ -1293,7 +1300,8 @@
       "open": "buka",
       "close": "tutup"
     },
-    "noResults": "Tiada hasil"
+    "noResults": "Tiada hasil",
+    "trafficInspectorPurpose": "See exactly what your application sends to and receives from AI providers. Works with any OpenAI-compatible client."
   },
   "webhooks": {
     "title": "Webhooks",
@@ -1856,7 +1864,21 @@
     "directDownloadHint": "Atau muat turun format pemasang yang sesuai secara langsung:",
     "releaseNotes": "Nota Rilisan",
     "readMore": "Baca Lagi",
-    "noAuthLabel": "Tiada Auth"
+    "noAuthLabel": "Tiada Auth",
+    "recentRequests": "Recent Requests",
+    "recentRequestsEmpty": "No requests yet.",
+    "recentRequestsModel": "Model",
+    "recentRequestsTokens": "In / Out",
+    "recentRequestsWhen": "When",
+    "readinessEyebrow": "Get ready to route",
+    "readinessTitle": "Send your first request",
+    "readinessSubtitle": "Four small steps. OmniRoute checks readiness as you go.",
+    "readinessStep1": "Connect a provider",
+    "readinessStep2": "Configure endpoint authentication",
+    "readinessStep3": "Copy your endpoint",
+    "readinessStep4": "Send a test request",
+    "readinessContinue": "Continue setup",
+    "readinessDismiss": "Dismiss for now"
   },
   "analytics": {
     "title": "Analitis",
@@ -2901,7 +2923,8 @@
       "omp": "Ejen pengekodan terminal Oh My Pi",
       "letta": "Ejen CLI Letta dengan memori berterusan dan penggunaan alat",
       "warp": "Terminal Warp AI dengan sokongan penyedia tersuai",
-      "agent-deck": "Orkestrator berbilang ejen Agent Deck"
+      "agent-deck": "Orkestrator berbilang ejen Agent Deck",
+      "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support"
     },
     "guides": {
       "cursor": {
@@ -4133,7 +4156,10 @@
     "notionIntegrationHelp": "Buat Integrasi Dalaman di",
     "notionIntegrationToken": "Token Integrasi Dalaman Notion",
     "notionNotConnected": "Tidak disambungkan",
-    "notionTokenConfigured": "Token telah dikonfigurasikan. Alat Notion boleh didapati melalui MCP."
+    "notionTokenConfigured": "Token telah dikonfigurasikan. Alat Notion boleh didapati melalui MCP.",
+    "subtitle": "Use the OpenAI-compatible endpoint with most SDKs and tools.",
+    "testEndpoint": "Test endpoint →",
+    "advancedProtocols": "Advanced protocols"
   },
   "endpoints": {
     "tabProxy": "Endpoint Proxy",
@@ -4716,7 +4742,14 @@
     "issueCount": "{count} isu",
     "score": "Skor",
     "lastRequest": "Permintaan terakhir",
-    "lastError": "Ralat terakhir"
+    "lastError": "Ralat terakhir",
+    "healthVerdictReady": "OmniRoute is ready",
+    "healthVerdictActionRequired": "Action required to restore full operation",
+    "healthVerdictCoolingDown": "Cooling down after recent changes",
+    "healthSubtitle": "System health check",
+    "advancedDiagnosticsTitle": "Advanced diagnostics",
+    "hide": "Hide",
+    "show": "Show"
   },
   "telemetry": {
     "title": "Sistem Telemetri",
@@ -5834,6 +5867,8 @@
     "rateLimitOverridesSection": "Ganti Had Kadar",
     "rateLimitOverridesMaxConcurrentHint": "Ganti permintaan serentak maksimum untuk sambungan ini. Menggantikan had tahap akaun.",
     "rateLimitOverridesMaxConcurrentLabel": "Maksimum Serentak (Had Kadar)",
+    "rateLimitOverridesMaxWaitMsHint": "__MISSING__:Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "Masa minimum (ms) antara permintaan. Menggantikan kelewatan pengehad kadar lalai.",
     "rateLimitOverridesMinTimeLabel": "Selang Minimum (ms)",
     "rateLimitOverridesRpmHint": "Permintaan maksimum seminit untuk sambungan ini. Menggantikan lalai penyedia.",
@@ -6111,7 +6146,6 @@
       "glmt": "Profil GLM pratetap dengan belanjawan token yang lebih tinggi, pemikiran didayakan dan tamat masa yang lebih lama.",
       "getgoapi": "Sambungkan GoAPI dengan kunci API.",
       "groq": "Peringkat percuma: 30 RPM / 14.4K RPD — tiada kad kredit",
-      "hackclub": "Log masuk dengan akaun Hack Club anda di ai.hackclub.com.",
       "haiper": "Dapatkan kunci API di haiper.ai/haiper-api",
       "heroku": "Sambungkan Heroku AI dengan kunci API.",
       "hcnsec": "Dapatkan kunci API di api.hcnsec.cn",
@@ -6382,7 +6416,21 @@
     "savedModelEndpointSettings": "Tetapan titik akhir model yang disimpan",
     "searchByModelAria": "Cari mengikut model",
     "selectSupportedEndpoint": "Pilih sekurang-kurangnya satu titik akhir yang disokong",
-    "antigravityClientProfileHarness": "Harness / CLI"
+    "antigravityClientProfileHarness": "Harness / CLI",
+    "harImportButtonLabel": "Import .har file",
+    "harImportButtonBusy": "Importing…",
+    "harImportButtonHint": "Export from DevTools Network tab after sending at least one chat message.",
+    "harImportStatusValid": "Imported — valid for ~{minutes}m.",
+    "harImportStatusExpiringSoon": "Imported — valid for only ~{minutes}m more.",
+    "harImportStatusExpired": "Imported, but this token already expired ({minutes}m ago) — export a fresh HAR.",
+    "harImportStatusUnknownExpiry": "Imported. Couldn't read its expiry.",
+    "harImportErrorNotJson": "That file isn't valid JSON — is it really a .har export?",
+    "harImportErrorNoEntries": "This HAR has no network entries recorded.",
+    "harImportErrorNoChathubUrl": "No Copilot chat connection found in this HAR. Send at least one chat message in m365.cloud.microsoft before exporting.",
+    "harImportErrorUnparsableUrl": "Found the chat connection, but couldn't read its URL.",
+    "harImportErrorMissingFields": "Found the chat connection, but the token was missing from it.",
+    "harImportErrorReadFailed": "Couldn't read that file.",
+    "harImportErrorUnknown": "Couldn't extract a credential from that HAR file."
   },
   "settings": {
     "title": "tetapan",
@@ -8229,7 +8277,19 @@
     "cliproxyapiHealth": "Kesihatan",
     "cliproxyapiPort": "Pelabuhan",
     "qdrantHost": "Hos",
-    "qdrantCollection": "Koleksi"
+    "qdrantCollection": "Koleksi",
+    "presetAll": "All",
+    "presetAllDesc": "Show everything",
+    "presetEssentials": "Essentials",
+    "presetEssentialsDesc": "Beginner path - Advanced tools stay searchable",
+    "presetMinimal": "Minimal",
+    "presetMinimalDesc": "Core pages only",
+    "presetDeveloper": "Developer",
+    "presetDeveloperDesc": "Dev & proxy tools",
+    "presetAdmin": "Admin",
+    "presetAdminDesc": "Monitoring & audit",
+    "settingsSidebarTitle": "Sidebar Customization",
+    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable."
   },
   "contextRtk": {
     "title": "RTK Engine",
@@ -12016,7 +12076,8 @@
         "title": "Ejen ACP",
         "phrase": "CLI yang dimulakan oleh OmniRoute sebagai backend pelaksanaan (aliran songsang)",
         "flow": "Klien → OmniRoute → mulakan CLI (stdio/ACP) → respons",
-        "seeOther": "Lihat →"
+        "seeOther": "Lihat →",
+        "warning": "Most users can ignore this — use only when an integration requires it."
       }
     },
     "comparison": {
@@ -12840,6 +12901,10 @@
       },
       "SKILLS_SANDBOX_NETWORK_ENABLED": {
         "description": "Dayakan akses rangkaian dalam kotak pasir kemahiran."
+      },
+      "DISABLE_CONTEXT_WINDOW_CHECKS": {
+        "label": "Disable Context Window Checks",
+        "description": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active."
       }
     }
   },
@@ -13412,6 +13477,13 @@
         "modelLockouts": "Penguncian Model",
         "count": "Bilangan Sambungan"
       }
+    },
+    "reassuranceTitle": "Your connections recover automatically",
+    "reassuranceDetail": "Usually no action is needed. OmniRoute temporarily rests a connection after failures, then safely tries it again.",
+    "plainStates": {
+      "healthy": "Requests can be sent",
+      "coolingDown": "Trying again soon",
+      "lockedOut": "Needs your attention"
     }
   },
   "featureFlagCapabilityFilterEnabledDescription": "Tolak permintaan sebelum penghantaran apabila model sasaran tidak mempunyai keupayaan yang diperlukan (penglihatan, alat, output terstruktur, tetingkap konteks). Melindungi permintaan penyedia tunggal secara langsung yang mengabaikan penapis keserasian lapisan gabungan.",
@@ -13849,5 +13921,13 @@
     "toolsMismatch": "Penyedia tidak menyokong panggilan alat",
     "structuredOutputMismatch": "Penyedia tidak menyokong output berstruktur",
     "contextWindowMismatch": "Permintaan melebihi tetingkap konteks penyedia"
+  },
+  "featureFlagDisableContextWindowChecksDescription": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active.",
+  "cheaperInferenceSponsorBanner": {
+    "title": "Cheaper Inference is an OmniRoute Open Source Friend",
+    "description": "A cost-ranked gateway reselling dozens of frontier models behind one OpenAI-compatible endpoint — routing each request to the cheapest eligible provider, never above list price.",
+    "cta": "Get an API Key",
+    "partnerLinkNote": "Partner link",
+    "dismissAriaLabel": "Dismiss"
   }
 }

@@ -1,1 +1,0 @@
-- fix(providers): remove 10 retired model ids from the crof seed catalog so /v1/models stops advertising models crof.ai no longer serves (#10577)

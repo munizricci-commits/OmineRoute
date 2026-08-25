@@ -6,7 +6,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ModalityBridgeVideoTab from "@/app/(dashboard)/dashboard/settings/components/modalityBridge/ModalityBridgeVideoTab";
 
 vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => key,
+  useTranslations: (namespace?: string) => (key: string) =>
+    namespace === "settings" && key === "degradationFull"
+      ? "MISSING:settings.degradationFull"
+      : key,
 }));
 
 const roots: Array<{ root: Root; element: HTMLDivElement }> = [];
@@ -174,6 +177,52 @@ describe("ModalityBridgeVideoTab", () => {
       .filter(([, init]) => init?.method === "PATCH")
       .map(([, init]) => JSON.parse(String(init?.body)) as Record<string, unknown>);
     expect(patches).toContainEqual({ modalityBridgeVideoEnabled: true });
+  });
+
+  it("defaults to full analysis and persists an explicit focused-mode opt-in", async () => {
+    const element = await render();
+    const analysisMode = element.querySelector(
+      '[data-testid="modality-bridge-video-analysis-mode"]'
+    ) as HTMLSelectElement | null;
+
+    expect(analysisMode).not.toBeNull();
+    expect(analysisMode?.value).toBe("full");
+    expect(Array.from(analysisMode?.options ?? []).map((option) => option.value)).toEqual([
+      "full",
+      "focused",
+    ]);
+    expect(Array.from(analysisMode?.options ?? []).map((option) => option.textContent)).toEqual([
+      "health.degradationFull",
+      "modalityBridgeTaskAware",
+    ]);
+    const description = element.querySelector("#modality-bridge-video-analysis-mode-description");
+    expect(description?.textContent).toBe("modalityBridgeVideoDesc");
+    await act(async () => {
+      if (!analysisMode) return;
+      const setter = Object.getOwnPropertyDescriptor(
+        window.HTMLSelectElement.prototype,
+        "value"
+      )?.set;
+      setter?.call(analysisMode, "focused");
+      analysisMode.dispatchEvent(new Event("change", { bubbles: true }));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    await waitFor(
+      () =>
+        fetchMock.mock.calls.some(([, init]) => {
+          if (init?.method !== "PATCH") return false;
+          const body = JSON.parse(String(init.body)) as Record<string, unknown>;
+          return body.modalityBridgeVideoAnalysisMode === "focused";
+        }),
+      "focused analysis-mode PATCH"
+    );
+    expect(description?.textContent).toBe("modalityBridgeTaskAwareDesc");
+    const modePatches = fetchMock.mock.calls
+      .filter(([, init]) => init?.method === "PATCH")
+      .map(([, init]) => JSON.parse(String(init?.body)) as Record<string, unknown>)
+      .filter((body) => body.modalityBridgeVideoAnalysisMode !== undefined);
+    expect(modePatches).toEqual([{ modalityBridgeVideoAnalysisMode: "focused" }]);
   });
 
   it("caps the configurable timeout at the broker's 120 second hard deadline", async () => {

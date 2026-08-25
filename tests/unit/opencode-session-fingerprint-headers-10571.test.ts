@@ -160,6 +160,27 @@ test("OpencodeExecutor.buildHeaders derives a stable x-opencode-session from the
   assert.equal(headersFirst["x-opencode-session"], headersSecond["x-opencode-session"]);
 });
 
+test("Responses requests use a UUID x-opencode-session for Muse compatibility", () => {
+  const executor = new OpencodeExecutor("opencode");
+  executor._requestFormat = "openai-responses";
+  const headers = executor.buildHeaders(
+    null,
+    true,
+    null,
+    "muse-spark-1.2-contributor-free",
+    undefined,
+    {
+      model: "muse-spark-1.2-contributor-free",
+      input: [],
+    }
+  );
+  assert.match(
+    headers["x-opencode-session"] ?? "",
+    UUID_RE,
+    "Responses transport must use a UUID session"
+  );
+});
+
 test("OpencodeExecutor.buildHeaders derives a DIFFERENT x-opencode-session for a different conversation body", () => {
   const executor = new OpencodeExecutor("opencode-go");
   const headersA = executor.buildHeaders(null, true, null, "big-pickle", undefined, {

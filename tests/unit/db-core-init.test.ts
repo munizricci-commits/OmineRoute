@@ -497,7 +497,13 @@ test(
   }
 );
 
-test("build phase uses an in-memory database without creating sqlite files", serial, async () => {
+test("build phase returns the no-op stub without creating sqlite files", serial, async () => {
+  // Contract changed by #10060 (via #10952): the build phase no longer opens a
+  // real in-memory SQLite with migrations — loading the native better-sqlite3
+  // addon aborts the Next.js build worker on exit (node::
+  // RemoveEnvironmentCleanupHook). getDbInstance() now returns a no-op stub
+  // (pinned by tests/unit/build/10060-build-sqlite-stub.test.ts); queries are
+  // harmless no-ops and no file is touched.
   const dataDir = makeTempDir("omniroute-db-build-");
 
   try {
@@ -510,13 +516,15 @@ test("build phase uses an in-memory database without creating sqlite files", ser
         const core = await importFresh("src/lib/db/core.ts");
         const db = core.getDbInstance();
 
-        assert.ok(
+        assert.notEqual(db.driver, "better-sqlite3");
+        assert.equal(
           db
             .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?")
-            .get("provider_connections")
+            .get("provider_connections"),
+          undefined,
+          "the build stub must answer queries with no-ops, never a real table scan"
         );
         assert.equal(fs.existsSync(path.join(dataDir, "storage.sqlite")), false);
-        assert.equal(db.pragma("journal_mode", { simple: true }), "memory");
 
         core.resetDbInstance();
       }

@@ -31,6 +31,7 @@ const RETIRED_FLASH_IDS = [
   "gemini-3.6-flash-low",
   "gemini-3.6-flash-medium",
   "gemini-3.6-flash-high",
+  "gemini-3.5-flash",
   "gemini-3.5-flash-extra-low",
   "gemini-3.5-flash-low",
   "gemini-3-flash-agent",

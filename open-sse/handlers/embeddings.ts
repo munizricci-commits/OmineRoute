@@ -182,12 +182,8 @@ export async function handleEmbedding({
       )
     : [];
   const nativeModalities = [
-    ...(isJinaNativeEmbeddingInput(body.input)
-      ? collectJinaNativeModalities(body.input)
-      : []),
-    ...(isGeminiNativeEmbeddingInput(body.input)
-      ? collectGeminiNativeModalities(body.input)
-      : []),
+    ...(isJinaNativeEmbeddingInput(body.input) ? collectJinaNativeModalities(body.input) : []),
+    ...(isGeminiNativeEmbeddingInput(body.input) ? collectGeminiNativeModalities(body.input) : []),
   ].filter((modality) => modality !== "text");
   if (structuredItems.length > 0 || nativeModalities.length > 0) {
     const supportedModalities = getEmbeddingModelModalities(providerConfig, model);
@@ -266,7 +262,10 @@ export async function handleEmbedding({
   }
 
   let upstreamUrl = providerConfig.baseUrl;
-  if (provider === "ollama-local") {
+  if (provider === "ollama-local" || provider === "lmstudio") {
+    // Keyless local servers (#2824 ollama-local, #11233 lmstudio): honor the
+    // configured connection's baseUrl when one was hydrated, and fall back to
+    // the static localhost registry default otherwise.
     const configuredBaseUrl = credentials?.providerSpecificData?.baseUrl;
     const rawBaseUrl =
       typeof configuredBaseUrl === "string" && configuredBaseUrl.trim().length > 0
@@ -277,11 +276,11 @@ export async function handleEmbedding({
     // (CodeQL js/polynomial-redos) since baseUrl is operator-configured
     // per-connection data. See open-sse/utils/urlSanitize.ts.
     const normalizedBaseUrl = stripTrailingSlashes(rawBaseUrl.trim());
-    const ollamaHost = normalizedBaseUrl
+    const localServerHost = normalizedBaseUrl
       .replace(/\/v1\/(?:chat\/completions|embeddings)$/i, "")
       .replace(/\/api\/chat$/i, "")
       .replace(/\/v1$/i, "");
-    upstreamUrl = `${ollamaHost}/v1/embeddings`;
+    upstreamUrl = `${localServerHost}/v1/embeddings`;
   }
   let normalizeProviderResponse:
     ((data: Record<string, unknown>) => Record<string, unknown>) | null = null;
@@ -321,10 +320,7 @@ export async function handleEmbedding({
   // become N embeddings. Native multimodal parts take the same path.
   const useGeminiNativeTransport =
     providerConfig.structuredInputProtocol === "gemini-embed-content" &&
-    (isGeminiEmbedding2Family(model) ||
-      canonicalStructured ||
-      geminiNative ||
-      jinaNative);
+    (isGeminiEmbedding2Family(model) || canonicalStructured || geminiNative || jinaNative);
 
   if (providerConfig.structuredInputProtocol === "jina-v1" && jinaNative && canonicalStructured) {
     try {
@@ -462,13 +458,7 @@ export async function handleEmbedding({
       // best-effort.
       if (connectionId) {
         try {
-          await markAccountUnavailable(
-            connectionId,
-            response.status,
-            errorText,
-            provider,
-            model
-          );
+          await markAccountUnavailable(connectionId, response.status, errorText, provider, model);
         } catch {
           // swallow — the upstream error response takes priority
         }

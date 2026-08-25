@@ -154,21 +154,14 @@ test("unknown models keep maxOutputTokens null instead of using a generic defaul
   );
 });
 
-test("provider-neutral Gemini 3.5 tier IDs retain their non-thinking capabilities", () => {
+test("retired Gemini 3.5 Flash IDs have no provider-neutral model specs", () => {
   for (const modelId of [
+    "gemini-3.5-flash",
     "gemini-3.5-flash-extra-low",
     "gemini-3.5-flash-low",
     "gemini-3-flash-agent",
   ]) {
-    const spec = MODEL_SPECS[modelId];
-    assert.ok(spec, `missing exact MODEL_SPECS entry for ${modelId}`);
-    const capabilities = modelCapabilities.getResolvedModelCapabilities(modelId);
-    assert.equal(capabilities.contextWindow, 1048576, modelId);
-    assert.equal(capabilities.maxOutputTokens, 65536, modelId);
-    // These ids encode the upstream reasoning tier and do not accept a client-supplied effort.
-    assert.equal(capabilities.supportsThinking, false, modelId);
-    assert.equal(capabilities.supportsTools, true, modelId);
-    assert.equal(capabilities.supportsVision, true, modelId);
+    assert.equal(MODEL_SPECS[modelId], undefined, modelId);
   }
 });
 

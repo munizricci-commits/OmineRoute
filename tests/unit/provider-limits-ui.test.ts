@@ -288,7 +288,7 @@ test("hidden provider models are filtered from per-model quota rows", () => {
   });
   const hidden = providerLimitUtils.collectHiddenQuotaModelIds("antigravity", {
     models: [{ id: "antigravity/gpt-oss-120b-medium", isHidden: true }],
-    modelCompatOverrides: [{ id: "gemini-3.5-flash", isHidden: true }],
+    modelCompatOverrides: [{ id: "gemini-3.7-flash", isHidden: true }],
   });
   const visible = providerLimitUtils.filterHiddenModelQuotas("antigravity", quotas, hidden);
 

@@ -18,6 +18,7 @@ import {
   coerceToolSchemas,
   injectEmptyReasoningContentForToolCalls,
   injectOptionalEnumOmissionForTools,
+  injectOptionalStringOmissionForTools,
   sanitizeToolDescriptions,
 } from "./helpers/schemaCoercion.ts";
 import { getRequestTranslator, getResponseTranslator } from "./registry.ts";
@@ -595,6 +596,12 @@ export function translateRequest(
   }
 
   if (result.tools !== undefined) {
+    // Plain-string omission must run before coerceToolSchemas() strips `default`,
+    // so defaulted optional strings stay unsentinelled. Enum injection stays after
+    // coercion to preserve the #7023 pipeline.
+    if (targetFormat === FORMATS.OPENAI_RESPONSES) {
+      result.tools = injectOptionalStringOmissionForTools(result.tools);
+    }
     result.tools = coerceToolSchemas(result.tools);
     result.tools = sanitizeToolDescriptions(result.tools);
     if (targetFormat === FORMATS.OPENAI_RESPONSES) {

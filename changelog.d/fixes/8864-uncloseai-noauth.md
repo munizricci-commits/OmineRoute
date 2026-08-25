@@ -1,1 +1,0 @@
-- fix(dashboard): treat UncloseAI as a no-auth provider so the connect form no longer forces a fake API key (#8864)

@@ -75,6 +75,13 @@ export const githubProvider: RegistryEntry = {
       maxOutputTokens: 64000,
     },
     {
+      id: "claude-opus-4.6",
+      name: "Claude Opus 4.6",
+      targetFormat: "claude",
+      contextLength: 1000000,
+      maxOutputTokens: 64000,
+    },
+    {
       id: "claude-sonnet-4.6",
       name: "Claude Sonnet 4.6",
       targetFormat: "claude",
@@ -123,6 +130,18 @@ export const githubProvider: RegistryEntry = {
       maxOutputTokens: 64000,
     },
     {
+      id: "gemini-3.6-flash",
+      name: "Gemini 3.6 Flash",
+      contextLength: 1000000,
+      maxOutputTokens: 64000,
+    },
+    {
+      id: "gemini-3.5-flash",
+      name: "Gemini 3.5 Flash",
+      contextLength: 1000000,
+      maxOutputTokens: 64000,
+    },
+    {
       id: "gpt-5.6-sol",
       name: "GPT-5.6 Sol",
       targetFormat: "openai-responses",
@@ -152,6 +171,13 @@ export const githubProvider: RegistryEntry = {
     {
       id: "gpt-5.4-mini",
       name: "GPT-5.4 mini",
+      targetFormat: "openai-responses",
+      contextLength: 400000,
+      maxOutputTokens: 128000,
+    },
+    {
+      id: "gpt-5.4-nano",
+      name: "GPT-5.4 nano",
       targetFormat: "openai-responses",
       contextLength: 400000,
       maxOutputTokens: 128000,
@@ -194,6 +220,38 @@ export const githubProvider: RegistryEntry = {
       name: "MAI-Code-1-Flash",
       targetFormat: "openai-responses",
       contextLength: 256000,
+      maxOutputTokens: 128000,
+    },
+    // MAI (Microsoft AI) — /responses-only on Copilot (400 on /chat/completions).
+    {
+      id: "mai-code-1.1-flash",
+      name: "MAI-Code-1.1-Flash",
+      targetFormat: "openai-responses",
+      contextLength: 256000,
+      maxOutputTokens: 128000,
+    },
+    {
+      id: "mai-code-1-flash-picker",
+      name: "MAI-Code-1-Flash (picker)",
+      targetFormat: "openai-responses",
+      contextLength: 256000,
+      maxOutputTokens: 128000,
+    },
+    // xAI Grok on Copilot — /responses-only (supported_endpoints: ["/responses"];
+    // 400 on /chat/completions). Distinct from xAI-direct (chat-capable) — see
+    // the separate `xai` provider. Live-verified context 500k / output 128k.
+    {
+      id: "grok-4.6",
+      name: "Grok 4.6",
+      targetFormat: "openai-responses",
+      contextLength: 500000,
+      maxOutputTokens: 128000,
+    },
+    {
+      id: "grok-4.5",
+      name: "Grok 4.5",
+      targetFormat: "openai-responses",
+      contextLength: 500000,
       maxOutputTokens: 128000,
     },
     {

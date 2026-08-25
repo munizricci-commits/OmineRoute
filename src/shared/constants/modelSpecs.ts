@@ -70,6 +70,7 @@ const AUTHORITATIVE_CONTEXT_WINDOW_MODEL_IDS = new Set([
   "glm-5.3",
   "glm-5.3-high",
   "glm-5.3-low",
+  "glm-5.3-max",
   "glm-5.2",
   "glm-5.2-high",
   "glm-5.2-max",
@@ -99,7 +100,7 @@ const GPT_5_6_MODEL_SPEC = {
   supportsVision: true,
 } satisfies ModelSpec;
 
-const GEMINI_35_FLASH_MODEL_SPEC = {
+const GEMINI_36_FLASH_MODEL_SPEC = {
   maxOutputTokens: 65536,
   contextWindow: 1048576,
   supportsThinking: false,
@@ -160,7 +161,7 @@ export const MODEL_SPECS: Record<string, ModelSpec> = {
     aliases: ["openai/gpt-4o"],
   },
 
-  // ── Gemini 2.5 and provider-neutral 3.5 Flash series ─────────────
+  // ── Gemini 2.5 Flash ─────────────────────────────────────────────
   "gemini-2.5-flash": {
     maxOutputTokens: 65536,
     contextWindow: 1048576,
@@ -171,16 +172,6 @@ export const MODEL_SPECS: Record<string, ModelSpec> = {
     supportsTools: true,
     supportsVision: true,
   },
-  "gemini-3.5-flash-extra-low": {
-    ...GEMINI_35_FLASH_MODEL_SPEC,
-    thinkingBudgetCap: 0,
-  },
-  "gemini-3.5-flash-low": { ...GEMINI_35_FLASH_MODEL_SPEC },
-  "gemini-3-flash-agent": {
-    ...GEMINI_35_FLASH_MODEL_SPEC,
-    thinkingBudgetCap: 0,
-  },
-
   // ── Gemini 3.7 Flash (current Antigravity/AGY live tiers) ─────────
   // The tier suffix configures the thinking budget passed to the upstream
   // gemini-3.7-flash-tiered backend (high: 24.5k, medium: 8k, low: 1k).
@@ -234,9 +225,9 @@ export const MODEL_SPECS: Record<string, ModelSpec> = {
   // Provider-neutral compatibility for providers that still serve Gemini 3.6.
   // Antigravity/AGY availability is governed by their own provider catalogs and
   // retirement filters; these shared specs must not be treated as an allowlist.
-  "gemini-3.6-flash-high": { ...GEMINI_35_FLASH_MODEL_SPEC },
-  "gemini-3.6-flash-medium": { ...GEMINI_35_FLASH_MODEL_SPEC },
-  "gemini-3.6-flash-low": { ...GEMINI_35_FLASH_MODEL_SPEC },
+  "gemini-3.6-flash-high": { ...GEMINI_36_FLASH_MODEL_SPEC },
+  "gemini-3.6-flash-medium": { ...GEMINI_36_FLASH_MODEL_SPEC },
+  "gemini-3.6-flash-low": { ...GEMINI_36_FLASH_MODEL_SPEC },
 
   // ── Gemini 3 Flash series ───────────────────────────────────────
   "gemini-3-flash": {
@@ -280,20 +271,6 @@ export const MODEL_SPECS: Record<string, ModelSpec> = {
     supportsTools: true,
     supportsVision: true,
     aliases: ["gemini-3-pro-low"],
-  },
-
-  // ── Gemini 3.5 Flash ─────────────────────────────────────────────
-  // #10286: the base Google AI Studio model DOES support reasoning (it has
-  // an effort-tier alias gemini-3.5-flash-high) — override the shared spec's
-  // supportsThinking:false here only. Do NOT flip GEMINI_35_FLASH_MODEL_SPEC
-  // itself: it is also spread into the Antigravity flash-tier aliases
-  // (gemini-3.5-flash-low/-extra-low, gemini-3-flash-agent, gemini-3.6-flash-*)
-  // which reject client-supplied thinking params because the model id itself
-  // selects the reasoning tier upstream.
-  "gemini-3.5-flash": {
-    ...GEMINI_35_FLASH_MODEL_SPEC,
-    supportsThinking: true,
-    aliases: ["gemini-3.5-flash-high"],
   },
 
   // ── Claude Opus 4.5 ─────────────────────────────────────────────
@@ -591,6 +568,13 @@ export const MODEL_SPECS: Record<string, ModelSpec> = {
     supportsTools: true,
   },
   "glm-5.3-low": {
+    maxOutputTokens: 131072,
+    contextWindow: 1000000,
+    thinkingBudgetCap: 38912,
+    supportsThinking: true,
+    supportsTools: true,
+  },
+  "glm-5.3-max": {
     maxOutputTokens: 131072,
     contextWindow: 1000000,
     thinkingBudgetCap: 38912,

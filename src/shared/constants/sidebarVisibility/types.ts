@@ -174,7 +174,7 @@ export interface SidebarSectionDefinition {
   defaultPinned?: boolean;
 }
 
-export type SidebarPresetId = "all" | "minimal" | "developer" | "admin";
+export type SidebarPresetId = "all" | "essentials" | "minimal" | "developer" | "admin";
 
 export interface SidebarPresetDefinition {
   id: SidebarPresetId;

@@ -974,7 +974,14 @@
     "batchFileUsedByCount": "{count, plural, one {# బ్యాచ్} other {# బ్యాచ్లు}}",
     "batchFilePreview": "పరిశీలన",
     "batchFilePreviewTruncated": "మొదటి {shown} పంక్తులు చూపిస్తున్నాయి ({total} మొత్తం పంక్తులు)",
-    "batchFileDownloadFull": "పూర్తి ఫైల్ డౌన్‌లోడ్ చేయండి"
+    "batchFileDownloadFull": "పూర్తి ఫైల్ డౌన్‌లోడ్ చేయండి",
+    "batchHeaderSubtitle": "Run many requests as one job",
+    "batchStep1": "1 · Upload JSONL",
+    "batchStep1Desc": "Add requests",
+    "batchStep2": "2 · Create batch",
+    "batchStep2Desc": "Run job",
+    "batchStep3": "3 · Get results",
+    "batchStep3Desc": "Download output"
   },
   "disabled": "నిలిపివేయబడింది",
   "featureFlagOmnirouteEmergencyFallbackDescription": "బడ్జెట్ ముగిసిపోయిన అభ్యర్థనలను అత్యవసర ఉచిత ఫాల్‌బ్యాక్ ప్రొవైడర్/మోడల్‌కు రూట్ చేయండి.",
@@ -1293,7 +1300,8 @@
       "open": "తిరిగి తెరువు",
       "close": "మూసివేయండి"
     },
-    "noResults": "ఫలితాలు లేవు"
+    "noResults": "ఫలితాలు లేవు",
+    "trafficInspectorPurpose": "See exactly what your application sends to and receives from AI providers. Works with any OpenAI-compatible client."
   },
   "webhooks": {
     "title": "వెబ్‌బూక్స్",
@@ -1856,7 +1864,21 @@
     "directDownloadHint": "లేదా సంబంధిత ఇన్స్టాలర్ ఫార్మాట్‌ను నేరుగా డౌన్‌లోడ్ చేయండి:",
     "releaseNotes": "విడుదల గమనికలు",
     "readMore": "మరింత చదవండి",
-    "noAuthLabel": "ఎలాంటి ప్రమాణీకరణ లేదు"
+    "noAuthLabel": "ఎలాంటి ప్రమాణీకరణ లేదు",
+    "recentRequests": "Recent Requests",
+    "recentRequestsEmpty": "No requests yet.",
+    "recentRequestsModel": "Model",
+    "recentRequestsTokens": "In / Out",
+    "recentRequestsWhen": "When",
+    "readinessEyebrow": "Get ready to route",
+    "readinessTitle": "Send your first request",
+    "readinessSubtitle": "Four small steps. OmniRoute checks readiness as you go.",
+    "readinessStep1": "Connect a provider",
+    "readinessStep2": "Configure endpoint authentication",
+    "readinessStep3": "Copy your endpoint",
+    "readinessStep4": "Send a test request",
+    "readinessContinue": "Continue setup",
+    "readinessDismiss": "Dismiss for now"
   },
   "analytics": {
     "title": "Analytics",
@@ -2901,7 +2923,8 @@
       "omp": "Oh My Pi టెర్మినల్ కోడింగ్ ఏజెంట్",
       "letta": "పర్సిస్టెంట్ మెమరీ మరియు టూల్ వినియోగంతో Letta CLI ఏజెంట్",
       "warp": "కస్టమ్ ప్రొవైడర్ సపోర్ట్‌తో Warp AI టెర్మినల్",
-      "agent-deck": "Agent Deck మల్టీ-ఏజెంట్ ఆర్కెస్ట్రేటర్"
+      "agent-deck": "Agent Deck మల్టీ-ఏజెంట్ ఆర్కెస్ట్రేటర్",
+      "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support"
     },
     "guides": {
       "cursor": {
@@ -4133,7 +4156,10 @@
     "notionIntegrationHelp": "లో ఒక అంతర్గత సమీకరణను సృష్టించండి",
     "notionIntegrationToken": "Notion అంతర్గత ఇంటిగ్రేషన్ టోకెన్",
     "notionNotConnected": "కనెక్ట్ కాలేదు",
-    "notionTokenConfigured": "టోకెన్ కాన్ఫిగర్ చేయబడింది. Notion టూల్స్ MCP ద్వారా అందుబాటులో ఉన్నాయి."
+    "notionTokenConfigured": "టోకెన్ కాన్ఫిగర్ చేయబడింది. Notion టూల్స్ MCP ద్వారా అందుబాటులో ఉన్నాయి.",
+    "subtitle": "Use the OpenAI-compatible endpoint with most SDKs and tools.",
+    "testEndpoint": "Test endpoint →",
+    "advancedProtocols": "Advanced protocols"
   },
   "endpoints": {
     "tabProxy": "Endpoint Proxy",
@@ -4716,7 +4742,14 @@
     "issueCount": "{count} సమస్యలు",
     "score": "స్కోరు",
     "lastRequest": "చివరి అభ్యర్థన",
-    "lastError": "చివరి లోపం"
+    "lastError": "చివరి లోపం",
+    "healthVerdictReady": "OmniRoute is ready",
+    "healthVerdictActionRequired": "Action required to restore full operation",
+    "healthVerdictCoolingDown": "Cooling down after recent changes",
+    "healthSubtitle": "System health check",
+    "advancedDiagnosticsTitle": "Advanced diagnostics",
+    "hide": "Hide",
+    "show": "Show"
   },
   "telemetry": {
     "title": "సిస్టమ్ టెలిమెట్రీ",
@@ -5834,6 +5867,8 @@
     "rateLimitOverridesSection": "రేట్ పరిమితి ఓవర్‌రైడ్‌లు",
     "rateLimitOverridesMaxConcurrentHint": "ఈ కనెక్షన్ కోసం గరిష్ట ఏకకాల అభ్యర్థనల ఓవర్‌రైడ్. ఖాతా-స్థాయి పరిమితిని ఓవర్‌రైడ్ చేస్తుంది.",
     "rateLimitOverridesMaxConcurrentLabel": "గరిష్ట ఏకకాల అభ్యర్థనలు (రేట్ పరిమితి)",
+    "rateLimitOverridesMaxWaitMsHint": "__MISSING__:Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "అభ్యర్థనల మధ్య కనీస సమయం (ms). డిఫాల్ట్ రేట్ లిమిటర్ ఆలస్యాన్ని ఓవర్‌రైడ్ చేస్తుంది.",
     "rateLimitOverridesMinTimeLabel": "కనీస విరామం (ms)",
     "rateLimitOverridesRpmHint": "ఈ కనెక్షన్ కోసం నిమిషానికి గరిష్ట అభ్యర్థనలు. ప్రొవైడర్ డిఫాల్ట్‌ను ఓవర్‌రైడ్ చేస్తుంది.",
@@ -6111,7 +6146,6 @@
       "glmt": "ఎక్కువ టోకెన్ బడ్జెట్, థింకింగ్ ఎనేబుల్ చేయబడిన మరియు ఎక్కువ టైమ్‌అవుట్‌తో కూడిన ప్రీసెట్ GLM ప్రొఫైల్.",
       "getgoapi": "API కీతో GoAPI ని కనెక్ట్ చేయండి.",
       "groq": "ఉచిత టైర్: 30 RPM / 14.4K RPD — క్రెడిట్ కార్డ్ అవసరం లేదు",
-      "hackclub": "ai.hackclub.com వద్ద మీ Hack Club ఖాతాతో సైన్ ఇన్ చేయండి.",
       "haiper": "haiper.ai/haiper-api వద్ద API కీని పొందండి",
       "heroku": "API కీతో Heroku AI ని కనెక్ట్ చేయండి.",
       "hcnsec": "api.hcnsec.cn వద్ద API కీని పొందండి",
@@ -6382,7 +6416,21 @@
     "savedModelEndpointSettings": "సేవ్ చేసిన మోడల్ ఎండ్‌పాయింట్ సెట్టింగ్స్",
     "searchByModelAria": "మోడల్ ద్వారా శోధించండి",
     "selectSupportedEndpoint": "కమిషన్ చేయబడిన కనెక్ట్ చేయబడిన ఎండ్‌పాయింట్‌లలో కనీసం ఒకటి ఎంచుకోండి",
-    "antigravityClientProfileHarness": "Harness / CLI"
+    "antigravityClientProfileHarness": "Harness / CLI",
+    "harImportButtonLabel": "Import .har file",
+    "harImportButtonBusy": "Importing…",
+    "harImportButtonHint": "Export from DevTools Network tab after sending at least one chat message.",
+    "harImportStatusValid": "Imported — valid for ~{minutes}m.",
+    "harImportStatusExpiringSoon": "Imported — valid for only ~{minutes}m more.",
+    "harImportStatusExpired": "Imported, but this token already expired ({minutes}m ago) — export a fresh HAR.",
+    "harImportStatusUnknownExpiry": "Imported. Couldn't read its expiry.",
+    "harImportErrorNotJson": "That file isn't valid JSON — is it really a .har export?",
+    "harImportErrorNoEntries": "This HAR has no network entries recorded.",
+    "harImportErrorNoChathubUrl": "No Copilot chat connection found in this HAR. Send at least one chat message in m365.cloud.microsoft before exporting.",
+    "harImportErrorUnparsableUrl": "Found the chat connection, but couldn't read its URL.",
+    "harImportErrorMissingFields": "Found the chat connection, but the token was missing from it.",
+    "harImportErrorReadFailed": "Couldn't read that file.",
+    "harImportErrorUnknown": "Couldn't extract a credential from that HAR file."
   },
   "settings": {
     "title": "Settings",
@@ -8229,7 +8277,19 @@
     "cliproxyapiHealth": "ఆరోగ్యం",
     "cliproxyapiPort": "పోర్ట్",
     "qdrantHost": "హోస్ట్",
-    "qdrantCollection": "సేకరణ"
+    "qdrantCollection": "సేకరణ",
+    "presetAll": "All",
+    "presetAllDesc": "Show everything",
+    "presetEssentials": "Essentials",
+    "presetEssentialsDesc": "Beginner path - Advanced tools stay searchable",
+    "presetMinimal": "Minimal",
+    "presetMinimalDesc": "Core pages only",
+    "presetDeveloper": "Developer",
+    "presetDeveloperDesc": "Dev & proxy tools",
+    "presetAdmin": "Admin",
+    "presetAdminDesc": "Monitoring & audit",
+    "settingsSidebarTitle": "Sidebar Customization",
+    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable."
   },
   "contextRtk": {
     "title": "RTK Engine",
@@ -12016,7 +12076,8 @@
         "title": "ACP ఏజెంట్లు",
         "phrase": "ఎగ్జిక్యూషన్ బ్యాకెండ్‌గా OmniRoute సృష్టించే CLIలు (రివర్స్ ఫ్లో)",
         "flow": "క్లయింట్ → OmniRoute → spawn CLI (stdio/ACP) → రెస్పాన్స్",
-        "seeOther": "చూడండి →"
+        "seeOther": "చూడండి →",
+        "warning": "Most users can ignore this — use only when an integration requires it."
       }
     },
     "comparison": {
@@ -12840,6 +12901,10 @@
       },
       "SKILLS_SANDBOX_NETWORK_ENABLED": {
         "description": "స్కిల్స్ శాండ్‌బాక్స్‌లో నెట్‌వర్క్ యాక్సెస్‌ను ప్రారంభించండి."
+      },
+      "DISABLE_CONTEXT_WINDOW_CHECKS": {
+        "label": "Disable Context Window Checks",
+        "description": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active."
       }
     }
   },
@@ -13412,6 +13477,13 @@
         "modelLockouts": "మోడల్ లాక్‌అవుట్‌లు",
         "count": "కనెక్షన్ల సంఖ్య"
       }
+    },
+    "reassuranceTitle": "Your connections recover automatically",
+    "reassuranceDetail": "Usually no action is needed. OmniRoute temporarily rests a connection after failures, then safely tries it again.",
+    "plainStates": {
+      "healthy": "Requests can be sent",
+      "coolingDown": "Trying again soon",
+      "lockedOut": "Needs your attention"
     }
   },
   "featureFlagCapabilityFilterEnabledDescription": "ప్రయోజనాలు అవసరమైన సామర్థ్యాలు (దృష్టి, సాధనాలు, నిర్మిత అవుట్‌పుట్, సందర్భం విండో) లేని లక్ష్య మోడల్ ముందు పంపిణీకి అభ్యర్థనలను తిరస్కరించండి. కాంబో-లేయర్ అనుకూలత ఫిల్టర్‌ను దాటించే ప్రత్యక్ష సింగిల్-ప్రొవైడర్ అభ్యర్థనలను రక్షిస్తుంది.",
@@ -13849,5 +13921,13 @@
     "toolsMismatch": "ప్రొవైడర్ టూల్ కాలింగ్‌ను మద్దతు ఇవ్వదు",
     "structuredOutputMismatch": "ప్రొవైడర్ నిర్మిత అవుట్‌పుట్‌ను మద్దతు ఇవ్వదు",
     "contextWindowMismatch": "అనువర్తన ప్రదాత యొక్క సందర్భం కిటికీని మించు కోరింపు"
+  },
+  "featureFlagDisableContextWindowChecksDescription": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active.",
+  "cheaperInferenceSponsorBanner": {
+    "title": "Cheaper Inference is an OmniRoute Open Source Friend",
+    "description": "A cost-ranked gateway reselling dozens of frontier models behind one OpenAI-compatible endpoint — routing each request to the cheapest eligible provider, never above list price.",
+    "cta": "Get an API Key",
+    "partnerLinkNote": "Partner link",
+    "dismissAriaLabel": "Dismiss"
   }
 }

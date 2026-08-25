@@ -1,1 +1,0 @@
-- fix(api): yield the event loop during catalog builds and bulk-load override/hidden-model tables (#9147)

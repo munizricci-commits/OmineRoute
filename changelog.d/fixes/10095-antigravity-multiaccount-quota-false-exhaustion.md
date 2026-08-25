@@ -1,1 +1,0 @@
-- fix(domain): stop treating an unreported Antigravity quota fraction (`fractionReported:false`) as 0% remaining in `quotaCache.ts`, which was falsely marking every fresh/newly-connected account as exhausted and blocking multi-account rotation (#10095)

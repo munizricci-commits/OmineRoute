@@ -1,1 +1,0 @@
-- fix(sse): fail over combo streaming responses that reach `finish_reason` with zero content, reasoning, or tool_calls instead of forwarding a terminated-but-empty completion (#10404)

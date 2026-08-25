@@ -45,6 +45,7 @@ export const APP_STAGING_ALLOWED_EXACT_PATHS: string[] = [
   // LLMLingua ONNX worker — esbuild'd standalone .js spawned via worker_threads
   // (the Next.js bundler can't trace the computed Worker path). Kept like the MCP server.
   "open-sse/services/compression/engines/llmlingua/onnxWorker.js",
+  "open-sse/services/compression/compressionWorker.js",
   "src/lib/usage/callLogArtifactWorker.js",
   "package.json",
   "peer-stamp.mjs",
@@ -312,13 +313,27 @@ export const PACK_ARTIFACT_NEVER_ALLOWED_SEGMENTS: string[] = ["node_modules"];
 
 export function findUnexpectedArtifactPaths(
   filePaths: string[],
-  { exactPaths = [], prefixPaths = [] }: { exactPaths?: string[]; prefixPaths?: string[] } = {}
+  {
+    exactPaths = [],
+    prefixPaths = [],
+    // #9985: the app-STAGING prune (prepublish Step 10.7) must be able to opt out
+    // of the node_modules segment ban — the standalone server's runtime deps live
+    // under dist/node_modules and Turbopack-hashed dirs (.build/next/node_modules/
+    // sql.js-*/dist/sql-wasm.wasm, transformers ort-wasm). Pruning them 500'd every
+    // DB-backed route in packaged boots while /api/monitoring/health stayed green.
+    // The PUBLISH gate (validate-pack-artifact) keeps the strict default.
+    neverAllowedSegments = PACK_ARTIFACT_NEVER_ALLOWED_SEGMENTS,
+  }: {
+    exactPaths?: string[];
+    prefixPaths?: string[];
+    neverAllowedSegments?: string[];
+  } = {}
 ): string[] {
   const normalizedExact = new Set(exactPaths.map(normalizeArtifactPath));
   const normalizedPrefixes = prefixPaths.map(normalizeArtifactPath);
 
   const hasForbiddenSegment = (filePath: string): boolean =>
-    filePath.split("/").some((segment) => PACK_ARTIFACT_NEVER_ALLOWED_SEGMENTS.includes(segment));
+    filePath.split("/").some((segment) => neverAllowedSegments.includes(segment));
 
   return filePaths
     .map(normalizeArtifactPath)

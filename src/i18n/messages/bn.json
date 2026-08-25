@@ -974,7 +974,14 @@
     "batchFileUsedByCount": "ব্যবহৃত হয়েছে {count, plural, one {# ব্যাচ} other {# ব্যাচ}}",
     "batchFilePreview": "পূর্বদর্শন",
     "batchFilePreviewTruncated": "প্রথম {shown} লাইন দেখানো হচ্ছে ({total} মোট লাইন)",
-    "batchFileDownloadFull": "পূর্ণ ফাইল ডাউনলোড করুন"
+    "batchFileDownloadFull": "পূর্ণ ফাইল ডাউনলোড করুন",
+    "batchHeaderSubtitle": "Run many requests as one job",
+    "batchStep1": "1 · Upload JSONL",
+    "batchStep1Desc": "Add requests",
+    "batchStep2": "2 · Create batch",
+    "batchStep2Desc": "Run job",
+    "batchStep3": "3 · Get results",
+    "batchStep3Desc": "Download output"
   },
   "disabled": "নিষ্ক্রিয়",
   "featureFlagOmnirouteEmergencyFallbackDescription": "বাজেট শেষ হয়ে যাওয়া অনুরোধগুলো জরুরি ফ্রি ফলব্যাক প্রোভাইডার/মডেলে রুট করুন।",
@@ -1293,7 +1300,8 @@
       "open": "খুলুন",
       "close": "বন্ধ করুন"
     },
-    "noResults": "কোন ফলাফল নেই"
+    "noResults": "কোন ফলাফল নেই",
+    "trafficInspectorPurpose": "See exactly what your application sends to and receives from AI providers. Works with any OpenAI-compatible client."
   },
   "webhooks": {
     "title": "ওয়েবহুক",
@@ -1856,7 +1864,21 @@
     "directDownloadHint": "অথবা সংশ্লিষ্ট ইনস্টলার ফরম্যাটটি সরাসরি ডাউনলোড করুন:",
     "releaseNotes": "রিলিজ নোটস",
     "readMore": "আরও পড়ুন",
-    "noAuthLabel": "কোন প্রমাণীকরণ নেই"
+    "noAuthLabel": "কোন প্রমাণীকরণ নেই",
+    "recentRequests": "Recent Requests",
+    "recentRequestsEmpty": "No requests yet.",
+    "recentRequestsModel": "Model",
+    "recentRequestsTokens": "In / Out",
+    "recentRequestsWhen": "When",
+    "readinessEyebrow": "Get ready to route",
+    "readinessTitle": "Send your first request",
+    "readinessSubtitle": "Four small steps. OmniRoute checks readiness as you go.",
+    "readinessStep1": "Connect a provider",
+    "readinessStep2": "Configure endpoint authentication",
+    "readinessStep3": "Copy your endpoint",
+    "readinessStep4": "Send a test request",
+    "readinessContinue": "Continue setup",
+    "readinessDismiss": "Dismiss for now"
   },
   "analytics": {
     "title": "Analytics",
@@ -2901,7 +2923,8 @@
       "omp": "Oh My Pi টার্মিনাল কোডিং এজেন্ট",
       "letta": "পারসিস্টেন্ট মেমরি এবং টুল ব্যবহারের সুবিধা সহ Letta CLI এজেন্ট",
       "warp": "কাস্টম প্রোভাইডার সাপোর্ট সহ Warp AI টার্মিনাল",
-      "agent-deck": "Agent Deck মাল্টি-এজেন্ট অর্কেস্ট্রেটর"
+      "agent-deck": "Agent Deck মাল্টি-এজেন্ট অর্কেস্ট্রেটর",
+      "prime-agent": "Prime Agent — self-improving RLM coding harness with OpenAI-compatible provider support"
     },
     "guides": {
       "cursor": {
@@ -4133,7 +4156,10 @@
     "notionIntegrationHelp": "একটি অভ্যন্তরীণ ইন্টিগ্রেশন তৈরি করুন at",
     "notionIntegrationToken": "নোটশন অভ্যন্তরীণ ইন্টিগ্রেশন টোকেন",
     "notionNotConnected": "সংযুক্ত নয়",
-    "notionTokenConfigured": "টোকেন কনফিগার করা হয়েছে। Notion টুলগুলি MCP এর মাধ্যমে উপলব্ধ।"
+    "notionTokenConfigured": "টোকেন কনফিগার করা হয়েছে। Notion টুলগুলি MCP এর মাধ্যমে উপলব্ধ।",
+    "subtitle": "Use the OpenAI-compatible endpoint with most SDKs and tools.",
+    "testEndpoint": "Test endpoint →",
+    "advancedProtocols": "Advanced protocols"
   },
   "endpoints": {
     "tabProxy": "Endpoint Proxy",
@@ -4716,7 +4742,14 @@
     "issueCount": "{count} সমস্যা",
     "score": "স্কোর",
     "lastRequest": "সর্বশেষ অনুরোধ",
-    "lastError": "সর্বশেষ ত্রুটি"
+    "lastError": "সর্বশেষ ত্রুটি",
+    "healthVerdictReady": "OmniRoute is ready",
+    "healthVerdictActionRequired": "Action required to restore full operation",
+    "healthVerdictCoolingDown": "Cooling down after recent changes",
+    "healthSubtitle": "System health check",
+    "advancedDiagnosticsTitle": "Advanced diagnostics",
+    "hide": "Hide",
+    "show": "Show"
   },
   "telemetry": {
     "title": "সিস্টেম টেলিমেট্রি",
@@ -5834,6 +5867,8 @@
     "rateLimitOverridesSection": "রেট লিমিট ওভাররাইড",
     "rateLimitOverridesMaxConcurrentHint": "এই সংযোগের জন্য সর্বোচ্চ সমবর্তী অনুরোধের ওভাররাইড। অ্যাকাউন্ট-স্তরের সীমা ওভাররাইড করে।",
     "rateLimitOverridesMaxConcurrentLabel": "সর্বোচ্চ সমবর্তী (রেট লিমিট)",
+    "rateLimitOverridesMaxWaitMsHint": "__MISSING__:Maximum time (ms) a request may wait for a rate-limit slot before failing. Overrides the global Resilience setting for this connection only.",
+    "rateLimitOverridesMaxWaitMsLabel": "__MISSING__:Max Queue Wait (ms)",
     "rateLimitOverridesMinTimeHint": "অনুরোধগুলোর মধ্যে ন্যূনতম সময় (ms)। ডিফল্ট রেট লিমিটারের বিলম্ব ওভাররাইড করে।",
     "rateLimitOverridesMinTimeLabel": "ন্যূনতম ব্যবধান (ms)",
     "rateLimitOverridesRpmHint": "এই সংযোগের জন্য প্রতি মিনিটে সর্বোচ্চ অনুরোধ। প্রদানকারীর ডিফল্ট ওভাররাইড করে।",
@@ -6111,7 +6146,6 @@
       "glmt": "উচ্চতর টোকেন বাজেট, থিংকিং সক্রিয় এবং দীর্ঘতর টাইমআউট সহ প্রিসেট GLM প্রোফাইল।",
       "getgoapi": "একটি API কী দিয়ে GoAPI কানেক্ট করুন।",
       "groq": "ফ্রি টিয়ার: 30 RPM / 14.4K RPD — কোনো ক্রেডিট কার্ড লাগবে না",
-      "hackclub": "ai.hackclub.com-এ আপনার Hack Club অ্যাকাউন্ট দিয়ে সাইন ইন করুন।",
       "haiper": "haiper.ai/haiper-api থেকে API কী পান",
       "heroku": "একটি API কী দিয়ে Heroku AI কানেক্ট করুন।",
       "hcnsec": "api.hcnsec.cn-এ API কী পান",
@@ -6382,7 +6416,21 @@
     "savedModelEndpointSettings": "সংরক্ষিত মডেল এন্ডপয়েন্ট সেটিংস",
     "searchByModelAria": "মডেল দ্বারা অনুসন্ধান করুন",
     "selectSupportedEndpoint": "কমপক্ষে একটি সমর্থিত এন্ডপয়েন্ট নির্বাচন করুন",
-    "antigravityClientProfileHarness": "Harness / CLI"
+    "antigravityClientProfileHarness": "Harness / CLI",
+    "harImportButtonLabel": "Import .har file",
+    "harImportButtonBusy": "Importing…",
+    "harImportButtonHint": "Export from DevTools Network tab after sending at least one chat message.",
+    "harImportStatusValid": "Imported — valid for ~{minutes}m.",
+    "harImportStatusExpiringSoon": "Imported — valid for only ~{minutes}m more.",
+    "harImportStatusExpired": "Imported, but this token already expired ({minutes}m ago) — export a fresh HAR.",
+    "harImportStatusUnknownExpiry": "Imported. Couldn't read its expiry.",
+    "harImportErrorNotJson": "That file isn't valid JSON — is it really a .har export?",
+    "harImportErrorNoEntries": "This HAR has no network entries recorded.",
+    "harImportErrorNoChathubUrl": "No Copilot chat connection found in this HAR. Send at least one chat message in m365.cloud.microsoft before exporting.",
+    "harImportErrorUnparsableUrl": "Found the chat connection, but couldn't read its URL.",
+    "harImportErrorMissingFields": "Found the chat connection, but the token was missing from it.",
+    "harImportErrorReadFailed": "Couldn't read that file.",
+    "harImportErrorUnknown": "Couldn't extract a credential from that HAR file."
   },
   "settings": {
     "title": "Settings",
@@ -8229,7 +8277,19 @@
     "cliproxyapiHealth": "স্বাস্থ্য",
     "cliproxyapiPort": "পোর্ট",
     "qdrantHost": "হোস্ট",
-    "qdrantCollection": "সংগ্রহ"
+    "qdrantCollection": "সংগ্রহ",
+    "presetAll": "All",
+    "presetAllDesc": "Show everything",
+    "presetEssentials": "Essentials",
+    "presetEssentialsDesc": "Beginner path - Advanced tools stay searchable",
+    "presetMinimal": "Minimal",
+    "presetMinimalDesc": "Core pages only",
+    "presetDeveloper": "Developer",
+    "presetDeveloperDesc": "Dev & proxy tools",
+    "presetAdmin": "Admin",
+    "presetAdminDesc": "Monitoring & audit",
+    "settingsSidebarTitle": "Sidebar Customization",
+    "settingsSidebarDesc": "Choose which sidebar items to show. Essentials keeps Advanced tools searchable."
   },
   "contextRtk": {
     "title": "RTK Engine",
@@ -12016,7 +12076,8 @@
         "title": "ACP এজেন্ট",
         "phrase": "CLI যা OmniRoute এক্সিকিউশন ব্যাকএন্ড হিসেবে স্পন করে (রিভার্স ফ্লো)",
         "flow": "ক্লায়েন্ট → OmniRoute → spawn CLI (stdio/ACP) → রেসপন্স",
-        "seeOther": "দেখুন →"
+        "seeOther": "দেখুন →",
+        "warning": "Most users can ignore this — use only when an integration requires it."
       }
     },
     "comparison": {
@@ -12840,6 +12901,10 @@
       },
       "SKILLS_SANDBOX_NETWORK_ENABLED": {
         "description": "স্কিল স্যান্ডবক্সে নেটওয়ার্ক অ্যাক্সেস সক্ষম করুন।"
+      },
+      "DISABLE_CONTEXT_WINDOW_CHECKS": {
+        "label": "Disable Context Window Checks",
+        "description": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active."
       }
     }
   },
@@ -13412,6 +13477,13 @@
         "modelLockouts": "মডেল লকআউট",
         "count": "সংযোগ সংখ্যা"
       }
+    },
+    "reassuranceTitle": "Your connections recover automatically",
+    "reassuranceDetail": "Usually no action is needed. OmniRoute temporarily rests a connection after failures, then safely tries it again.",
+    "plainStates": {
+      "healthy": "Requests can be sent",
+      "coolingDown": "Trying again soon",
+      "lockedOut": "Needs your attention"
     }
   },
   "featureFlagCapabilityFilterEnabledDescription": "লক্ষ্য মডেলের প্রয়োজনীয় সক্ষমতা (দৃষ্টি, সরঞ্জাম, কাঠামোবদ্ধ আউটপুট, প্রসঙ্গ উইন্ডো) অনুপস্থিত থাকলে প্রেরণের আগে অনুরোধগুলি প্রত্যাখ্যান করুন। এটি কম্বো-লেয়ার সামঞ্জস্য ফিল্টারকে বাইপাস করা সরাসরি একক-প্রদানকারী অনুরোধগুলি রক্ষা করে।",
@@ -13849,5 +13921,13 @@
     "toolsMismatch": "প্রদানকারী টুল কলিং সমর্থন করে না",
     "structuredOutputMismatch": "প্রোভাইডার স্ট্রাকচারড আউটপুট সমর্থন করে না",
     "contextWindowMismatch": "অনুরোধটি প্রদানকারীর প্রসঙ্গ উইন্ডো অতিক্রম করেছে"
+  },
+  "featureFlagDisableContextWindowChecksDescription": "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers still enforce their actual limits. Prompt compression and output-token caps remain active.",
+  "cheaperInferenceSponsorBanner": {
+    "title": "Cheaper Inference is an OmniRoute Open Source Friend",
+    "description": "A cost-ranked gateway reselling dozens of frontier models behind one OpenAI-compatible endpoint — routing each request to the cheapest eligible provider, never above list price.",
+    "cta": "Get an API Key",
+    "partnerLinkNote": "Partner link",
+    "dismissAriaLabel": "Dismiss"
   }
 }

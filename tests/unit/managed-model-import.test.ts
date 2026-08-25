@@ -279,6 +279,7 @@ test("antigravity sync dynamically builds and saves mitmAlias mappings", async (
     mode: "sync",
     fetchedModels: [
       { id: "gemini-3.5-flash", name: "Gemini 3.5 Flash" },
+      { id: "gemini-3.7-flash-high", name: "Gemini 3.7 Flash High" },
       { id: "custom-antigravity-model", name: "Custom Antigravity Model" },
     ],
   });
@@ -289,8 +290,13 @@ test("antigravity sync dynamically builds and saves mitmAlias mappings", async (
   const mitmMappings = await modelsDb.getMitmAlias("antigravity");
   console.log("MITM MAPPINGS IN TEST:", mitmMappings);
 
-  // Should contain standard mapping
-  assert.equal(mitmMappings["gemini-3.5-flash"], "antigravity/gemini-3.5-flash");
+  // Retired models reported by upstream must not be imported or mapped.
+  assert.equal(mitmMappings["gemini-3.5-flash"], undefined);
+  assert.equal(
+    models.some((model) => model.id === "gemini-3.5-flash"),
+    false
+  );
+  assert.equal(mitmMappings["gemini-3.7-flash-high"], "antigravity/gemini-3.7-flash-high");
   assert.equal(mitmMappings["custom-antigravity-model"], "antigravity/custom-antigravity-model");
 
   // Removed Antigravity 2.0 preview/agent aliases must not be reintroduced.

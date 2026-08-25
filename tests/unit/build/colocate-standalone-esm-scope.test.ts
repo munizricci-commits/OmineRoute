@@ -127,3 +127,20 @@ test("scoped layout runs a CJS server.js and an ESM worker.js side by side", () 
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("colocate-standalone bundles the required compression worker", () => {
+  const root = mkdtempSync(join(tmpdir(), "colocate-compression-worker-"));
+  try {
+    writeFileSync(join(root, "server.js"), "module.exports = {};\n");
+    execFileSync(process.execPath, ["scripts/build/colocate-standalone.mjs"], {
+      cwd: join(import.meta.dirname, "..", "..", ".."),
+      env: { ...process.env, OMNIROUTE_STANDALONE_DIR: root },
+      stdio: "pipe",
+    });
+    const workerDir = join(root, "open-sse", "services", "compression");
+    assert.equal(existsSync(join(workerDir, "compressionWorker.js")), true);
+    assert.equal(JSON.parse(readFileSync(join(workerDir, "package.json"), "utf8")).type, "module");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

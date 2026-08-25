@@ -407,6 +407,40 @@ if (existsSync(llmWorkerSrc)) {
   }
 }
 
+// ── Step 8.6b: Bundle synchronous compression worker ──────────────────
+const compressionWorkerSrc = join(
+  ROOT,
+  "open-sse",
+  "services",
+  "compression",
+  "compressionWorker.ts"
+);
+const compressionWorkerDest = join(
+  DIST_DIR,
+  "open-sse",
+  "services",
+  "compression",
+  "compressionWorker.js"
+);
+if (!existsSync(compressionWorkerSrc)) {
+  throw new Error("Required compression worker source is missing");
+}
+console.log("  🔨 Bundling compression worker...");
+mkdirSync(dirname(compressionWorkerDest), { recursive: true });
+runBuildTool(
+  "esbuild",
+  "esbuild",
+  [
+    "open-sse/services/compression/compressionWorker.ts",
+    "--bundle",
+    "--platform=node",
+    "--packages=external",
+    "--format=esm",
+    "--outfile=dist/open-sse/services/compression/compressionWorker.js",
+  ],
+  { cwd: ROOT, stdio: "inherit" }
+);
+
 // ── Step 8.7: Bundle CLI Entrypoint ──────────────────────────
 const cliSrcFile = join(ROOT, "bin", "omniroute.ts");
 const cliDestFile = join(ROOT, "bin", "omniroute.mjs");
@@ -639,10 +673,15 @@ for (const relativePath of APP_STAGING_REMOVAL_PATHS) {
 }
 
 // ── Step 10.7: Prune any staged dist/ file outside the allowed runtime set ──
+// #9985: neverAllowedSegments is EMPTY here on purpose — unlike the publish
+// tarball gate, the staged dist/ legitimately contains node_modules (the
+// standalone server's runtime deps, including Turbopack-hashed packages whose
+// wasm files DB init requires). The allowlist prefixes above are the contract.
 const stagedFiles = walkFiles(DIST_DIR);
 const unexpectedStagedFiles = findUnexpectedArtifactPaths(stagedFiles, {
   exactPaths: APP_STAGING_ALLOWED_EXACT_PATHS,
   prefixPaths: APP_STAGING_ALLOWED_PATH_PREFIXES,
+  neverAllowedSegments: [],
 });
 
 if (unexpectedStagedFiles.length > 0) {
@@ -657,6 +696,7 @@ if (unexpectedStagedFiles.length > 0) {
 const remainingUnexpectedFiles = findUnexpectedArtifactPaths(walkFiles(DIST_DIR), {
   exactPaths: APP_STAGING_ALLOWED_EXACT_PATHS,
   prefixPaths: APP_STAGING_ALLOWED_PATH_PREFIXES,
+  neverAllowedSegments: [],
 });
 
 if (remainingUnexpectedFiles.length > 0) {

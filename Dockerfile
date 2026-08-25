@@ -59,6 +59,12 @@ RUN set -eux; \
 # ── Builder ────────────────────────────────────────────────────────────────
 FROM base AS builder
 
+# No telemetry, anywhere. Disable Next.js's anonymous build-time telemetry
+# (it otherwise pings Vercel during `next build`). Set on the builder stage so
+# every image build is silent; the runtime never builds, so this covers the
+# only phase Next telemetry can fire.
+ENV NEXT_TELEMETRY_DISABLED=1
+
 # Build tools for native module compilation
 # apt-get update needed here because base's rm -rf clears the shared cache
 RUN --mount=type=cache,id=s/92ca8a61-c1ba-421f-a389-d48ac7258c2d-apt-cache,target=/var/cache/apt,sharing=locked \
@@ -166,8 +172,32 @@ ENV OMNIROUTE_MITM_STUB=1
 # child (build-next-isolated.mjs → resolveNextBuildEnv spreads process.env).
 # Build-only; the runtime heap is set separately on the runner stage
 # (OMNIROUTE_MEMORY_MB). Override: `--build-arg OMNIROUTE_BUILD_MEMORY_MB=6144`.
-ARG OMNIROUTE_BUILD_MEMORY_MB=4096
+# Default raised 4096 → 6144 (#10060): the Next 16 production pass on a codebase
+# this size intermittently OOMs a build worker at 4 GB on memory-tight hosts.
+ARG OMNIROUTE_BUILD_MEMORY_MB=6144
 ENV NODE_OPTIONS="--max-old-space-size=${OMNIROUTE_BUILD_MEMORY_MB}"
+
+# Cap Next.js build worker pools. Next 16 defaults to `os.cpus().length - 1`
+# workers for page-data collection (31 on a 32-core builder); on memory-tight
+# hosts 31 workers + webpack's multi-GB heap blow past RAM and a worker dies
+# with SIGSEGV at teardown ("worker exited with code: null and signal: SIGSEGV"),
+# silently leaving no standalone bundle. Next derives the worker count from
+# CIRCLE_NODE_TOTAL (workers = N-1). (#10060)
+#
+# Lowered 8 → 3 (7 workers → 2). Every page-data worker inherits NODE_OPTIONS
+# above, so the ceiling is per PROCESS, not per build: 7 workers on a 16 GB
+# GitHub runner (ubuntu-24.04 / ubuntu-24.04-arm, 4 vCPU) exhausted the host and
+# buildkit failed the whole step with `ResourceExhausted: ... cannot allocate
+# memory`. The compile phase always finished ("✓ Compiled successfully in
+# 4.2min"); the kernel killed the build right after "Collecting page data using
+# 7 workers". It was intermittent for a while and went 100% on 2026-08-22, which
+# is what a threshold being crossed by ordinary codebase growth looks like.
+# tests/unit/docker-build-memory-budget.test.ts does the arithmetic and fails if
+# either knob is raised past what a 16 GB runner holds. 2 workers also stops
+# oversubscribing the runner's 4 vCPU, which 7 did. Override for a big builder:
+# `--build-arg OMNIROUTE_BUILD_WORKERS=8`.
+ARG OMNIROUTE_BUILD_WORKERS=3
+ENV CIRCLE_NODE_TOTAL=${OMNIROUTE_BUILD_WORKERS}
 
 COPY . ./
 RUN --mount=type=cache,id=s/92ca8a61-c1ba-421f-a389-d48ac7258c2d-next-cache,target=/app/.build/next/cache \

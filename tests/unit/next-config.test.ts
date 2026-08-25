@@ -83,6 +83,10 @@ test("next config declares Turbopack aliases, runtime assets and server external
   // A default production build must NOT alias it, or the stub ships to npm/Electron/VPS
   // artifacts and breaks Agent Bridge start. See the dedicated env-matrix test below.
   assert.equal(nextConfig.turbopack.resolveAlias["@/mitm/manager"], undefined);
+  // #11343: same story for the better-sqlite3 build stub. resolveAlias is applied
+  // BEFORE the serverExternalPackages check, so an unconditional alias bundles the
+  // stub and every route answers 500 at runtime ("r(...) is not a constructor").
+  assert.equal(nextConfig.turbopack.resolveAlias["better-sqlite3"], undefined);
   assert.equal(nextConfig.outputFileTracingRoot, process.cwd());
   assert.ok(tracingIncludes.includes("./src/lib/db/migrations/**/*"));
   assert.ok(
@@ -115,6 +119,28 @@ test("next config declares Turbopack aliases, runtime assets and server external
     "tls",
   ]) {
     assert.ok(serverExternalPackages.has(packageName), `${packageName} should be externalized`);
+  }
+});
+
+test("Turbopack aliases better-sqlite3 to the stub ONLY when OMNIROUTE_BETTER_SQLITE3_STUB=1 (#11343)", async () => {
+  const original = process.env.OMNIROUTE_BETTER_SQLITE3_STUB;
+  try {
+    delete process.env.OMNIROUTE_BETTER_SQLITE3_STUB;
+    const { default: def } = await loadNextConfig("bettersqlite-default");
+    assert.equal(def.turbopack.resolveAlias["better-sqlite3"], undefined);
+    // The default build must keep the real package reachable as an external, which
+    // is exactly what the alias silently defeated.
+    assert.ok(new Set(def.serverExternalPackages).has("better-sqlite3"));
+
+    process.env.OMNIROUTE_BETTER_SQLITE3_STUB = "1";
+    const { default: stubbed } = await loadNextConfig("bettersqlite-optin");
+    assert.equal(
+      stubbed.turbopack.resolveAlias["better-sqlite3"],
+      "./src/lib/db/better-sqlite3.stub.js"
+    );
+  } finally {
+    if (original === undefined) delete process.env.OMNIROUTE_BETTER_SQLITE3_STUB;
+    else process.env.OMNIROUTE_BETTER_SQLITE3_STUB = original;
   }
 });
 

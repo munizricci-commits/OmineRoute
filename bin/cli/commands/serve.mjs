@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { platform, totalmem } from "node:os";
 import { t } from "../i18n.mjs";
 import { writePidFile, cleanupPidFile, waitForServer } from "../utils/pid.mjs";
@@ -12,7 +12,7 @@ import {
   isFatalInstrumentationHookFailure,
   formatAndroidInstrumentationFailureHint,
 } from "../utils/ensureAndroidCacheDir.mjs";
-import { resolveServerHost } from "../utils/serverHost.mjs";
+import { resolveServerHost, resolveExposureWarning } from "../utils/serverHost.mjs";
 import {
   resolveMaxOldSpaceMb,
   calibrateHeapFallbackMb,
@@ -160,6 +160,15 @@ export async function runServe(opts = {}) {
      Workaround:  npm rebuild better-sqlite3
      Or run:      omniroute runtime repair  (rebuilds into a user-writable runtime; works without a C++ toolchain)\x1b[0m
 `);
+  }
+
+  // GHSA-wmgv-ph3p-rv57: the default posture (all interfaces + no API key) is a
+  // deliberate local-first choice, but it must be loud at startup — an operator
+  // on an untrusted network learns the two escape hatches here, not after a
+  // surprise quota bill.
+  const exposureWarning = resolveExposureWarning();
+  if (exposureWarning) {
+    console.warn(`\x1b[33m  ⚠  ${exposureWarning}\x1b[0m\n`);
   }
 
   const serverWsJs = join(APP_DIR, "server-ws.mjs");
@@ -414,7 +423,7 @@ async function runWithSupervisor(
       if (detectMitmCrash(crashLog)) {
         try {
           const PROJECT_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
-          const { updateSettings } = await import(`${PROJECT_ROOT}/src/lib/db/settings.ts`);
+          const { updateSettings } = await import(pathToFileURL(join(PROJECT_ROOT, "src/lib/db/settings.ts")).href);
           updateSettings({ mitmEnabled: false });
         } catch {}
         return "disable-mitm-and-retry";

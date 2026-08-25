@@ -1161,6 +1161,8 @@ export interface OmniRouteRawModelEntry {
     attachment?: boolean;
     structured_output?: boolean;
     temperature?: boolean;
+    /** Runtime-learned or synced reasoning tiers (server-gated, blind-mapped). */
+    effort_tiers?: string[];
   };
   release_date?: string;
   last_updated?: string;
@@ -1302,6 +1304,18 @@ export function mapRawModelToModelV2(
   ctx: { providerId: string; baseURL: string; apiFormat?: { anthropicPrefixes?: string[] } }
 ): ModelV2 {
   const caps = raw.capabilities ?? {};
+  // effort_tiers loop: server-declared tiers become ModelV2 variants so the
+  // UI offers exactly the tiers OmniRoute vouches for (instead of opencode's
+  // invented [low, medium, high] fallback). Blind: filtering/exclusion rules
+  // live server-side. Absent/empty/malformed => key omitted ENTIRELY (an
+  // empty variants object would suppress opencode's fallback for this model).
+  const declaredTiers = Array.isArray(caps.effort_tiers)
+    ? caps.effort_tiers.filter((t): t is string => typeof t === "string" && t.length > 0)
+    : [];
+  const variants =
+    declaredTiers.length > 0
+      ? Object.fromEntries(declaredTiers.map((tier) => [tier, { reasoningEffort: tier }]))
+      : undefined;
   const inMods = new Set(raw.input_modalities ?? ["text"]);
   const outMods = new Set(raw.output_modalities ?? ["text"]);
 
@@ -1315,10 +1329,7 @@ export function mapRawModelToModelV2(
     // OpenCode looks up `-m <plugin>/<combo>` as model id `<combo>` under
     // the plugin provider (#10345). Other bare ids still prefix with
     // `providerId` so credentials resolve as `(omniroute, model)`.
-    id:
-      raw.id.includes("/") || raw.owned_by === "combo"
-        ? raw.id
-        : `${ctx.providerId}/${raw.id}`,
+    id: raw.id.includes("/") || raw.owned_by === "combo" ? raw.id : `${ctx.providerId}/${raw.id}`,
     /**
      * Display name. Falls back to raw.id when no enrichment is available;
      * the caller (`createOmniRouteProviderHook`) overlays
@@ -1357,6 +1368,7 @@ export function mapRawModelToModelV2(
       ...(typeof raw.max_input_tokens === "number" ? { input: raw.max_input_tokens } : {}),
       output: typeof raw.max_output_tokens === "number" ? raw.max_output_tokens : 0,
     },
+    ...(variants ? { variants } : {}),
     status: "active",
     options: {},
     headers: {},

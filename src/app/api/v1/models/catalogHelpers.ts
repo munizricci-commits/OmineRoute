@@ -36,6 +36,7 @@ export type ComboCatalogTarget = {
 
 type ConnectionScopedReasoningModel = {
   id: string;
+  supportsThinking?: boolean;
   supportedThinkingEfforts?: string[];
 };
 
@@ -106,7 +107,9 @@ export function getConnectionScopedEffortTiers(
   modelId: string,
   target: Pick<ComboCatalogTarget, "connectionId" | "allowedConnectionIds">,
   eligibleConnectionIds: readonly string[] | undefined,
-  modelsByConnection: ConnectionScopedReasoningCatalog
+  modelsByConnection: ConnectionScopedReasoningCatalog,
+  explicitThinkingEfforts?: readonly string[],
+  fallbackThinkingEfforts?: readonly string[]
 ): string[] | undefined {
   const eligible = eligibleConnectionIds ? new Set(eligibleConnectionIds) : undefined;
   if (target.connectionId && eligible && !eligible.has(target.connectionId)) return [];
@@ -139,7 +142,16 @@ export function getConnectionScopedEffortTiers(
   );
   if (matching.some((model) => model === undefined)) return [];
 
-  const efforts = matching.map((model) => model?.supportedThinkingEfforts || []);
+  const efforts = matching.map((model) => {
+    const resolved = model?.supportedThinkingEfforts?.length
+      ? model.supportedThinkingEfforts
+      : model?.supportsThinking === true && fallbackThinkingEfforts
+        ? [...fallbackThinkingEfforts]
+        : [];
+    return explicitThinkingEfforts
+      ? explicitThinkingEfforts.filter((effort) => resolved.includes(effort))
+      : resolved;
+  });
   return intersectStringArrays(efforts);
 }
 

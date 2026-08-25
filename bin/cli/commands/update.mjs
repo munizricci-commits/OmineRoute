@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { t } from "../i18n.mjs";
+import { npmBin, npmExecOptions } from "../npm-exec.mjs";
 
 const execFileAsync = promisify(execFile);
 
@@ -31,9 +32,13 @@ export async function getCurrentVersion() {
 // they were already on the latest version (#4376). `execFn` is injectable for tests.
 export async function getLatestVersion(execFn = execFileAsync) {
   try {
-    const { stdout } = await execFn("npm", ["view", "omniroute", "version", "--prefer-online"], {
-      timeout: 15000,
-    });
+    // argv is all literals, so enabling the shell on win32 cannot splice a
+    // runtime value into the command line (Hard Rule #13).
+    const { stdout } = await execFn(
+      npmBin(),
+      ["view", "omniroute", "version", "--prefer-online"],
+      npmExecOptions(process.platform, { timeoutMs: 15000 })
+    );
     return stdout.trim();
   } catch {
     return null;
@@ -114,9 +119,11 @@ export async function runUpdateCommand(opts = {}) {
 
   if (showChangelog) {
     try {
-      const { stdout } = await execFileAsync("npm", ["view", "omniroute", "changelog"], {
-        timeout: 10000,
-      });
+      const { stdout } = await execFileAsync(
+        npmBin(),
+        ["view", "omniroute", "changelog"],
+        npmExecOptions(process.platform, { timeoutMs: 15000 })
+      );
       if (stdout.trim()) {
         console.log(stdout.trim());
       } else {

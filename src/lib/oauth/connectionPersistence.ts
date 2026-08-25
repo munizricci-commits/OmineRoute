@@ -96,7 +96,13 @@ export function findExistingOAuthConnectionMatch(
 export function buildOAuthConnectionCreatePayload(
   provider: string,
   tokenData: Record<string, any>,
-  expiresAt: string | null
+  expiresAt: string | null,
+  degradedProject?: {
+    testStatus: "degraded";
+    errorCode: string;
+    lastErrorType: string;
+    lastError: string;
+  } | null
 ) {
   return {
     provider,
@@ -104,7 +110,17 @@ export function buildOAuthConnectionCreatePayload(
     ...tokenData,
     expiresAt,
     tokenExpiresAt: expiresAt,
-    testStatus: "active" as const,
+    // #11284: degraded when Cloud Code projectId discovery failed at connect
+    // time — the row is saved (refresh token stored, request-time bootstrap
+    // can self-heal) but visibly NOT active.
+    testStatus: degradedProject?.testStatus ?? ("active" as const),
+    ...(degradedProject
+      ? {
+          errorCode: degradedProject.errorCode,
+          lastErrorType: degradedProject.lastErrorType,
+          lastError: degradedProject.lastError,
+        }
+      : {}),
   };
 }
 

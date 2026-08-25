@@ -11,7 +11,7 @@ import {
   CodexAppServerClient,
   type CodexAppServerClientOptions,
 } from "./codex/appServerClient.ts";
-import { resolveAppServerConfig, type CodexAppServerConfig } from "./codex/appServerConfig.ts";
+import { resolveAppServerConfig, resolveThreadStartPolicy, type CodexAppServerConfig } from "./codex/appServerConfig.ts";
 import {
   translateNotification,
   translateToolCall,
@@ -232,13 +232,20 @@ export class CodexAppServerExecutor extends BaseExecutor {
         "codex_app_server_unconfigured"
       );
     }
+    // Turn policy (hardened after the #11205 security review): approvalPolicy
+    // "never", sandbox "workspace-write", autoApprove off unless the operator
+    // opted in — see resolveThreadStartPolicy.
+    const policy = resolveThreadStartPolicy(config, psd);
 
     const promptText = extractPromptText(input.body);
     const effort = extractEffort(input.body);
     const toolMaps = buildAppServerToolMaps(input.body);
     const hasTools = toolMaps.specs.length > 0;
     const events = new AsyncEventQueue<AdapterEvent>();
-    const client = new CodexAppServerClient(this.clientOptions);
+    const client = new CodexAppServerClient({
+      ...this.clientOptions,
+      autoApproveApprovals: policy.autoApprove,
+    });
 
     const run = async () => {
       let terminated = false;
@@ -284,17 +291,16 @@ export class CodexAppServerExecutor extends BaseExecutor {
           cwd: config.cwd,
           // OmniRoute is a router: the HARNESS that consumes OmniRoute owns tool
           // execution and policy. codex must therefore NEVER block a turn waiting
-          // on its own interactive approval, and its own sandbox must not gate the
-          // model — the harness decides what actually runs. So we pair
-          // approvalPolicy:"never" (non-interactive; codex never prompts) with
-          // sandbox:"danger-full-access" (codex's own sandbox imposes no
-          // restriction), mirroring codexInstructions.ts:50 ("never +
-          // danger-full-access = take advantage of it"). Any server→client
-          // approval request that still arrives is auto-APPROVED by the client
-          // (see CodexAppServerClient), never denied — denial would sabotage the
-          // harness's tool calls. Callers can override both via providerSpecificData.
-          approvalPolicy: config.approvalPolicy ?? "never",
-          sandbox: config.sandbox ?? "danger-full-access",
+          // on its own interactive approval (approvalPolicy "never"). Its own
+          // sandbox defaults to "workspace-write" (hardened after the #11205
+          // security review; WAS "danger-full-access") so codex-decided host
+          // commands are confined to the turn's cwd tree — widen only via an
+          // explicit operator override. Server→client approval prompts (codex's
+          // own command/file/permission requests, NOT the harness tool
+          // passthrough) are auto-DENIED by the client unless the operator opted
+          // into auto-approval (see CodexAppServerClient).
+          approvalPolicy: policy.approvalPolicy,
+          sandbox: policy.sandbox,
           // INBOUND harness tools → codex. The client tells the app-server which
           // function tools are available for the thread via the `dynamicTools`
           // field on thread/start (a DynamicToolSpec[] under the experimental API,

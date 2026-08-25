@@ -12,6 +12,7 @@ import {
   calculateFactors,
   calculateScore,
   DEFAULT_WEIGHTS,
+  normalizeScoringWeights,
   type ProviderCandidate,
   type ScoringFactors,
   type ScoringWeights,
@@ -122,8 +123,11 @@ function resolveModePackName(config: Record<string, unknown>): string | null {
 
 /** Resolves an explicit, validated `weights` object from the config, if present. */
 function resolveExplicitWeights(config: Record<string, unknown>): ScoringWeights | undefined {
-  const explicitWeights = isRecord(config.weights) ? (config.weights as ScoringWeights) : undefined;
-  return explicitWeights && validateWeights(explicitWeights) ? explicitWeights : undefined;
+  if (!isRecord(config.weights)) return undefined;
+  const explicitWeights = config.weights as ScoringWeights;
+  if (validateWeights(explicitWeights)) return explicitWeights;
+  const normalized = normalizeScoringWeights(config.weights as Partial<ScoringWeights>);
+  return validateWeights(normalized) ? normalized : undefined;
 }
 
 function resolveInspectorWeights(combo: ComboRecord | undefined): InspectorWeights {

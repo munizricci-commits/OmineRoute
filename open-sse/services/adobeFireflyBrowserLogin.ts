@@ -1008,27 +1008,63 @@ async function captureViaCdp(opts: {
   }
 }
 
-function killProcessTree(child: ChildProcess | null): void {
+/**
+ * Terminate a spawned browser process and all of its descendants.
+ *
+ * Windows uses `taskkill /pid <pid> /T /F` to walk the process tree and terminate descendants.
+ * Linux/POSIX sends SIGTERM/SIGKILL to the process group (`-pid`) when detached/group leader,
+ * falling back to direct child kill if the process group is unavailable.
+ */
+export function killProcessTree(
+  child:
+    | ChildProcess
+    | { pid?: number; kill?: (signal?: NodeJS.Signals | number | string) => boolean | void }
+    | null
+    | undefined,
+  options?: {
+    platform?: string;
+    processKill?: (pid: number, signal?: NodeJS.Signals | string) => void;
+    spawnFn?: typeof spawn;
+  }
+): void {
   if (!child?.pid) return;
   const pid = child.pid;
   // Never taskkill our own Node/pkg process or its parent (would kill the backend mid-login).
   if (pid === process.pid || (typeof process.ppid === "number" && pid === process.ppid)) {
     return;
   }
+  const platform = options?.platform || process.platform;
+  const processKill = options?.processKill || process.kill.bind(process);
+  const spawnFn = options?.spawnFn || spawn;
+
   try {
-    if (process.platform === "win32") {
+    if (platform === "win32") {
       // /T kills only this PID's descendants — not system Chrome profiles we did not spawn.
-      const killer = spawn("taskkill", ["/pid", String(pid), "/T", "/F"], {
+      const killer = spawnFn("taskkill", ["/pid", String(pid), "/T", "/F"], {
         stdio: "ignore",
         windowsHide: true,
         detached: true,
       });
-      killer.unref?.();
+      killer?.unref?.();
     } else {
-      child.kill("SIGTERM");
+      let killedGroup = false;
+      try {
+        processKill(-pid, "SIGTERM");
+        killedGroup = true;
+      } catch {
+        try {
+          child.kill?.("SIGTERM");
+        } catch {
+          /* ignore */
+        }
+      }
       setTimeout(() => {
         try {
-          child.kill("SIGKILL");
+          if (killedGroup) {
+            processKill(-pid, "SIGKILL");
+          } else {
+            child.kill?.("SIGKILL");
+          }
         } catch {
           /* ignore */
         }
@@ -1036,7 +1072,7 @@ function killProcessTree(child: ChildProcess | null): void {
     }
   } catch {
     try {
-      child.kill();
+      child.kill?.();
     } catch {
       /* ignore */
     }
@@ -1175,12 +1211,15 @@ async function runAdobeFireflyCdpBrowser(opts: {
       // detach so a long Forter wait does not pin the Node process refcount.
       // Host job SILENT_BREAKAWAY_OK still prevents Chrome from joining the backend job
       // (that was killing/wedging VibeProxyServices on Sign in with browser).
+      // On POSIX: detached creates a new process group leader so killProcessTree(-pid)
+      // can terminate Chrome and all its child processes (zygote/renderer/GPU).
+      const isDetached = process.platform !== "win32" || !opts.interactive;
       child = spawn(browserPath, args, {
         stdio: "ignore",
         // Interactive sign-in: show Chrome. Background warm: hide spawn console/window
         // host; headless flags already suppress the browser UI.
         windowsHide: !opts.interactive,
-        detached: !opts.interactive,
+        detached: isDetached,
       });
       if (!opts.interactive) {
         try {

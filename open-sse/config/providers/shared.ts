@@ -139,6 +139,9 @@ export interface RegistryEntry {
   requestDefaults?: ProviderRequestDefaults;
   oauth?: RegistryOAuth;
   models: RegistryModel[];
+  /** Provider-native reasoning vocabulary for reasoning-capable passthrough models
+   * that do not have an explicit per-model declaration. */
+  defaultSupportedThinkingEfforts?: readonly string[];
   modelsUrl?: string;
   /** Prefix to prepend to model IDs before upstream API calls (e.g. "accounts/fireworks/models/") */
   modelIdPrefix?: string;

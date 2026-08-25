@@ -26,7 +26,8 @@
     "testFailed": "Teste do provedor falhou: {error}",
     "loginEnabled": "Login: habilitado (senha atualizada)",
     "loginDisabled": "Login: desabilitado",
-    "providerInfo": "Provedor: {info}"
+    "providerInfo": "Provedor: {info}",
+    "opencode": "Instala e configura o plugin @omniroute/opencode-plugin incluído para o OpenCode"
   },
   "doctor": {
     "title": "OmniRoute Doctor",
@@ -254,7 +255,9 @@
     "no_recovery": "Desabilitar reinício automático em crash (modo debug)",
     "max_restarts": "Máximo de reinícios em 30s antes de desistir (padrão: 2)",
     "tray": "Mostrar ícone na bandeja do sistema (apenas desktop, opt-in)",
-    "no_tray": "Desabilitar ícone na bandeja do sistema"
+    "no_tray": "Desabilitar ícone na bandeja do sistema",
+    "tls_cert": "Caminho para um certificado TLS (PEM) para servir HTTPS (também OMNIROUTE_TLS_CERT)",
+    "tls_key": "Caminho para a chave privada TLS (PEM) para servir HTTPS (também OMNIROUTE_TLS_KEY)"
   },
   "backup": {
     "title": "Backup",

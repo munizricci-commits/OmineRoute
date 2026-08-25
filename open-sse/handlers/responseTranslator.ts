@@ -13,6 +13,7 @@ import {
 import { restoreClaudeToolName } from "../services/claudeCodeToolRemapper.ts";
 import { extractReplayableResponsesReasoningText } from "../services/reasoningInputPolicy.ts";
 import { sanitizeToolId } from "../translator/helpers/schemaCoercion.ts";
+import { stripEmptyOptionalToolArgs } from "../translator/response/openai-responses/pureHelpers.ts";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -135,24 +136,28 @@ function findBestMessageText(output: unknown[]): {
  * Handles different provider response formats (Gemini, Claude, etc.)
  *
  * @param toolNameMap - Optional Map<prefixedName, originalName> for Claude OAuth tool name stripping
+ * @param toolSchemas - Optional Map<toolName, parametersSchema> for schema-aware optional-arg cleanup
  */
 export function translateNonStreamingResponse(
   responseBody: JsonRecord,
   targetFormat: string,
   sourceFormat: string,
-  toolNameMap?: Map<string, string> | null
+  toolNameMap?: Map<string, string> | null,
+  toolSchemas?: Map<string, JsonRecord> | null
 ): JsonRecord;
 export function translateNonStreamingResponse(
   responseBody: unknown,
   targetFormat: string,
   sourceFormat: string,
-  toolNameMap?: Map<string, string> | null
+  toolNameMap?: Map<string, string> | null,
+  toolSchemas?: Map<string, JsonRecord> | null
 ): unknown;
 export function translateNonStreamingResponse(
   responseBody: unknown,
   targetFormat: string,
   sourceFormat: string,
-  toolNameMap?: Map<string, string> | null
+  toolNameMap?: Map<string, string> | null,
+  toolSchemas?: Map<string, JsonRecord> | null
 ): unknown {
   // If already in source format, return as-is
   if (targetFormat === sourceFormat) {
@@ -219,6 +224,11 @@ export function translateNonStreamingResponse(
           toString(itemObj.id) ||
           `call_${Date.now()}_${toolCalls.length}`;
         let argsToEmit = itemObj.arguments;
+        const rawName = toString(itemObj.name);
+        const toolSchema = toolSchemas?.get(rawName);
+        if (toolSchema) {
+          argsToEmit = stripEmptyOptionalToolArgs(argsToEmit, rawName, toolSchema);
+        }
         if (argsToEmit != null && typeof argsToEmit === "object" && !Array.isArray(argsToEmit)) {
           const cleaned: JsonRecord = { ...(argsToEmit as JsonRecord) };
           for (const [k, v] of Object.entries(cleaned)) {
@@ -229,7 +239,6 @@ export function translateNonStreamingResponse(
 
         const fnArgs =
           typeof argsToEmit === "string" ? argsToEmit : JSON.stringify(argsToEmit || {});
-        const rawName = toString(itemObj.name);
         // Strip Claude OAuth proxy_ prefix using toolNameMap
         const resolvedName = caseInsensitiveToolNameLookup(rawName, toolNameMap) ?? rawName;
         toolCalls.push({

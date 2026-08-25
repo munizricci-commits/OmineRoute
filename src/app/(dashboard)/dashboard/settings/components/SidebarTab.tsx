@@ -521,6 +521,7 @@ export default function SidebarTab() {
 
   const presetLabels: Record<SidebarPresetId, string> = {
     all: getSettingsLabel("presetAll", "All"),
+    essentials: getSettingsLabel("presetEssentials", "Essentials"),
     minimal: getSettingsLabel("presetMinimal", "Minimal"),
     developer: getSettingsLabel("presetDeveloper", "Developer"),
     admin: getSettingsLabel("presetAdmin", "Admin"),
@@ -528,6 +529,10 @@ export default function SidebarTab() {
 
   const presetDescriptions: Record<SidebarPresetId, string> = {
     all: getSettingsLabel("presetAllDesc", "Show everything"),
+    essentials: getSettingsLabel(
+      "presetEssentialsDesc",
+      "Beginner path — Advanced tools stay searchable"
+    ),
     minimal: getSettingsLabel("presetMinimalDesc", "Core pages only"),
     developer: getSettingsLabel("presetDeveloperDesc", "Dev & proxy tools"),
     admin: getSettingsLabel("presetAdminDesc", "Monitoring & audit"),

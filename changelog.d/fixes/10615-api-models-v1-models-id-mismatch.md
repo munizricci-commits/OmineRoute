@@ -1,1 +1,0 @@
-- fix(dashboard): make /api/models agree with /v1/models on synced-catalog coverage instead of reporting stale models as available (#10615)

@@ -89,3 +89,71 @@ test("deepseek's non-ordinal max<->xhigh translation is untouched by the learned
   // deepseek's special case returns early — xhigh -> max, never reaches the catch-all.
   assert.equal(result.reasoning_effort, "max");
 });
+
+// #11295: nearest-tier — smallest accepted >= demand — replaces the old
+// downgrade-only (greatest accepted <= demand) direction.
+test("proactive clamp: medium→high for learned {low,high,max} (nearest-tier, #11295)", () => {
+  recordLearnedReasoningEffort("opencode-zen-direct", "x-preview-f-free", ["low", "high", "max"]);
+  const out = sanitizeReasoningEffortForProvider(
+    { reasoning_effort: "medium", model: "x-preview-f-free" },
+    "opencode-zen-direct",
+    "x-preview-f-free"
+  ) as { reasoning_effort: string };
+  assert.equal(out.reasoning_effort, "high");
+});
+test("proactive clamp: xhigh→max for learned {low,high,max} (nearest-tier, #11295)", () => {
+  recordLearnedReasoningEffort("opencode-zen-direct", "x-preview-f-free-2", ["low", "high", "max"]);
+  const out = sanitizeReasoningEffortForProvider(
+    { reasoning_effort: "xhigh", model: "x-preview-f-free-2" },
+    "opencode-zen-direct",
+    "x-preview-f-free-2"
+  ) as { reasoning_effort: string };
+  assert.equal(out.reasoning_effort, "max");
+});
+test("proactive clamp: ultra→max for learned {low,high,max}", () => {
+  recordLearnedReasoningEffort("opencode-zen-direct", "x-preview-f-free-3", ["low", "high", "max"]);
+  const out = sanitizeReasoningEffortForProvider(
+    { reasoning_effort: "ultra", model: "x-preview-f-free-3" },
+    "opencode-zen-direct",
+    "x-preview-f-free-3"
+  ) as { reasoning_effort: string };
+  assert.equal(out.reasoning_effort, "max");
+});
+test("proactive clamp: ultra→medium for learned {low,medium}", () => {
+  recordLearnedReasoningEffort("acme", "m", ["low", "medium"]);
+  const out = sanitizeReasoningEffortForProvider(
+    { reasoning_effort: "ultra", model: "m" },
+    "acme",
+    "m"
+  ) as { reasoning_effort: string };
+  assert.equal(out.reasoning_effort, "medium");
+});
+test("proactive clamp: high→medium for learned {low,medium}", () => {
+  recordLearnedReasoningEffort("acme", "m2", ["low", "medium"]);
+  const out = sanitizeReasoningEffortForProvider(
+    { reasoning_effort: "high", model: "m2" },
+    "acme",
+    "m2"
+  ) as { reasoning_effort: string };
+  assert.equal(out.reasoning_effort, "medium");
+});
+// #11295: sub-floor demand (low, below the learned floor {high,max}) now
+// clamps up to the floor instead of passing through unchanged.
+test("sub-floor clamp: low→high for learned {high,max} (#11295)", () => {
+  recordLearnedReasoningEffort("acme", "m3", ["high", "max"]);
+  const out = sanitizeReasoningEffortForProvider(
+    { reasoning_effort: "low", model: "m3" },
+    "acme",
+    "m3"
+  ) as { reasoning_effort: string };
+  assert.equal(out.reasoning_effort, "high");
+});
+test("custom model ultra→medium for learned {low,medium}", () => {
+  recordLearnedReasoningEffort("openai-compatible-chat-eaff6869", "qwen3-coder-30b-a3b-instruct-2", ["low", "medium"]);
+  const out = sanitizeReasoningEffortForProvider(
+    { reasoning_effort: "ultra", model: "qwen3-coder-30b-a3b-instruct-2" },
+    "openai-compatible-chat-eaff6869",
+    "qwen3-coder-30b-a3b-instruct-2"
+  ) as { reasoning_effort: string };
+  assert.equal(out.reasoning_effort, "medium");
+});

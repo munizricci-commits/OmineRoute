@@ -57,6 +57,7 @@ test("agy ships its own live callable model catalog", () => {
   assert.ok(!ids.includes("gemini-3.6-flash-low"));
   assert.ok(!ids.includes("gemini-3.6-flash-medium"));
   assert.ok(!ids.includes("gemini-3.6-flash-high"));
+  assert.ok(!ids.includes("gemini-3.5-flash"));
   assert.ok(!ids.includes("gemini-3.5-flash-extra-low"));
   assert.ok(!ids.includes("gemini-3.5-flash-low"));
   assert.ok(!ids.includes("gemini-3-flash-agent"));
@@ -87,6 +88,7 @@ test("agy model helpers resolve catalog ids and display names", () => {
   assert.equal(isUserCallableAgyModelId("gemini-3.6-flash-low"), false);
   assert.equal(isUserCallableAgyModelId("gemini-3.6-flash-medium"), false);
   assert.equal(isUserCallableAgyModelId("gemini-3.6-flash-high"), false);
+  assert.equal(isUserCallableAgyModelId("gemini-3.5-flash"), false);
   assert.equal(isUserCallableAgyModelId("gemini-3.5-flash-extra-low"), false);
   assert.equal(isUserCallableAgyModelId("gemini-3.5-flash-low"), false);
   assert.equal(isUserCallableAgyModelId("gemini-3-flash-agent"), false);

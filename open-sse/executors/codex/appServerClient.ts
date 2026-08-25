@@ -12,9 +12,10 @@
  * command / patch / permission. OmniRoute is a ROUTER — the harness that consumes
  * it owns tool execution and policy — so codex must never stall a turn on its own
  * interactive approval. Every inbound ServerRequest is always answered: approval
- * prompts are auto-APPROVED (so the model's agentic tool calls proceed; the harness
- * decides what really runs), and anything else we can't service gets a JSON-RPC
- * error so the id is always settled and the turn never hangs.
+ * prompts are auto-DENIED by default (they gate codex's OWN host execution, not
+ * the harness's tools; auto-approval is an explicit operator opt-in — hardening
+ * after the #11205 security review), and anything else we can't service gets a
+ * JSON-RPC error so the id is always settled and the turn never hangs.
  */
 
 // wreq-js WebSocket surface (mirrors the private type in codex.ts:71-77).
@@ -37,7 +38,12 @@ interface PendingReq {
 }
 
 // The set of ServerRequest methods that are approval prompts (see PROTOCOL-DIGEST
-// "Server -> client REQUESTS"). All of these get an auto-denial decision.
+// "Server -> client REQUESTS"). All of these get an auto-DENIAL decision unless
+// the operator explicitly opted into auto-approval (hardening after the #11205
+// security review): these prompts gate codex's OWN command/file/permission
+// execution on the host, NOT the harness's dynamic tools (those travel the
+// separate item/tool/call passthrough), so denying by default never sabotages
+// harness tool calls — it closes a prompt-injection → host-execution path.
 const APPROVAL_REQUEST_METHODS = new Set<string>([
   "item/commandExecution/requestApproval",
   "item/fileChange/requestApproval",
@@ -47,12 +53,20 @@ const APPROVAL_REQUEST_METHODS = new Set<string>([
 ]);
 
 const ROUTER_APPROVAL_NOTE = "router: harness-controlled execution";
+const ROUTER_DENIAL_NOTE =
+  "router: denied by default (set codexAppServerAutoApprove to opt in)";
 
 export interface CodexAppServerClientOptions {
   /** Transport factory. Defaults to the shared wreq-js websocket() when omitted. */
   websocketFn?: CodexAppServerWebsocketFn | null;
   /** Default per-request timeout (ms). */
   defaultTimeoutMs?: number;
+  /**
+   * Auto-APPROVE codex's own approval prompts (command/file/permission).
+   * Defaults to FALSE — prompts are auto-denied. Enable only when the operator
+   * trusts the app-server deployment to run codex-decided host commands.
+   */
+  autoApproveApprovals?: boolean;
 }
 
 /**
@@ -89,11 +103,13 @@ export class CodexAppServerClient {
   private toolCallHandler: CodexAppServerToolCallHandler | null = null;
   private readonly websocketFn: CodexAppServerWebsocketFn | null;
   private readonly defaultTimeoutMs: number;
+  private readonly autoApproveApprovals: boolean;
   private closed = false;
 
   constructor(options: CodexAppServerClientOptions = {}) {
     this.websocketFn = options.websocketFn ?? null;
     this.defaultTimeoutMs = options.defaultTimeoutMs ?? 120_000;
+    this.autoApproveApprovals = options.autoApproveApprovals === true;
   }
 
   /**
@@ -232,22 +248,27 @@ export class CodexAppServerClient {
   }
 
   /**
-   * Always answer an inbound ServerRequest so its id is settled. Approval prompts
-   * are auto-APPROVED (OmniRoute is a router; the harness that consumes it owns
-   * execution policy, so codex's own approval must not block the turn). Anything
-   * we cannot service gets a JSON-RPC error so the id is still settled.
+   * Always answer an inbound ServerRequest so its id is settled. Approval
+   * prompts are auto-DENIED unless the operator opted into auto-approval
+   * (hardening after the #11205 security review): they gate codex's OWN host
+   * command/file execution, not the harness's tools. Anything we cannot
+   * service gets a JSON-RPC error so the id is still settled.
    */
   private answerServerRequest(id: number, method: string): void {
     if (!this.ws || this.closed) return;
     if (APPROVAL_REQUEST_METHODS.has(method)) {
-      // ReviewDecision "approved" — let the model's agentic action proceed. The
-      // harness downstream of OmniRoute is the real gate. Note the note field is
-      // advisory; the decision string is what codex acts on.
+      // ReviewDecision — "denied" by default; "approved" only with the explicit
+      // operator opt-in. The note field is advisory; the decision string is
+      // what codex acts on.
+      const approved = this.autoApproveApprovals;
       this.ws.send(
         JSON.stringify({
           jsonrpc: "2.0",
           id,
-          result: { decision: "approved", note: ROUTER_APPROVAL_NOTE },
+          result: {
+            decision: approved ? "approved" : "denied",
+            note: approved ? ROUTER_APPROVAL_NOTE : ROUTER_DENIAL_NOTE,
+          },
         })
       );
       return;

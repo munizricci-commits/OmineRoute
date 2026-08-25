@@ -199,7 +199,10 @@ export const updateSettingsSchema = z.object({
     .array(z.enum(SIDEBAR_SECTIONS.map((s) => s.id) as [string, ...string[]]))
     .optional(),
   sidebarItemOrder: z.record(z.string(), z.array(z.string().max(100))).optional(),
-  sidebarActivePreset: z.enum(["all", "minimal", "developer", "admin"]).nullable().optional(),
+  sidebarActivePreset: z
+    .enum(["all", "essentials", "minimal", "developer", "admin"])
+    .nullable()
+    .optional(),
   comboConfigMode: z.enum(COMBO_CONFIG_MODES).optional(),
   codexServiceTier: z
     .object({
@@ -420,6 +423,7 @@ export const updateSettingsSchema = z.object({
   modalityBridgeAudioTimeout: z.number().int().min(1000).max(300000).optional(),
   modalityBridgeAudioMaxClips: z.number().int().min(1).max(10).optional(),
   modalityBridgeVideoEnabled: z.boolean().optional(),
+  modalityBridgeVideoAnalysisMode: z.enum(["full", "focused"]).optional(),
   modalityBridgeVideoModel: z.string().max(200).optional(),
   modalityBridgeVideoFrameCount: z.number().int().min(1).max(16).optional(),
   modalityBridgeVideoSamplingPolicy: z.enum(["uniform", "scene_aware", "segment_aware"]).optional(),

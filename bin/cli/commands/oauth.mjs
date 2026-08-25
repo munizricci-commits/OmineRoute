@@ -258,8 +258,7 @@ async function runDeviceFlow(def, opts) {
     process.stdout.write(`\nAuthorization URL not available\n\n`);
   }
 
-  if (opts.browser !== false && verificationUri)
-    await openBrowser(verificationUri);
+  if (opts.browser !== false && verificationUri) await openBrowser(verificationUri);
   process.stderr.write("Waiting for device authorization...\n");
   const deadline = Date.now() + (opts.timeout ?? 300000);
   const intervalMs = (start.intervalMs ?? start.interval ?? 5) * 1000;
@@ -320,7 +319,18 @@ export async function runOAuthStatus(opts, cmd) {
     process.exit(1);
   }
   const data = await res.json();
-  const connections = (data.connections ?? data.providers ?? data.items ?? data).filter(
+  const payload = data?.connections ?? data?.providers ?? data?.items ?? data;
+  // #11236 (bug 5 residual): a 200 whose body is out of contract (no
+  // connections/providers/items array — e.g. `{"status":"ok"}`) used to fall
+  // through to `.filter` on a non-array and crash with a bare TypeError plus a
+  // libuv teardown assertion on Windows. Coerce to an empty list with a
+  // sanitized one-line warning instead of dumping a stack trace.
+  if (!Array.isArray(payload)) {
+    process.stderr.write(
+      "Warning: unexpected response shape from /api/providers; showing no connections.\n"
+    );
+  }
+  const connections = (Array.isArray(payload) ? payload : []).filter(
     (c) => c.authType === "oauth" || c.authType === "oauth2"
   );
   emit(connections, globalOpts, connectionSchema);

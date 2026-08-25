@@ -15,6 +15,10 @@ const originalFetch = globalThis.fetch;
 const originalJwtSecret = process.env.JWT_SECRET;
 const originalApiKeySecret = process.env.API_KEY_SECRET;
 const originalXdg = process.env.XDG_CONFIG_HOME;
+const originalAllowContainerWrite = process.env.OMNIROUTE_ALLOW_CONTAINER_CONFIG_WRITE;
+// This test exercises the apply/merge path, not the container guard (#10057) —
+// keep it hermetic on container devboxes/CI.
+process.env.OMNIROUTE_ALLOW_CONTAINER_CONFIG_WRITE = "1";
 const testRoots = new Set<string>();
 
 async function createAuthCookie(): Promise<string> {
@@ -72,6 +76,9 @@ test.afterEach(async () => {
   else process.env.API_KEY_SECRET = originalApiKeySecret;
   if (originalXdg === undefined) delete process.env.XDG_CONFIG_HOME;
   else process.env.XDG_CONFIG_HOME = originalXdg;
+  if (originalAllowContainerWrite === undefined)
+    delete process.env.OMNIROUTE_ALLOW_CONTAINER_CONFIG_WRITE;
+  else process.env.OMNIROUTE_ALLOW_CONTAINER_CONFIG_WRITE = originalAllowContainerWrite;
   for (const root of testRoots) await fs.rm(root, { recursive: true, force: true });
   testRoots.clear();
 });

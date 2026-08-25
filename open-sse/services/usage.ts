@@ -68,6 +68,7 @@ import { getXaiUsage } from "./usage/xai.ts";
 import { getXaiOauthUsage } from "./usage/xaiOauth.ts";
 import { getGrokCliUsage } from "./usage/grokCli.ts";
 import { getFirecrawlUsage } from "./usage/firecrawl.ts";
+import { getVolcenginePlanUsage } from "./usage/volcenginePlan.ts";
 import { getCommandCodeUsage } from "./usage/command-code.ts";
 import { getQwenTokenPlanUsage } from "./usage/qwen-token-plan.ts";
 import { getConolUsage } from "./conolUsage.ts";
@@ -135,6 +136,9 @@ export const USAGE_FETCHER_PROVIDERS = [
   "ha",
   // Firecrawl team credits (GET /v2/team/credit-usage)
   "firecrawl",
+  // Volcano Ark Plan subscriptions (agent-plan / coding-plan)
+  "volcengine-agent-plan",
+  "volcengine-coding-plan",
   // Command Code credits + 5h/weekly windows (GET /alpha/billing/credits)
   "command-code",
   "conol-web",
@@ -242,6 +246,9 @@ export async function getUsageForProvider(
       return await getHyperAgentUsage(apiKey || accessToken, providerSpecificData);
     case "firecrawl":
       return await getFirecrawlUsage(id || "", apiKey, connection);
+    case "volcengine-agent-plan":
+    case "volcengine-coding-plan":
+      return await getVolcenginePlanUsage(apiKey || "", provider, providerSpecificData);
     case "command-code":
       return await getCommandCodeUsage(apiKey || accessToken || "");
     case "conol-web":

@@ -31,6 +31,7 @@ import * as xSearch from "./search/xSearch.ts";
 import { freeWebSearch } from "../services/freeWebSearch.ts";
 import { saveCallLog } from "@/lib/usageDb";
 import { safeOutboundFetch } from "@/shared/network/safeOutboundFetch";
+import { parseAndValidateNonMetadataUrl } from "@/shared/network/outboundUrlGuard";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { z } from "zod";
@@ -313,9 +314,23 @@ function getProviderSettingString(
   return undefined;
 }
 
-function resolveSearchBaseUrl(config: SearchProviderConfig, params: SearchRequestParams): string {
+export function resolveSearchBaseUrl(
+  config: SearchProviderConfig,
+  params: SearchRequestParams
+): string {
   const override = getProviderSettingString(params, "baseUrl");
-  return (override || config.baseUrl).replace(/\/+$/, "");
+  if (override) {
+    // GHSA-j7j4-g9qc-q69c: the override is client-controlled (provider_options /
+    // providerSpecificData) and flows into a plain fetch() sink — validate it
+    // before any builder uses it as the server-side fetch target. Mode is
+    // block-metadata (NOT public-only): the primary searxng use case is a
+    // self-hosted instance on loopback/LAN, so private hosts keep working,
+    // while cloud-metadata endpoints (IMDS credential theft) are rejected.
+    // The catalog's own config.baseUrl is operator config and stays untouched.
+    parseAndValidateNonMetadataUrl(override);
+    return override.replace(/\/+$/, "");
+  }
+  return config.baseUrl.replace(/\/+$/, "");
 }
 
 function toSearchPageNumber(offset: number | undefined, maxResults: number): number | undefined {

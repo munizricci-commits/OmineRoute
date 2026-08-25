@@ -1,1 +1,0 @@
-- **fix(api):** alias `GET`/`HEAD` `/readyz` to `/healthz` so Kubernetes readiness probes do not 404 ([#10850](https://github.com/diegosouzapw/OmniRoute/issues/10850))

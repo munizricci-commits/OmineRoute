@@ -20,6 +20,7 @@ const EXPECTED: Record<InventoryKind, Record<string, number>> = {
     "src/app/api/compression/compare/verify/route.ts": 1,
     "src/app/api/internal/codex-responses-ws/route.ts": 1,
     "src/app/api/search/providers/route.ts": 3,
+    "src/app/api/v1/_shared/elevenLabsProxy.ts": 1,
     "src/app/api/v1/audio/speech/route.ts": 1,
     "src/app/api/v1/_shared/videoModelResolution.ts": 1,
     "src/app/api/v1/audio/transcriptions/route.ts": 2,
@@ -40,7 +41,11 @@ const EXPECTED: Record<InventoryKind, Record<string, number>> = {
     "src/app/api/v1/session-leases/route.ts": 1,
     "src/app/api/v1/videos/generations/route.ts": 2,
     "src/app/api/v1/web/fetch/route.ts": 1,
-    "src/lib/embeddings/service.ts": 2,
+    // #11088/#11271: third site is the synced local-endpoint route — it resolves
+    // credentials through getProviderCredentials with the connection allowlist
+    // from resolveLocalSyncedEndpointRoute, and handles allRateLimited, so it is
+    // fenced the same way as the two pre-existing sites.
+    "src/lib/embeddings/service.ts": 3,
     "src/lib/memory/embedding/index.ts": 1,
     "src/lib/search/executeWebSearch.ts": 2,
     "src/lib/skills/webFetchExecution.ts": 1,
@@ -66,6 +71,10 @@ const EXPECTED: Record<InventoryKind, Record<string, number>> = {
     "open-sse/handlers/cursorCliProxy.ts": 1,
     "open-sse/services/alibabaFreeTier.ts": 1,
     "open-sse/services/alibabaFreeTierQuotaFetcher.ts": 1,
+    // Volcano Ark plan cycle: readConnectionForCooldownGate() reads the row backing the
+    // pre-dispatch persisted-cooldown gate, i.e. it is on the routing/dispatch path - same
+    // class as providerWildcard/autoComboCandidates, so it is classified B below.
+    "open-sse/services/combo.ts": 1,
     "open-sse/services/combo/providerWildcard.ts": 1,
     "open-sse/services/tokenRefresh.ts": 1,
     "src/app/(dashboard)/dashboard/tools/agent-bridge/page.tsx": 1,
@@ -123,6 +132,14 @@ const EXPECTED: Record<InventoryKind, Record<string, number>> = {
     "src/lib/oauth/utils/codexAuthImport.ts": 1,
     "src/lib/providerModels/managedModelImport.ts": 1,
     "src/lib/providers/codexConnectionDefaults.ts": 1,
+    // Volcano Ark plan connect flow (commit d732cf615): both are connection *persistence*
+    // sites, not dispatch. volcenginePlanBinding looks the plan connection up by name to
+    // decide update-vs-create during connect (same shape as oauth/connectionPersistence);
+    // volcPlanAutoSyncBackfill is a one-shot boot backfill that patches a providerSpecificData
+    // flag and issues no upstream call. Neither selects a connection to serve a request, so
+    // both stay class C (see CLASSIFICATION below).
+    "src/lib/providers/volcPlanAutoSyncBackfill.ts": 1,
+    "src/lib/providers/volcenginePlanBinding.ts": 1,
     "src/lib/proxyEgress.ts": 1,
     "src/lib/quota/connectionRecovery.ts": 2,
     "src/lib/sync/bundle.ts": 1,
@@ -172,6 +189,7 @@ const CLASSIFICATION: Record<InventoryKind, Record<string, BypassClass>> = {
       [
         "open-sse/handlers/autoComboCandidates.ts",
         "open-sse/handlers/chatCore.ts",
+        "open-sse/services/combo.ts",
         "open-sse/services/alibabaFreeTier.ts",
         "open-sse/services/alibabaFreeTierQuotaFetcher.ts",
         "open-sse/services/combo/providerWildcard.ts",

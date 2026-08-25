@@ -636,35 +636,45 @@ export async function checkConnection(conn) {
         copilotExpiresAtMs - Date.now() < TOKEN_EXPIRY_BUFFER;
 
       let refreshedProviderSpecificData: Record<string, unknown> | null = null;
-      if (copilotAboutToExpire) {
-        const hideLogs = await shouldHideLogs();
-        const proxyResolution = await resolveProxyForConnection(conn.id);
-        const proxyConfig = extractResolvedProxyConfig(proxyResolution);
-        const healthCheckLog = {
-          info: (tag: string, msg: string) => {
-            if (!hideLogs) console.log(LOG_PREFIX, `[${tag}]`, msg);
-          },
-          warn: (tag: string, msg: string) => {
-            if (!hideLogs) console.warn(LOG_PREFIX, `[${tag}]`, msg);
-          },
-          error: (tag: string, msg: string, extra?: Record<string, unknown>) => {
-            if (!hideLogs) console.error(LOG_PREFIX, `[${tag}]`, msg, extra || "");
-          },
-        };
+      const hideLogs = await shouldHideLogs();
+      const proxyResolution = await resolveProxyForConnection(conn.id);
+      const proxyConfig = extractResolvedProxyConfig(proxyResolution);
+      const healthCheckLog = {
+        info: (tag: string, msg: string) => {
+          if (!hideLogs) console.log(LOG_PREFIX, `[${tag}]`, msg);
+        },
+        warn: (tag: string, msg: string) => {
+          if (!hideLogs) console.warn(LOG_PREFIX, `[${tag}]`, msg);
+        },
+        error: (tag: string, msg: string, extra?: Record<string, unknown>) => {
+          if (!hideLogs) console.error(LOG_PREFIX, `[${tag}]`, msg, extra || "");
+        },
+      };
 
-        const copilotResult = await refreshCopilotToken(
-          conn.accessToken,
-          healthCheckLog,
-          proxyConfig,
-          getCopilotTokenBaseUrl(conn)
-        );
-        if (copilotResult?.token) {
-          refreshedProviderSpecificData = {
-            ...providerSpecificData,
-            copilotToken: copilotResult.token,
-            copilotTokenExpiresAt: copilotResult.expiresAt,
-          };
-        }
+      const copilotResult = await refreshCopilotToken(
+        conn.accessToken,
+        healthCheckLog,
+        proxyConfig,
+        getCopilotTokenBaseUrl(conn)
+      );
+      if (copilotResult?.status === 401) {
+        await updateProviderConnection(conn.id, {
+          testStatus: "expired",
+          lastHealthCheckAt: now,
+          lastError: "GitHub rejected the access token",
+          lastErrorAt: now,
+          lastErrorType: "github_access_token_invalid",
+          lastErrorSource: "oauth",
+          errorCode: "github_access_token_invalid",
+        });
+        return;
+      }
+      if (copilotResult?.token && copilotAboutToExpire) {
+        refreshedProviderSpecificData = {
+          ...providerSpecificData,
+          copilotToken: copilotResult.token,
+          copilotTokenExpiresAt: copilotResult.expiresAt,
+        };
       }
 
       if (canClearGitHubNoRefreshTokenState(conn)) {

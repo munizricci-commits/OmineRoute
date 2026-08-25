@@ -702,6 +702,7 @@ test("v1 models catalog exposes current Antigravity aliases without retired mode
   assert.equal(ids.has("antigravity/gemini-3.6-flash-high"), false);
   assert.equal(ids.has("antigravity/gemini-3.6-flash-medium"), false);
   assert.equal(ids.has("antigravity/gemini-3.6-flash-low"), false);
+  assert.equal(ids.has("antigravity/gemini-3.5-flash"), false);
   assert.equal(ids.has("antigravity/gemini-3.5-flash-extra-low"), false);
   assert.equal(ids.has("antigravity/gemini-3.5-flash-low"), false);
   assert.equal(ids.has("antigravity/gemini-3-flash-agent"), false);

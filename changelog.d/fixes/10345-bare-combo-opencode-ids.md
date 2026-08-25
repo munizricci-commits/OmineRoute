@@ -1,1 +1,0 @@
-- **fix(opencode-plugin):** publish bare combo model ids without the plugin provider prefix so OpenCode can select them ([#10345](https://github.com/diegosouzapw/OmniRoute/issues/10345))

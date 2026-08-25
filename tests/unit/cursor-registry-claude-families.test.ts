@@ -8,6 +8,10 @@ function modelIds(): Set<string> {
   return new Set(cursorProvider.models.map((m) => m.id));
 }
 
+test("cursor registry excludes retired Gemini 3.5 Flash", () => {
+  assert.equal(modelIds().has("gemini-3.5-flash"), false);
+});
+
 test("cursor registry includes Claude Opus 4.8 effort + thinking + fast variants", () => {
   const ids = modelIds();
   for (const effort of EFFORTS) {

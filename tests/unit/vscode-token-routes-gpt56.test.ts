@@ -128,9 +128,11 @@ test("vscode raw models route exposes native GPT-5.6 IDs and effort tiers", asyn
   assert.equal(typeof defaultModel.created, "number");
   assert.equal(defaultModel.owned_by, "codex");
   assert.equal(defaultModel.name, "Codex GPT 5.6 Sol");
-  assert.equal(defaultModel.context_length, 272000);
+  // #11179: codex static catalog advertises the usable 872K window (max_context_window),
+  // not the old 272K pricing tier.
+  assert.equal(defaultModel.context_length, 872000);
   assert.equal(defaultModel.max_output_tokens, 128000);
-  assert.equal(defaultModel.max_input_tokens, 272000);
+  assert.equal(defaultModel.max_input_tokens, 872000);
   assert.deepEqual(defaultModel.capabilities, {
     vision: true,
     tool_calling: true,

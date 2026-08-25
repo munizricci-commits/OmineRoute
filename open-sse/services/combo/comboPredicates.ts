@@ -96,6 +96,11 @@ export const MAX_COMBO_DEPTH = 3;
 export const MAX_COMBO_DEPTH_HARD_CAP = 10;
 export const MAX_FALLBACK_WAIT_MS = 5000;
 export const MAX_GLOBAL_ATTEMPTS = 30;
+// Absolute safety ceiling for the operator-configured shared attempt budget
+// (#11134). config.maxGlobalAttempts can raise the default (30) or lower it,
+// but never above this cap — an unbounded attempt budget is the same runaway
+// background-request DoS risk that motivated MAX_COMBO_DEPTH_HARD_CAP.
+export const MAX_GLOBAL_ATTEMPTS_HARD_CAP = 200;
 
 /**
  * Clamp an operator-configured combo nesting depth (config.maxComboDepth) to a
@@ -107,6 +112,20 @@ export function clampComboDepth(value: unknown): number {
   const n = Math.floor(Number(value));
   if (!Number.isFinite(n) || n < 1) return MAX_COMBO_DEPTH;
   return Math.min(n, MAX_COMBO_DEPTH_HARD_CAP);
+}
+
+/**
+ * Clamp an operator-configured shared per-request attempt budget
+ * (config.maxGlobalAttempts) to a safe integer in
+ * [1, MAX_GLOBAL_ATTEMPTS_HARD_CAP] (#11134). Mirrors clampComboDepth: anything
+ * non-numeric, < 1, NaN or Infinity falls back to the default
+ * MAX_GLOBAL_ATTEMPTS so a bad config can never disable the budget (runaway
+ * retries against a dead pool) nor blow past the safety ceiling.
+ */
+export function clampGlobalAttempts(value: unknown): number {
+  const n = Math.floor(Number(value));
+  if (!Number.isFinite(n) || n < 1) return MAX_GLOBAL_ATTEMPTS;
+  return Math.min(n, MAX_GLOBAL_ATTEMPTS_HARD_CAP);
 }
 
 /** Minimum recorded requests before the predictive-TTFT breaker trusts the average. */
@@ -461,6 +480,73 @@ export function getConnectionStatusQuotaCutoffReason(
     return "rate_limited";
   }
   return undefined;
+}
+
+/**
+ * Pre-dispatch skip for a combo target whose connection is already on a
+ * persisted cooldown. Combo previously only learned that from AUTH after a
+ * real upstream call, so a burst could burn max_concurrent slots against a
+ * connection that SQLite already marked unavailable until a future reset.
+ *
+ * Honours a future rateLimitedUntil regardless of testStatus, the terminal
+ * statuses that must never be dispatched, and a bare `unavailable` status even
+ * when no timestamp was written alongside it.
+ */
+export function getPersistedConnectionCooldownSkipReason(
+  target: { modelStr: string; connectionId?: string | null },
+  connection: Record<string, unknown> | null | undefined,
+  allowRateLimitedConnection = false
+): string | null {
+  if (allowRateLimitedConnection) return null;
+  if (!target.connectionId || !connection) return null;
+  if (hasFutureRateLimitUntil(connection.rateLimitedUntil)) {
+    return `Skipping ${target.modelStr} — connection ${target.connectionId} has persisted cooldown until ${String(connection.rateLimitedUntil)}`;
+  }
+  const status = normalizeConnectionStatus(connection.testStatus);
+  if (QUOTA_BLOCKING_CONNECTION_STATUSES.has(status)) {
+    return `Skipping ${target.modelStr} — connection ${target.connectionId} status=${status}`;
+  }
+  // `unavailable` with no (or an already-expired) rateLimitedUntil still means AUTH
+  // took this connection out of rotation — markAccountUnavailable() writes the status
+  // before, and sometimes without, a timestamp ("Using zai account …" then a real
+  // upstream 429). Without this branch the pre-skip only fired once the timestamp had
+  // landed, so a burst still dispatched against a connection AUTH had already retired.
+  // Lazy recovery is unaffected: clearAccountError() resets the status on first success.
+  if (status === "unavailable") {
+    return `Skipping ${target.modelStr} — connection ${target.connectionId} status=unavailable`;
+  }
+  return null;
+}
+
+/**
+ * Async wrapper around `getPersistedConnectionCooldownSkipReason` for the combo
+ * dispatchers, which must re-check the persisted cooldown before EVERY upstream
+ * attempt — not just once before the retry loop.
+ *
+ * The retry path is exactly where the stale-read risk lives: a sibling request in
+ * the same burst can write `rate_limited_until` while this attempt is sleeping out
+ * its retry delay, so the caller passes a cache-bypassing fetcher for retry > 0
+ * (the readCache TTL is 5s, long enough to serve a "no cooldown" snapshot written
+ * before the 429 landed).
+ *
+ * Kept dependency-free — the fetcher is injected, so this module stays pure and
+ * unit-testable without a DB.
+ */
+export async function resolvePersistedConnectionCooldownSkipReason(
+  target: { modelStr: string; connectionId?: string | null },
+  fetchConnection: (id: string) => Promise<Record<string, unknown> | null | undefined>,
+  allowRateLimitedConnection = false
+): Promise<string | null> {
+  if (allowRateLimitedConnection) return null;
+  if (!target.connectionId) return null;
+  let connection: Record<string, unknown> | null | undefined;
+  try {
+    connection = await fetchConnection(target.connectionId);
+  } catch {
+    // A DB read failure must never block dispatch — fall through to the upstream call.
+    return null;
+  }
+  return getPersistedConnectionCooldownSkipReason(target, connection, allowRateLimitedConnection);
 }
 
 /** @param {string} errorText */

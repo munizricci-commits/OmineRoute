@@ -13,7 +13,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { DashboardChannel, DashboardEventName } from "@/lib/events/types";
-import { deriveLiveWsPath } from "@/shared/utils/wsPath";
+import { deriveLiveWsPath, resolveLiveWsUrl, sanitizeLiveWsPort } from "@/shared/utils/wsPath";
 
 // ── Config ────────────────────────────────────────────────────────────────
 
@@ -40,14 +40,10 @@ function getDefaultWsUrl(): string {
   if (typeof window === "undefined") return `ws://localhost:20132${BUILD_TIME_WS_PATH}`;
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   const { hostname } = window.location;
-  // Bug #1 fix: Use the WS server's actual port (20132) for both loopback
-  // and non-loopback clients. Previously the non-loopback branch tried to
-  // upgrade the HTTP port (window.location.host) which has no upgrade
-  // handler in src/proxy.ts. If the user wants the upgrade to go through
-  // Next.js (same-origin), they should explicitly pass `wsUrl`.
-  if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1") {
-    return `${protocol}//${hostname}:20132${BUILD_TIME_WS_PATH}`;
-  }
+  // The WS server's own port, for loopback and non-loopback alike: the HTTP
+  // port has no upgrade handler in src/proxy.ts. This is only the starting
+  // point - the handshake below replaces the port when the server reports a
+  // different one, and a caller can always pass `wsUrl` outright.
   return `${protocol}//${hostname}:20132${BUILD_TIME_WS_PATH}`;
 }
 
@@ -113,6 +109,7 @@ export function useLiveDashboard({
   const needsHandshake = !wsUrl && !BUILD_TIME_PUBLIC_WS_URL && typeof window !== "undefined";
   const [handshakeUrl, setHandshakeUrl] = useState<string | null>(null);
   const [handshakePath, setHandshakePath] = useState<string | null>(null);
+  const [handshakePort, setHandshakePort] = useState<number | null>(null);
   const [wsUrlResolved, setWsUrlResolved] = useState(!needsHandshake);
 
   useEffect(() => {
@@ -127,6 +124,11 @@ export function useLiveDashboard({
         if (typeof body?.live?.path === "string" && body.live.path.startsWith("/")) {
           setHandshakePath(body.live.path);
         }
+        // The live server reports the port it is actually listening on, so a
+        // LIVE_WS_PORT override reaches a prebuilt image instead of being
+        // overruled by the compiled-in default (#11331).
+        const port = sanitizeLiveWsPort(body?.live?.port);
+        if (port !== null) setHandshakePort(port);
       })
       .catch(() => {
         // Handshake unavailable — fall back to the default URL.
@@ -139,20 +141,13 @@ export function useLiveDashboard({
     };
   }, [needsHandshake, wsUrlResolved]);
 
-  const effectiveWsUrl = (() => {
-    if (wsUrl) return wsUrl;
-    if (handshakeUrl) return handshakeUrl;
-    if (handshakePath && handshakePath !== BUILD_TIME_WS_PATH) {
-      try {
-        const url = new URL(DEFAULT_WS_URL);
-        url.pathname = handshakePath;
-        return url.toString();
-      } catch {
-        return DEFAULT_WS_URL;
-      }
-    }
-    return DEFAULT_WS_URL;
-  })();
+  const effectiveWsUrl = resolveLiveWsUrl({
+    explicit: wsUrl,
+    handshakeUrl,
+    handshakePort,
+    handshakePath: handshakePath !== BUILD_TIME_WS_PATH ? handshakePath : null,
+    defaultUrl: DEFAULT_WS_URL,
+  });
 
   const [events, setEvents] = useState<WsEventPayload[]>([]);
   const wsRef = useRef<WebSocket | null>(null);

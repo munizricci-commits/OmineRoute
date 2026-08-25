@@ -85,6 +85,8 @@ function parseGlmEffortTier(model: string): GlmEffortTier | null {
       return { baseModel: "glm-5.3", effort: "high", transport: "openai" };
     case "glm-5.3-low":
       return { baseModel: "glm-5.3", effort: "low", transport: "openai" };
+    case "glm-5.3-max":
+      return { baseModel: "glm-5.3", effort: "max", transport: "openai" };
     default:
       return null;
   }

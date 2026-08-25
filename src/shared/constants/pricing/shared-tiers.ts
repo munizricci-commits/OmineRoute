@@ -135,6 +135,13 @@ export const GLM_PRICING = {
     reasoning: 5,
     cache_creation: 1.2,
   },
+  "glm-5.3-max": {
+    input: 1.2,
+    output: 5,
+    cached: 0.3,
+    reasoning: 5,
+    cache_creation: 1.2,
+  },
   "glm-5.2": {
     input: 1.2,
     output: 5,

@@ -9,6 +9,7 @@ export const ollama_cloudProvider: RegistryEntry = {
   modelsUrl: "https://ollama.com/api/tags",
   authType: "apikey",
   authHeader: "bearer",
+  defaultSupportedThinkingEfforts: ["none", "low", "medium", "high", "max"],
   // Note: rate limits vary by plan (free = "Light usage", Pro = more, Max = 5x Pro).
   // Users can generate API keys at https://ollama.com/settings/keys
   models: [
@@ -24,23 +25,20 @@ export const ollama_cloudProvider: RegistryEntry = {
       supportsReasoning: true,
       supportedThinkingEfforts: ["low", "medium", "high"],
     },
-    // #10788: Ollama Cloud accepts low|medium|high|max|none uniformly across
-    // its reasoning-capable models (see supportsMaxEffortForProvider's
-    // isOllamaCloud comment in open-sse/executors/base/reasoningEffort.ts) —
-    // declare supportedThinkingEfforts so appendSyncedEffortVariants() (which
-    // runs before static-model capability enrichment) can synthesize the
-    // catalog's selectable -low/-high/-max variant ids for these models.
+    // #10788: these models accept none|low|medium|high|max. Keep their explicit
+    // declarations aligned with the provider fallback so the static and synced
+    // catalog paths expose the same native vocabulary.
     {
       id: "deepseek-v4-pro",
       name: "DeepSeek V4 Pro",
       supportsReasoning: true,
-      supportedThinkingEfforts: ["low", "medium", "high", "max"],
+      supportedThinkingEfforts: ["none", "low", "medium", "high", "max"],
     },
     {
       id: "deepseek-v4-flash",
       name: "DeepSeek V4 Flash",
       supportsReasoning: true,
-      supportedThinkingEfforts: ["low", "medium", "high", "max"],
+      supportedThinkingEfforts: ["none", "low", "medium", "high", "max"],
     },
     { id: "kimi-k2.6", name: "Kimi K2.6" },
     // Ollama Cloud accepts low|medium|high|max|none and rejects xhigh, so the
@@ -50,14 +48,14 @@ export const ollama_cloudProvider: RegistryEntry = {
       name: "GLM 5.1",
       supportsReasoning: true,
       supportsXHighEffort: false,
-      supportedThinkingEfforts: ["low", "medium", "high", "max"],
+      supportedThinkingEfforts: ["none", "low", "medium", "high", "max"],
     },
     {
       id: "glm-5.2",
       name: "GLM 5.2",
       supportsReasoning: true,
       supportsXHighEffort: false,
-      supportedThinkingEfforts: ["low", "medium", "high", "max"],
+      supportedThinkingEfforts: ["none", "low", "medium", "high", "max"],
     },
     // #3110: MiniMax M3 via Ollama
     { id: "minimax-m3", name: "MiniMax M3", contextLength: 1048576, supportsVision: true },

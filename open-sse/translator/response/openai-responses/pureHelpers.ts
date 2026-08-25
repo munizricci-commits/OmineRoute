@@ -56,21 +56,35 @@ function isDroppableEmptyEntry(entry, propSchema, required, key, allowlisted) {
   return allowlisted || (propSchema != null && !required.has(key));
 }
 
-// #7023 — the request-side counterpart (injectOptionalEnumOmissionSentinel) widens
-// no-default optional enum properties to accept `null`, meaning "omitted" (OpenAI's own
-// nullable-union idiom for Responses-API strict mode). Drop the key when the model
-// follows that idiom for a non-required, schema-declared property.
+function schemaTypeIncludes(type, wanted) {
+  return type === wanted || (Array.isArray(type) && type.includes(wanted));
+}
+
+function hasOmissionSentinel(propSchema) {
+  if (!propSchema || typeof propSchema !== "object") return false;
+  if (
+    typeof propSchema.description !== "string" ||
+    !propSchema.description.includes("null = omit this parameter")
+  ) {
+    return false;
+  }
+  return (
+    schemaTypeIncludes(propSchema.type, "null") ||
+    (Array.isArray(propSchema.enum) && propSchema.enum.includes(null))
+  );
+}
+
+// #7023 — the request-side counterpart widens no-default optional properties to accept
+// `null`, meaning "omitted" (OpenAI's own nullable-union idiom for Responses-API strict
+// mode). Enums use injectOptionalEnumOmissionSentinel; plain strings use
+// injectOptionalStringOmissionSentinel. Drop the key when the model follows that idiom
+// for a non-required, schema-declared property, or when OmniRoute's marker is present
+// even after an upstream strictifies the field into `required`.
 function isDroppableNullEntry(entry, propSchema, required, key, toolName) {
   if (entry !== null) return false;
   if (toolName === "Agent") return true;
   if (propSchema == null) return false;
-  const omissionSentinel =
-    typeof propSchema === "object" &&
-    Array.isArray(propSchema.enum) &&
-    propSchema.enum.includes(null) &&
-    typeof propSchema.description === "string" &&
-    propSchema.description.includes("null = omit this parameter");
-  return !required.has(key) || omissionSentinel;
+  return !required.has(key) || hasOmissionSentinel(propSchema);
 }
 
 function stripEmptyOptionalToolArgsObject(value, toolName, schema) {
@@ -110,7 +124,11 @@ export function stripEmptyOptionalToolArgs(value, toolName, schema) {
     // supplied (schema-aware normalization is not restricted to the allowlist).
     // "Agent" also passes without a schema: isDroppableNullEntry drops its null
     // omission sentinels even when the strict schema snapshot is unavailable (#9423).
-    if (!hasUsableSchema(schema) && !STRIPPABLE_EMPTY_ARG_TOOLS.has(toolName) && toolName !== "Agent") {
+    if (
+      !hasUsableSchema(schema) &&
+      !STRIPPABLE_EMPTY_ARG_TOOLS.has(toolName) &&
+      toolName !== "Agent"
+    ) {
       return value;
     }
     try {

@@ -202,6 +202,36 @@ export const SIDEBAR_ITEM_ORDER_KEY = "sidebarItemOrder";
 export const SIDEBAR_PRESET_KEY = "sidebarActivePreset";
 export const SIDEBAR_SETTINGS_UPDATED_EVENT = "omniroute:settings-updated";
 
+/** Beginner Essentials: core path only. Advanced tools stay reachable via search. */
+const ESSENTIALS_SHOWN: ReadonlySet<HideableSidebarItemId> = new Set([
+  "home",
+  "endpoints",
+  "api-manager",
+  "providers",
+  "health",
+  "settings-general",
+  "settings-sidebar",
+]);
+
+/** Hidden in Essentials sidebar but kept searchable in Command Palette. */
+export const ESSENTIALS_ADVANCED_TOOL_IDS: ReadonlySet<HideableSidebarItemId> = new Set([
+  "playground",
+  "logs",
+  "batch",
+  "translator",
+  "combos",
+  "quota",
+  "analytics",
+  "costs",
+  "cache",
+  "runtime",
+  "resilience-connections",
+  "mcp",
+  "a2a",
+  "memory",
+  "skills",
+]);
+
 const MINIMAL_SHOWN: ReadonlySet<HideableSidebarItemId> = new Set([
   "home",
   "endpoints",
@@ -297,6 +327,7 @@ function buildHiddenList(shown: ReadonlySet<HideableSidebarItemId>): HideableSid
 
 export const SIDEBAR_PRESETS: readonly SidebarPresetDefinition[] = [
   { id: "all", icon: "select_all", hiddenItems: [] },
+  { id: "essentials", icon: "star", hiddenItems: buildHiddenList(ESSENTIALS_SHOWN) },
   { id: "minimal", icon: "minimize", hiddenItems: buildHiddenList(MINIMAL_SHOWN) },
   { id: "developer", icon: "code", hiddenItems: buildHiddenList(DEVELOPER_SHOWN) },
   { id: "admin", icon: "admin_panel_settings", hiddenItems: buildHiddenList(ADMIN_SHOWN) },

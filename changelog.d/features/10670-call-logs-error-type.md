@@ -1,1 +1,0 @@
-- **feat(call_logs):** persist the per-call error family in `call_logs.error_type` and expose a failure breakdown (`errorBreakdown`) in the usage analytics endpoint, reusing the existing production classifier ([#10670](https://github.com/diegosouzapw/OmniRoute/issues/10670))

@@ -1,1 +1,0 @@
-- fix(ollama): route models by advertised capability — synced store now persists non-chat models and chat filtering moved to read time (#11088, option 1)

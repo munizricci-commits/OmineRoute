@@ -1,1 +1,0 @@
-- **docs(backend):** document that memory extraction, skills injection, and token refresh share the request event loop, plus dashboard kill switches ([#10349](https://github.com/diegosouzapw/OmniRoute/issues/10349))

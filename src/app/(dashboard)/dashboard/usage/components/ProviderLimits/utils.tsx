@@ -1,5 +1,5 @@
 export { parseQuotaData } from "./quotaParsing";
-import { hasFixedQuotaOrder } from "./quotaParsing";
+import { hasFixedQuotaOrder, hasCanonicalWindowOrder, sortQuotasByWindow } from "./quotaParsing";
 
 const PROVIDER_PLAN_FALLBACKS = new Set([
   "claude code",
@@ -398,6 +398,15 @@ export function topQuotas(quotas: any[], n = 3, providerId?: string): any[] {
   // status/remaining-%, which would undo it (#6687's collapsed-card sibling, #7764).
   if (hasFixedQuotaOrder(providerId)) {
     return filtered.slice(0, n);
+  }
+
+  // #7764 residual: any OTHER provider reporting rolling time windows (claude,
+  // minimax, zai, command-code, ...) has an equally inherent session→weekly→
+  // monthly order. Re-sorting those by remaining % makes two accounts of the
+  // same provider render the bars in opposite positions. Detected from the
+  // quota keys, so a new provider needs no list update.
+  if (hasCanonicalWindowOrder(filtered)) {
+    return sortQuotasByWindow(filtered).slice(0, n);
   }
 
   return [...filtered]

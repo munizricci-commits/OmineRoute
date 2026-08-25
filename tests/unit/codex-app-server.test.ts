@@ -213,9 +213,9 @@ test("mapUsage: converts snake_case token counts", () => {
   assert.equal(mapUsage(undefined), undefined);
 });
 
-// ── Client: stall-guard auto-approval ───────────────────────────────────────
+// ── Client: approval stall-guard (deny-by-default, opt-in approve) ─────────
 
-test("CodexAppServerClient: server approval request is auto-approved", async () => {
+test("CodexAppServerClient: server approval request is auto-DENIED by default (#11205 hardening)", async () => {
   const ctrl = makeFakeSocket();
   const { fn } = fakeTransport(ctrl);
   const client = new CodexAppServerClient({ websocketFn: fn });
@@ -234,12 +234,30 @@ test("CodexAppServerClient: server approval request is auto-approved", async () 
 
   const reply = ctrl.sent.find((f) => f.id === 99);
   assert.ok(reply, "client must reply to the server approval request");
-  // OmniRoute is a router: approvals are auto-APPROVED so the model's agentic
-  // tool calls proceed; the harness downstream is the real execution gate.
-  assert.equal(
-    (reply!.result as Record<string, unknown>).decision,
-    "approved"
-  );
+  // Security contract (post-#11205 review): codex's OWN command/file/permission
+  // executions are denied by default — approval prompts are NOT the harness
+  // tool-call passthrough (that path is item/tool/call, handled separately), so
+  // denying never sabotages harness tools. Blanket auto-approve + a permissive
+  // sandbox is a confused-deputy for prompt-injected turns.
+  assert.equal((reply!.result as Record<string, unknown>).decision, "denied");
+});
+
+test("CodexAppServerClient: approval request is auto-approved only with explicit opt-in", async () => {
+  const ctrl = makeFakeSocket();
+  const { fn } = fakeTransport(ctrl);
+  const client = new CodexAppServerClient({ websocketFn: fn, autoApproveApprovals: true });
+  await client.connect("ws://x", "tok");
+
+  ctrl.emit({
+    jsonrpc: "2.0",
+    id: 100,
+    method: "item/fileChange/requestApproval",
+    params: { changes: [] },
+  });
+
+  const reply = ctrl.sent.find((f) => f.id === 100);
+  assert.ok(reply, "client must reply to the server approval request");
+  assert.equal((reply!.result as Record<string, unknown>).decision, "approved");
 });
 
 test("CodexAppServerClient: non-approval server request gets a JSON-RPC error", async () => {
@@ -332,11 +350,13 @@ test("CodexAppServerExecutor: streaming turn emits initialize → thread/start �
   assert.deepEqual(lifecycle, ["initialize", "thread/start", "turn/start"]);
 
   // thread/start carried the router defaults: approvalPolicy:"never" (codex
-  // never blocks on its own approval) + sandbox:"danger-full-access" (codex's
-  // own sandbox does not gate the model; the harness is the real execution gate).
+  // never blocks on its own approval) + sandbox:"workspace-write" — hardened
+  // default post-#11205 security review (was "danger-full-access"): codex's own
+  // sandbox now confines writes to the turn's cwd tree unless the operator
+  // explicitly opts back into a wider sandbox via providerSpecificData/env.
   const threadStart = sent.find((f) => f.method === "thread/start");
   assert.equal((threadStart!.params as Record<string, unknown>).approvalPolicy, "never");
-  assert.equal((threadStart!.params as Record<string, unknown>).sandbox, "danger-full-access");
+  assert.equal((threadStart!.params as Record<string, unknown>).sandbox, "workspace-write");
 
   // turn/start carried the text input with text_elements:[]
   const turnStart = sent.find((f) => f.method === "turn/start");
@@ -700,3 +720,173 @@ test("probeCodexAppServerAuth: no transport → unknown (does not throw)", async
   assert.equal(status.state, "unknown");
 });
 
+
+// ── Security hardening (#11205 post-merge review) ───────────────────────────
+// Two findings from the automated push review on the original #11205 merge:
+//  (1) the readyz health probe sent the bearer token to any URL a connection
+//      config pointed at, following redirects (SSRF / credential exfil);
+//  (2) env-sourced credentials were happily paired with a
+//      providerSpecificData-sourced URL, so anyone able to write a connection
+//      could harvest the operator's env token.
+// The binding rule: env-sourced tokens are only sent to env-sourced URLs or to
+// operator-local hosts (loopback / RFC1918 / link-local / ULA / localhost /
+// single-label LAN names / *.local / *.ts.net / *.internal). A psd-sourced
+// token may go anywhere — whoever wrote the psd already knows it.
+
+function withEnv<T>(vars: Record<string, string | undefined>, fn: () => T): T {
+  const prev: Record<string, string | undefined> = {};
+  for (const k of Object.keys(vars)) {
+    prev[k] = process.env[k];
+    if (vars[k] === undefined) delete process.env[k];
+    else process.env[k] = vars[k];
+  }
+  try {
+    return fn();
+  } finally {
+    for (const k of Object.keys(vars)) {
+      if (prev[k] === undefined) delete process.env[k];
+      else process.env[k] = prev[k];
+    }
+  }
+}
+
+const BINDING_ENV_KEYS = {
+  OMNIROUTE_CODEX_APPSERVER_WS: undefined,
+  OMNIROUTE_CODEX_APPSERVER_WS_TOKEN: "env-token-hex",
+  OMNIROUTE_CODEX_APPSERVER_WS_TOKEN_FILE: undefined,
+} as const;
+
+test("resolveAppServerConfig: refuses env token → remote psd URL (SSRF binding)", () => {
+  withEnv({ ...BINDING_ENV_KEYS }, () => {
+    // attacker/lower-priv connection config points the URL at an outside host;
+    // the env token must NOT be attached → unconfigured (null), feature off.
+    assert.equal(
+      resolveAppServerConfig({
+        codexTransport: "app-server",
+        codexAppServerUrl: "wss://evil.example.com:8443",
+      }),
+      null
+    );
+    // dotted hostnames are not local even when they look benign
+    assert.equal(
+      resolveAppServerConfig({
+        codexTransport: "app-server",
+        codexAppServerUrl: "ws://appserver.evil-corp.io:1456",
+      }),
+      null
+    );
+  });
+});
+
+test("resolveAppServerConfig: env token allowed to operator-local psd URLs", () => {
+  withEnv({ ...BINDING_ENV_KEYS }, () => {
+    const localUrls = [
+      "ws://127.0.0.1:1456",
+      "ws://localhost:1456",
+      "ws://[::1]:1456",
+      "ws://10.0.0.5:1456",
+      "ws://172.16.3.4:1456",
+      "ws://192.168.0.15:1456",
+      "ws://169.254.1.1:1456",
+      "ws://ts-egress:1456", // single-label LAN/hosts-file name
+      "ws://codex.local:1456",
+      "ws://node1.ts.net:1456",
+      "ws://sidecar.internal:1456",
+    ];
+    for (const url of localUrls) {
+      const cfg = resolveAppServerConfig({ codexTransport: "app-server", codexAppServerUrl: url });
+      assert.ok(cfg, `expected env token to bind to local URL ${url}`);
+      assert.equal(cfg!.token, "env-token-hex");
+    }
+  });
+});
+
+test("resolveAppServerConfig: psd-sourced token may pair with any psd URL", () => {
+  withEnv(
+    {
+      OMNIROUTE_CODEX_APPSERVER_WS: undefined,
+      OMNIROUTE_CODEX_APPSERVER_WS_TOKEN: undefined,
+      OMNIROUTE_CODEX_APPSERVER_WS_TOKEN_FILE: undefined,
+    },
+    () => {
+      const cfg = resolveAppServerConfig({
+        codexTransport: "app-server",
+        codexAppServerUrl: "wss://codex.remote.example.com:443",
+        codexAppServerToken: "psd-token",
+      });
+      assert.ok(cfg, "psd token + psd URL is self-consistent, allowed");
+      assert.equal(cfg!.token, "psd-token");
+    }
+  );
+});
+
+test("resolveAppServerConfig: env URL + env token pairs regardless of host", () => {
+  withEnv(
+    {
+      OMNIROUTE_CODEX_APPSERVER_WS: "wss://codex-remote.example.com:8443",
+      OMNIROUTE_CODEX_APPSERVER_WS_TOKEN: "env-token-hex",
+      OMNIROUTE_CODEX_APPSERVER_WS_TOKEN_FILE: undefined,
+    },
+    () => {
+      const cfg = resolveAppServerConfig({ codexTransport: "app-server" });
+      assert.ok(cfg, "operator's own env pair is self-consistent, allowed");
+      assert.equal(cfg!.url, "wss://codex-remote.example.com:8443");
+    }
+  );
+});
+
+// ── Health probe: redirect pinning + binding inheritance ────────────────────
+
+test("testCodexAppServerConnection: readyz probe pins redirects (no token leak via 30x)", async () => {
+  const { testCodexAppServerConnection } = await import(
+    "../../src/app/api/providers/[id]/test/codexAppServerHealth.ts"
+  );
+  const originalFetch = globalThis.fetch;
+  const seen: Array<{ url: string; init?: RequestInit }> = [];
+  globalThis.fetch = (async (url: unknown, init?: RequestInit) => {
+    seen.push({ url: String(url), init });
+    return new Response("not ready", { status: 503 });
+  }) as typeof fetch;
+  try {
+    const result = await testCodexAppServerConnection({
+      provider: "codex-app-server",
+      providerSpecificData: {
+        codexAppServerUrl: "ws://127.0.0.1:1456",
+        codexAppServerToken: "deadbeef",
+      },
+    });
+    assert.ok(result, "app-server provider must take the readyz path");
+    assert.equal(result!.valid, false);
+    assert.equal(seen.length, 1);
+    assert.equal(seen[0].url, "http://127.0.0.1:1456/readyz");
+    assert.equal(seen[0].init?.redirect, "manual", "bearer token must never follow a redirect");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("testCodexAppServerConnection: env token + remote psd URL reports unconfigured, no network", async () => {
+  const { testCodexAppServerConnection } = await import(
+    "../../src/app/api/providers/[id]/test/codexAppServerHealth.ts"
+  );
+  const originalFetch = globalThis.fetch;
+  let fetched = false;
+  globalThis.fetch = (async () => {
+    fetched = true;
+    return new Response("ok", { status: 200 });
+  }) as typeof fetch;
+  try {
+    await withEnv({ ...BINDING_ENV_KEYS }, async () => {
+      const result = await testCodexAppServerConnection({
+        provider: "codex-app-server",
+        providerSpecificData: { codexAppServerUrl: "wss://evil.example.com:8443" },
+      });
+      assert.ok(result);
+      assert.equal(result!.valid, false);
+      assert.match(String((result!.diagnosis as { code?: string })?.code), /app_server_unconfigured/);
+    });
+    assert.equal(fetched, false, "binding refusal must happen before any network call");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

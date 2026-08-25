@@ -40,7 +40,6 @@ type JsonRecord = Record<string, unknown>;
 
 export interface CatalogEnrichmentSnapshot {
   modelsDevPricing: PricingByProvider | null;
-  capabilityResolution?: ModelCapabilityResolutionSnapshot;
   providerNodeIdsByPrefix?: Readonly<Record<string, string>>;
   /** #9147: build-local bulk load of synced capabilities + token/context overrides
    * so per-entry enrichment never hits SQLite again (see catalogResponse.ts). */

@@ -1,1 +1,0 @@
-- **fix(analytics):** Claude Code (`claude`/`cc`) is a flat-rate subscription, so cost analytics reports `$0` for it instead of estimating Anthropic list prices — the metered `anthropic` API keeps its real cost, and budget/quota/routing still estimate as before ([#10774](https://github.com/diegosouzapw/OmniRoute/pull/10774)) — thanks @electrumguy

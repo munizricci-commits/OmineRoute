@@ -1,1 +1,0 @@
-- fix(quality): rebaseline file-size for #10859's own modelCapabilities.ts/commandCode.ts growth (missed at merge time)

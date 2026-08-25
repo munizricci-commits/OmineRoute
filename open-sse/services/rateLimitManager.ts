@@ -140,28 +140,40 @@ function isAutoEnableActive(settings: RequestQueueSettings): boolean {
 const EFFECTIVELY_INFINITE = Number.MAX_SAFE_INTEGER;
 const EFFECTIVELY_INFINITE_CONCURRENCY = 1000;
 
+// Shared override-resolution rule for every per-connection rate-limit field:
+// a positive override wins, 0 or missing falls through to `fallback`.
+function resolveOverride(override: number | undefined | null, fallback: number): number {
+  return typeof override === "number" && override > 0 ? override : fallback;
+}
+
 // Resolve an RPM override. 0 or missing means "infinite" (no rate cap).
 function resolveRpm(override: number | undefined | null): number {
-  return typeof override === "number" && override > 0 ? override : EFFECTIVELY_INFINITE;
+  return resolveOverride(override, EFFECTIVELY_INFINITE);
 }
 
 // Resolve a minTime override. 0 or missing means "no minimum gap".
 function resolveMinTime(override: number | undefined | null): number {
-  return typeof override === "number" && override > 0 ? override : 0;
+  return resolveOverride(override, 0);
 }
 
 // Resolve a maxConcurrent override. 0 or missing means "effectively infinite".
 function resolveMaxConcurrent(override: number | undefined | null): number {
-  return typeof override === "number" && override > 0 ? override : EFFECTIVELY_INFINITE_CONCURRENCY;
+  return resolveOverride(override, EFFECTIVELY_INFINITE_CONCURRENCY);
 }
 
 export function resolveRequestQueueMaxWaitMs(
   provider: string,
-  configuredMaxWaitMs: number = currentRequestQueueSettings.maxWaitMs
+  configuredMaxWaitMs: number = currentRequestQueueSettings.maxWaitMs,
+  connectionId?: string
 ): number {
-  return provider.trim().toLowerCase() === "zai-web"
-    ? Math.max(configuredMaxWaitMs, ZAI_WEB_REQUEST_QUEUE_MAX_WAIT_MS)
-    : configuredMaxWaitMs;
+  const legacyDefault =
+    provider.trim().toLowerCase() === "zai-web"
+      ? Math.max(configuredMaxWaitMs, ZAI_WEB_REQUEST_QUEUE_MAX_WAIT_MS)
+      : configuredMaxWaitMs;
+  const override = connectionId
+    ? connectionRateLimitOverrides.get(connectionId)?.maxWaitMs
+    : undefined;
+  return resolveOverride(override, legacyDefault);
 }
 
 function buildLimiterDefaults() {
@@ -546,7 +558,7 @@ export async function withRateLimit(provider, connectionId, model, fn, signal = 
 
   // Proactive sliding-window fallback for header-less providers with a declared cap
   // (Fase 8.2). No-op unless PROVIDER_DEFAULT_RATE_LIMITS has an entry for `provider`.
-  const maxWaitMs = resolveRequestQueueMaxWaitMs(provider);
+  const maxWaitMs = resolveRequestQueueMaxWaitMs(provider, undefined, connectionId);
   await awaitProviderDefaultSlot(provider, connectionId, signal, maxWaitMs);
 
   const limiter = getLimiter(provider, connectionId, model);

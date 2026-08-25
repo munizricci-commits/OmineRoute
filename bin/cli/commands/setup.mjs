@@ -1,4 +1,4 @@
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import { createPrompt, printHeading, printInfo, printSuccess } from "../io.mjs";
 import { openOmniRouteDb } from "../sqlite.mjs";
@@ -16,7 +16,7 @@ import { t } from "../i18n.mjs";
 const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 
 async function getListCliTools() {
-  const { listCliTools } = await import(`${PROJECT_ROOT}/src/shared/constants/cliTools.ts`);
+  const { listCliTools } = await import(pathToFileURL(resolve(PROJECT_ROOT, "src/shared/constants/cliTools.ts")).href);
   return listCliTools;
 }
 

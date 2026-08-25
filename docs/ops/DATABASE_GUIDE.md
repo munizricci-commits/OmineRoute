@@ -1,7 +1,7 @@
 ---
 title: "Database Schema & Operations Guide"
-version: 3.8.40
-lastUpdated: 2026-06-28
+version: 3.8.50
+lastUpdated: 2026-08-23
 ---
 
 # Database Schema & Operations Guide
@@ -43,11 +43,16 @@ For **single-user, single-instance** deployments (the primary OmniRoute use case
 db.pragma("journal_mode = WAL");
 db.pragma("busy_timeout = 2000");
 db.pragma("synchronous = NORMAL");
-// Settings > System & Storage > Cache Size is applied as KiB.
-db.pragma("cache_size = -16384");
+db.pragma(`cache_size = -${DEFAULT_DATABASE_SETTINGS.optimization.cacheSize}`);
 ```
 
 WAL allows **concurrent reads** during writes — important for the dashboard, which queries while requests are being recorded.
+
+The default cache size is **65,536 KiB (64 MiB)**. SQLite interprets a negative
+`cache_size` as an approximate upper bound in KiB and allocates pages on demand.
+**Settings > System & Storage > Cache Size** accepts integer values from **1 to
+1,000,000 KiB**; saving the setting applies it to the live database connection,
+and OmniRoute restores the persisted value at startup.
 
 ---
 

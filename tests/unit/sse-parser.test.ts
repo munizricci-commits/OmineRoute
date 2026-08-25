@@ -394,7 +394,7 @@ test("parseSSEToGeminiResponse extracts tool calls from textual format", () => {
     })}`,
   ].join("\n");
 
-  const parsed = parseSSEToGeminiResponse(rawSSE, "gemini-3.5-flash-low");
+  const parsed = parseSSEToGeminiResponse(rawSSE, "gemini-3.7-flash-low");
 
   assert.ok(parsed);
   assert.equal(parsed.choices[0].finish_reason, "tool_calls");

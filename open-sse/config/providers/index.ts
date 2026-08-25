@@ -70,6 +70,8 @@ import { togetherProvider } from "./registry/together/index.ts";
 import { cohereProvider } from "./registry/cohere/index.ts";
 import { cursorProvider, cursor_apiProvider } from "./registry/cursor/index.ts";
 import { volcengineProvider } from "./registry/volcengine/index.ts";
+import { volcengine_agent_planProvider } from "./registry/volcengine/agent-plan/index.ts";
+import { volcengine_coding_planProvider } from "./registry/volcengine/coding-plan/index.ts";
 import { freetheaiProvider } from "./registry/freetheai/index.ts";
 import { g4f_groqProvider } from "./registry/g4f-groq/index.ts";
 import { g4f_geminiProvider } from "./registry/g4f-gemini/index.ts";
@@ -337,6 +339,8 @@ export const REGISTRY: Record<string, RegistryEntry> = {
   cursor: cursorProvider,
   "cursor-api": cursor_apiProvider,
   volcengine: volcengineProvider,
+  "volcengine-agent-plan": volcengine_agent_planProvider,
+  "volcengine-coding-plan": volcengine_coding_planProvider,
   freetheai: freetheaiProvider,
   "g4f-groq": g4f_groqProvider,
   "g4f-gemini": g4f_geminiProvider,

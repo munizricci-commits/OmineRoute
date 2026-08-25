@@ -61,7 +61,11 @@ export async function testCodexAppServerConnection(
   );
   const config = resolveAppServerConfig(psd);
   if (!config) {
-    const error = "Codex app-server transport is not configured (missing url or token)";
+    // Also reached when the credential/URL binding refused (env token + remote
+    // psd URL) — the resolve deliberately returns null there so the token can
+    // never leave the operator's network (see appServerConfig.ts).
+    const error =
+      "Codex app-server transport is not configured (missing url/token, or the env-token/remote-URL binding was refused)";
     return {
       valid: false,
       error,
@@ -81,6 +85,10 @@ export async function testCodexAppServerConnection(
       method: "GET",
       headers: { Authorization: `Bearer ${config.token}` },
       signal: controller.signal,
+      // Never follow redirects carrying the bearer token (SSRF hardening after
+      // the #11205 security review): a 30x to an outside host would exfiltrate
+      // the capability token. A redirect response is simply "not ready".
+      redirect: "manual",
     });
     if (res.status !== 200) {
       const error = `Codex app-server not ready (${readyzUrl} → HTTP ${res.status})`;

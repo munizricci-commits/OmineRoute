@@ -114,10 +114,13 @@ function writeLinuxSystemdUnit(cliPath) {
   const unitDir = dirname(linuxSystemdUnitPath());
   mkdirSync(unitDir, { recursive: true });
   const envFile = join(userHomeDir(), ".omniroute", ".env");
+  const nodeBinDir = dirname(process.execPath);
+  const userLocalBin = join(userHomeDir(), ".local", "bin");
+  const pathEnv = `${nodeBinDir}:${userLocalBin}:/usr/local/sbin:/usr/local/bin:/usr/bin:/bin`;
   const lines = [
     "[Unit]",
     "Description=OmniRoute AI proxy router",
-    "After=network-online.target",
+    "After=network-online.target graphical-session.target",
     "Wants=network-online.target",
     "",
     "[Service]",
@@ -134,6 +137,7 @@ function writeLinuxSystemdUnit(cliPath) {
     `ExecStart=${buildServeExecLine(cliPath, { tray: false })}`,
     "Restart=on-failure",
     "RestartSec=5",
+    `Environment="PATH=${pathEnv}"`,
   ];
   if (existsSync(envFile)) lines.push(`EnvironmentFile=-${envFile}`);
   lines.push("", "[Install]", "WantedBy=default.target", "");

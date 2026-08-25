@@ -1,1 +1,0 @@
-- chore(test): regenerate the provider/translate-path golden snapshot to reflect freebuff (#10531), fixing a base-red left by that merge (freebuff/freeinference key ordering only, no value changes).

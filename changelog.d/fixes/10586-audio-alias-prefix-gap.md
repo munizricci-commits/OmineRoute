@@ -1,1 +1,0 @@
-- fix(sse): resolve the short provider-alias prefix (e.g. `el/`) advertised by GET /v1/models for audio speech, transcription and translation model ids (#10586)

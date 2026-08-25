@@ -5,7 +5,8 @@
  * iteration order silently won, emitting a startup warning and shadowing a real
  * provider:
  *   - "kimi" → kimi-web (shadowed the kimi provider that gained a dedicated executor)
- *   - "hc"   → hackclub (shadowed huggingchat)
+ *   - "hc"   → the provider that held it shadowed huggingchat (it was later
+ *     removed entirely, #11176; huggingchat keeps its own id as alias)
  *
  * The decision: the primary provider keeps the short alias; the web/secondary
  * variant takes its own id as alias. This test pins both the global uniqueness

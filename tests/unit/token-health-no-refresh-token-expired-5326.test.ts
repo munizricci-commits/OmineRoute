@@ -124,55 +124,81 @@ test("checkConnection leaves a non-refresh provider with no refresh token untouc
 
 test("checkConnection keeps GitHub Copilot access-token-only connections active", async () => {
   await resetStorage();
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () =>
+    new Response(
+      JSON.stringify({
+        token: "verified-copilot-token",
+        expires_at: Math.floor((Date.now() + 60 * 60 * 1000) / 1000),
+      }),
+      { status: 200, headers: { "content-type": "application/json" } }
+    )) as typeof fetch;
 
-  const connection = await providersDb.createProviderConnection({
-    provider: "github",
-    authType: "oauth",
-    name: "GitHub Access Token Account",
-    accessToken: "github-access-token",
-    refreshToken: null,
-    providerSpecificData: {
-      copilotToken: "copilot-token",
-      copilotTokenExpiresAt: Math.floor((Date.now() + 60 * 60 * 1000) / 1000),
-    },
-    testStatus: "active",
-    isActive: true,
-  });
+  try {
+    const connection = await providersDb.createProviderConnection({
+      provider: "github",
+      authType: "oauth",
+      name: "GitHub Access Token Account",
+      accessToken: "github-access-token",
+      refreshToken: null,
+      providerSpecificData: {
+        copilotToken: "copilot-token",
+        copilotTokenExpiresAt: Math.floor((Date.now() + 60 * 60 * 1000) / 1000),
+      },
+      testStatus: "active",
+      isActive: true,
+    });
 
-  await tokenHealthCheck.checkConnection(connection);
+    await tokenHealthCheck.checkConnection(connection);
 
-  const updated = await providersDb.getProviderConnectionById(getCreatedConnectionId(connection));
-  assert.equal(updated?.testStatus, "active");
-  assert.notEqual(updated?.errorCode, "no_refresh_token");
-  assert.ok(updated?.lastHealthCheckAt);
+    const updated = await providersDb.getProviderConnectionById(getCreatedConnectionId(connection));
+    assert.equal(updated?.testStatus, "active");
+    assert.notEqual(updated?.errorCode, "no_refresh_token");
+    assert.ok(updated?.lastHealthCheckAt);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("checkConnection clears stale no_refresh_token state for usable GitHub Copilot connections", async () => {
   await resetStorage();
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () =>
+    new Response(
+      JSON.stringify({
+        token: "verified-copilot-token",
+        expires_at: Math.floor((Date.now() + 60 * 60 * 1000) / 1000),
+      }),
+      { status: 200, headers: { "content-type": "application/json" } }
+    )) as typeof fetch;
 
-  const connection = await providersDb.createProviderConnection({
-    provider: "github",
-    authType: "oauth",
-    name: "GitHub False Expired Account",
-    accessToken: "github-access-token",
-    refreshToken: null,
-    providerSpecificData: {
-      copilotToken: "copilot-token",
-      copilotTokenExpiresAt: Math.floor((Date.now() + 60 * 60 * 1000) / 1000),
-    },
-    testStatus: "expired",
-    errorCode: "no_refresh_token",
-    lastError: "No refresh token available — re-authenticate this account.",
-    isActive: true,
-  });
+  try {
+    const connection = await providersDb.createProviderConnection({
+      provider: "github",
+      authType: "oauth",
+      name: "GitHub False Expired Account",
+      accessToken: "github-access-token",
+      refreshToken: null,
+      providerSpecificData: {
+        copilotToken: "copilot-token",
+        copilotTokenExpiresAt: Math.floor((Date.now() + 60 * 60 * 1000) / 1000),
+      },
+      testStatus: "expired",
+      errorCode: "no_refresh_token",
+      lastError: "No refresh token available — re-authenticate this account.",
+      isActive: true,
+    });
 
-  await tokenHealthCheck.checkConnection(connection);
+    await tokenHealthCheck.checkConnection(connection);
 
-  const updated = await providersDb.getProviderConnectionById(getCreatedConnectionId(connection));
-  assert.equal(updated?.testStatus, "active");
-  assert.equal(updated?.errorCode ?? null, null);
-  assert.equal(updated?.lastError ?? null, null);
-  assert.ok(updated?.lastHealthCheckAt);
+    const updated = await providersDb.getProviderConnectionById(getCreatedConnectionId(connection));
+    assert.equal(updated?.testStatus, "active");
+    assert.equal(updated?.errorCode ?? null, null);
+    assert.equal(updated?.lastError ?? null, null);
+    assert.ok(updated?.lastHealthCheckAt);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 // Boundary regression for #8182 vs #5326: the terminal-skip guard added by #8182

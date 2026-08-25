@@ -227,7 +227,8 @@ export async function finalizeCatalogResponse(
   //      per-entry work is interleaved with other callers / the dashboard WS.
   const yieldTurn = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
   await yieldTurn();
-  const capabilityResolutionSnapshot = createModelCapabilityResolutionSnapshot();
+  const capabilityResolutionSnapshot =
+    enrichmentSnapshot?.capabilityResolutionSnapshot ?? createModelCapabilityResolutionSnapshot();
   const enriched: Array<Record<string, unknown>> = [];
   const catYIELD_EVERY = 5;
   let catEnrichCount = 0;

@@ -1,1 +1,0 @@
-- **fix(translator):** merge consecutive same-role contents in direct Claude to Gemini request translation to prevent upstream HTTP 400 errors

@@ -91,8 +91,20 @@ interface KieImageOptions {
   } | null;
 }
 
+// KIE Market catalog ids are namespaced for OmniRoute's catalog
+// (`google-imagen/<model>`), but the KIE Market createTask API expects
+// vendor-specific upstream ids that do not follow a single consistent
+// pattern (confirmed against docs.kie.ai/market/google/* — see #11225,
+// #11296): nano-banana-2 and nano-banana-pro drop the vendor namespace
+// entirely, while nano-banana and nano-banana-edit use a `google/` prefix
+// instead of `google-imagen/`. Every other KIE Market namespace (seedream,
+// flux, ideogram, qwen, wan, grok-imagine, gpt) already matches its real
+// upstream id byte-for-byte, so this map stays scoped to google-imagen.
 export const KIE_MARKET_UPSTREAM_MODEL_IDS: ReadonlyMap<string, string> = new Map([
+  ["google-imagen/nano-banana", "google/nano-banana"],
   ["google-imagen/nano-banana-2", "nano-banana-2"],
+  ["google-imagen/nano-banana-pro", "nano-banana-pro"],
+  ["google-imagen/nano-banana-edit", "google/nano-banana-edit"],
 ]);
 
 export function resolveKieMarketUpstreamModelId(publicModelId: string): string {

@@ -15,6 +15,8 @@ const {
   extractCiGates,
   FULL_CI_SKIP,
   fullCiTimeoutFor,
+  curatedEquivalentId,
+  fullCiKindFor,
 } = mod;
 
 const extract = extractCiGates as (
@@ -360,4 +362,118 @@ test("extractCiGates: the REAL ci.yml yields the base-reds that leaked in v3.8.4
     assert.ok(ids.has(g), `real ci.yml must expose ${g} to --full-ci`);
   }
   assert.ok(ids.size >= 20, "the real gate set is substantial (>= 20 static gates)");
+});
+
+// ─── Verdict accuracy (review of the #9985 release-green verdict) ────────────
+
+test("firstFailureLine never blames a PASSING line whose test FILE NAME contains 'fail' (#9985)", () => {
+  // Observed in the 2026-08-23 verdict: the reported "cause" of the unit red was
+  //   ✓ …fail-fast-concurrency-gate.test.ts (4 tests) 203ms
+  // i.e. a GREEN line, matched only because the unanchored /FAIL/i marker hit the
+  // substring "fail" inside the file name. The real ✖ line was three lines below.
+  const out = [
+    "> omniroute@3.8.50 test:unit",
+    " ✓ tests/unit/runtime/fail-fast-concurrency-gate.test.ts (4 tests) 203ms",
+    " ✓ tests/unit/router/failover-budget.test.ts (9 tests) 41ms",
+    " ✖ tests/unit/router/pricing.test.ts > picks the cheapest candidate",
+    "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal: 2 !== 3",
+  ].join("\n");
+  const hit = firstFailureLine(out);
+  assert.doesNotMatch(hit, /fail-fast-concurrency-gate/, "a green line is never the failure cause");
+  assert.doesNotMatch(hit, /failover-budget/, "a green line is never the failure cause");
+  assert.match(hit, /pricing\.test\.ts/, "the real failing line must be reported instead");
+});
+
+test("firstFailureLine still recognises every legitimate failure marker", () => {
+  const cases: [string, RegExp][] = [
+    ["ok 1 - warms up\nnot ok 2 - routes to the cheapest key\n", /not ok 2/],
+    ["Test Files 1 failed\nFAIL tests/unit/router/pricing.test.ts\n", /^FAIL /],
+    ["src/x.ts(10,5): error TS2322: Type 'string' is not assignable.", /error TS2322/],
+    ["✗ db-rules: raw sqlite handle left open", /db-rules/],
+    ["Error: ENOENT: no such file or directory, open 'dist/server.js'", /ENOENT/],
+    ["[cognitive-complexity] REGRESSÃO — 801 violações > baseline 797", /REGRESS/],
+    ["[file-size] REGRESSED: open-sse/router.ts 1204 > cap 1100", /REGRESSED/],
+  ];
+  for (const [out, expected] of cases) {
+    assert.match(firstFailureLine(out), expected, `marker lost for: ${out.slice(0, 40)}`);
+  }
+});
+
+test("firstFailureLine falls back to the last line when nothing matches", () => {
+  assert.equal(firstFailureLine("warming up\nall quiet\n"), "all quiet");
+  assert.equal(firstFailureLine(""), "failed");
+});
+
+test("curatedEquivalentId maps a ci.yml gate script onto the curated pass id (#9985)", () => {
+  assert.equal(curatedEquivalentId("check:file-size"), "file-size");
+  assert.equal(curatedEquivalentId("check:compression-budget"), "compression-budget");
+  // Curated ids that are NOT just the script name minus "check:".
+  assert.equal(curatedEquivalentId("check:workflows"), "workflow-lint");
+  assert.equal(curatedEquivalentId("check:complexity-ratchets"), "complexity");
+  assert.equal(curatedEquivalentId("lint"), "lint-errors");
+  // An uncurated gate keeps a stable, non-colliding identity.
+  assert.equal(curatedEquivalentId("check:route-validation:t06"), "route-validation:t06");
+});
+
+test("fullCiKindFor honours the curated classification of an already-known gate (#9985)", () => {
+  const curated = [
+    { id: "file-size", kind: "drift", ok: false },
+    { id: "compression-budget", kind: "drift", ok: false },
+    { id: "workflow-lint", kind: "drift", ok: false },
+    { id: "docs-all", kind: "hard", ok: true },
+    { id: "lint-errors", kind: "hard", ok: true },
+  ];
+  // Ratchets curated as DRIFT must stay drift when --full-ci re-runs them from ci.yml...
+  assert.equal(fullCiKindFor("check:file-size", curated), "drift");
+  assert.equal(fullCiKindFor("check:compression-budget", curated), "drift");
+  assert.equal(fullCiKindFor("check:workflows", curated), "drift");
+  // ...real-defect gates stay hard...
+  assert.equal(fullCiKindFor("check:docs-all", curated), "hard");
+  assert.equal(fullCiKindFor("lint", curated), "hard");
+  // ...and a gate the curated pass never ran defaults to hard (the --full-ci contract).
+  assert.equal(fullCiKindFor("check:bundle-size", curated), "hard");
+  assert.equal(fullCiKindFor("check:route-validation:t06", curated), "hard");
+});
+
+test("one gate can never land in BOTH verdict buckets of the same report (#9985)", () => {
+  // The 2026-08-23 verdict listed file-size and compression-budget as hard failures
+  // AND as drift, in the same table, because the --full-ci pass re-recorded every
+  // ci.yml gate as kind:"hard" and the dedupe only compared raw ids.
+  const curated = [
+    { id: "file-size", kind: "drift", ok: false },
+    { id: "compression-budget", kind: "drift", ok: false },
+  ];
+  const fromCiYaml = ["check:file-size", "check:compression-budget"].map((id) => ({
+    id,
+    kind: fullCiKindFor(id, curated),
+    ok: false,
+  }));
+  const v = computeVerdict([...curated, ...fromCiYaml]);
+  const hardGates = new Set(v.hardFailures.map((r) => curatedEquivalentId(r.id)));
+  const contradictions = v.drift
+    .map((r) => curatedEquivalentId(r.id))
+    .filter((id) => hardGates.has(id));
+  assert.deepEqual(
+    contradictions,
+    [],
+    "a gate reported as hard must not also be reported as drift"
+  );
+  assert.equal(
+    v.releaseGreen,
+    true,
+    "a curated-drift ratchet must not block the release via the --full-ci path"
+  );
+});
+
+test("the --full-ci loop classifies from the curated results, not a hardcoded kind (#9985)", async () => {
+  const fs = await import("node:fs");
+  const src = fs.readFileSync(
+    new URL("../../scripts/quality/validate-release-green.mjs", import.meta.url),
+    "utf8"
+  );
+  assert.match(
+    src,
+    /kind:\s*fullCiKindFor\(g\.id,\s*results\)/,
+    "--full-ci must classify each ci.yml gate through fullCiKindFor()"
+  );
 });

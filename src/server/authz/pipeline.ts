@@ -25,6 +25,7 @@ import {
   AUTHZ_HEADER_PEER_LOCALITY,
   AUTHZ_HEADER_REQUEST_ID,
   AUTHZ_HEADER_ROUTE_CLASS,
+  AUTHZ_HEADER_TRUSTED_PEER_IP,
   AUTHZ_TRUSTED_HEADERS,
   CLI_TOKEN_HEADER,
   PEER_IP_HEADER,
@@ -332,6 +333,16 @@ export async function runAuthzPipeline(
     process.env.OMNIROUTE_PEER_STAMP_TOKEN
   );
   requestHeaders.set(AUTHZ_HEADER_PEER_LOCALITY, peerLocality);
+  // Stamp the resolved, non-spoofable peer IP for route handlers that need
+  // the real client IP (e.g. login rate-limit key). Only set when the stamp
+  // token is configured and the HMAC signature validates; absent otherwise.
+  const trustedPeerIp = resolveStampedPeer(
+    request.headers.get(PEER_IP_HEADER),
+    process.env.OMNIROUTE_PEER_STAMP_TOKEN
+  );
+  if (trustedPeerIp) {
+    requestHeaders.set(AUTHZ_HEADER_TRUSTED_PEER_IP, trustedPeerIp);
+  }
   // Local CLI-token auth is decided centrally above. Preserve that trusted
   // decision for route-level requireManagementAuth without forwarding the
   // machine token itself: custom client auth headers are stripped before the

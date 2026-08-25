@@ -1559,22 +1559,31 @@ export class BaseExecutor {
           if (acceptedValues) {
             reasoningEffortClamped = true;
             const learned = recordLearnedReasoningEffort(this.provider, model, acceptedValues);
-            if (learned) {
+            if (learned && learned.size > 0) {
+              const beforeRetry = JSON.stringify(transformedBody);
               transformedBody = sanitizeReasoningEffortForProvider(
                 transformedBody,
                 this.provider,
                 model,
                 log
               );
-              let retryBody = JSON.stringify(transformedBody);
-              if (usesClaudeCodeProtocol || this.provider === "claude") {
-                retryBody = await signRequestBody(retryBody);
+              const afterRetry = JSON.stringify(transformedBody);
+              if (beforeRetry === afterRetry) {
+                log?.info?.(
+                  "REASONING_SANITIZE",
+                  `Upstream ${response.status} rejected reasoning_effort on ${url} — learned ${[...learned].join(",")} but clamp was no-op for ${this.provider}/${model}, not retrying`
+                );
+              } else {
+                let retryBody = JSON.stringify(transformedBody);
+                if (usesClaudeCodeProtocol || this.provider === "claude") {
+                  retryBody = await signRequestBody(retryBody);
+                }
+                log?.info?.(
+                  "REASONING_SANITIZE",
+                  `Upstream ${response.status} rejected reasoning_effort on ${url} — clamped to ${[...learned].join(",")} and retrying (learned for ${this.provider}/${model})`
+                );
+                response = await fetchWithStartTimeout(url, { ...fetchOptions, body: retryBody });
               }
-              log?.info?.(
-                "REASONING_SANITIZE",
-                `Upstream ${response.status} rejected reasoning_effort on ${url} — clamped to ${learned} and retrying (learned for ${this.provider}/${model})`
-              );
-              response = await fetchWithStartTimeout(url, { ...fetchOptions, body: retryBody });
             }
           }
         }
