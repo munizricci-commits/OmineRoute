@@ -34,8 +34,9 @@ RUN if [ -f "node_modules/tls-client-node/scripts/postinstall.js" ]; then \
       bun node_modules/tls-client-node/scripts/postinstall.js || true; \
     fi
 
-# Disable Turbopack for Bun builder stage (Turbopack V8 internal worker bindings require Node)
-ENV OMNIROUTE_USE_TURBOPACK=0
+# Turbopack is supported on Bun 1.4 + Next 16.3; override via --build-arg OMNIROUTE_USE_TURBOPACK=0 if needed
+ARG OMNIROUTE_USE_TURBOPACK=1
+ENV OMNIROUTE_USE_TURBOPACK=${OMNIROUTE_USE_TURBOPACK}
 
 ARG OMNIROUTE_BASE_PATH=""
 ENV OMNIROUTE_BASE_PATH=$OMNIROUTE_BASE_PATH
