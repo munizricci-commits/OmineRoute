@@ -40,8 +40,8 @@ import {
   hydrateCodexQuotaCacheForRequest,
   isQuotaExhaustedForRequest,
 } from "@/domain/quotaCache";
-import { getQuotaScopeLabelForProvider } from "@omniroute/open-sse/services/antigravityQuotaFamily.ts";
 import { getCreditsMode } from "@omniroute/open-sse/services/antigravityCredits.ts";
+import { getQuotaScopeLabelForProvider } from "@omniroute/open-sse/services/antigravityQuotaFamily.ts";
 import { preferAntigravityConnectionsWithStoredProject } from "@omniroute/open-sse/services/antigravityProjectPersistence.ts";
 import {
   isAccountUnavailable,
@@ -138,6 +138,12 @@ import { loadOptionalNoAuthApiKeyCredentials } from "./noAuthOptionalApiKey";
 import { getResource404Bypass } from "./requestResourceHealth";
 import { isVertexConnectionWidePermissionDenied } from "./vertexErrorClassifier";
 import { maybeAutoDisableBannedAccount } from "./autoDisableBannedAccount";
+import {
+  canonicalizeAntigravityExactModel,
+  tryAcquireAntigravityLease,
+  releaseAntigravityLease,
+  type AntigravityLease,
+} from "./antigravityRoutingState";
 import * as log from "../utils/logger";
 import {
   fisherYatesShuffle,
@@ -183,6 +189,10 @@ export interface CredentialSelectionOptions {
   _leaseRetryWithLockHeld?: boolean;
   /** Internal: freeze the original policy-valid candidate set across lease race/preflight retry. */
   _leaseCandidateIds?: string[];
+  /** Process-local exact-model routing lease; only final chat dispatch opts in. */
+  routingRequestId?: string | null;
+  routingDeadlineMs?: number | null;
+  reserveAntigravityLease?: boolean;
 }
 export type ExclusiveLeaseSelectionResult = {
   exclusiveLease: ExclusiveConnectionLease;
@@ -1131,7 +1141,11 @@ function planLastUsedCommit(
 function materializeConnection(
   connection: ProviderConnectionView,
   options: CredentialSelectionOptions,
-  extra: DeferredLeaseSelection & { exclusiveLease?: ExclusiveConnectionLease } = {}
+  extra: DeferredLeaseSelection & {
+    exclusiveLease?: ExclusiveConnectionLease;
+    routingLease?: AntigravityLease;
+    requestedModel?: string | null;
+  } = {}
 ) {
   const apiKeyHealth = connection.providerSpecificData?.apiKeyHealth as
     Record<string, KeyHealth> | undefined;
@@ -1166,6 +1180,16 @@ function materializeConnection(
     maxConcurrent: connection.maxConcurrent,
     quotaWindowThresholds: connection.quotaWindowThresholds ?? null,
     ...(releaseOAuthSession ? { releaseOAuthSession } : {}),
+    ...(extra.routingLease
+      ? {
+          routing: {
+            provider: "antigravity" as const,
+            connectionId: connection.id,
+            exactModel: canonicalizeAntigravityExactModel(extra.requestedModel),
+            leaseId: extra.routingLease.id,
+          },
+        }
+      : {}),
     ...extra,
   };
 }
@@ -2131,6 +2155,24 @@ export async function getProviderCredentials(
       }
     }
 
+    let routingLease: AntigravityLease | undefined;
+    if (provider === "antigravity" && connection && options.reserveAntigravityLease === true) {
+      const acquired = tryAcquireAntigravityLease({
+        connectionId: connection.id,
+        requestedModel,
+        requestId: options.routingRequestId,
+        deadlineMs: options.routingDeadlineMs,
+      });
+      if (acquired.kind === "busy") {
+        return {
+          leaseUnavailable: true as const,
+          selectedConnectionId: connection.id,
+          earliestLeaseExpiryMs: acquired.earliestExpiryMs,
+        };
+      }
+      routingLease = acquired.lease;
+    }
+
     if (provider === "antigravity" && connection) {
       log.info(
         "AUTH",
@@ -2138,7 +2180,11 @@ export async function getProviderCredentials(
       );
     }
 
-    return materializeConnection(connection, options, { exclusiveLease });
+    return materializeConnection(connection, options, {
+      exclusiveLease,
+      routingLease,
+      requestedModel,
+    });
   } finally {
     selectionLock?.release();
   }
@@ -2247,12 +2293,21 @@ export async function getProviderCredentialsWithQuotaPreflight(
       );
       if (claim.kind === "LOST") {
         selectedCredentials.releaseOAuthSession?.();
+        releaseAntigravityLease(
+          (credentials as { routing?: { leaseId?: string } }).routing?.leaseId
+        );
         excludedConnectionIds.add(connectionId);
         pendingCredentialSelection =
           await selectedCredentials.selectNextLeaseCandidate?.(connectionId);
         return null;
       }
-      if (claim.kind === "STALE") return { leaseFenceStale: true };
+      if (claim.kind === "STALE") {
+        selectedCredentials.releaseOAuthSession?.();
+        releaseAntigravityLease(
+          (credentials as { routing?: { leaseId?: string } }).routing?.leaseId
+        );
+        return { leaseFenceStale: true };
+      }
       await selectedCredentials.commitSelectionSideEffects?.();
       if (options.materializeCredentials === false) {
         selectedCredentials.releaseOAuthSession?.();
@@ -2352,6 +2407,9 @@ export async function getProviderCredentialsWithQuotaPreflight(
       );
     } catch (error) {
       selectedCredentials.releaseOAuthSession?.();
+      releaseAntigravityLease(
+        (credentials as { routing?: { leaseId?: string } }).routing?.leaseId
+      );
       throw error;
     }
     if (preflight.proceed) {
@@ -2361,6 +2419,9 @@ export async function getProviderCredentialsWithQuotaPreflight(
     }
 
     selectedCredentials.releaseOAuthSession?.();
+    releaseAntigravityLease(
+      (credentials as { routing?: { leaseId?: string } }).routing?.leaseId
+    );
 
     const unavailableUntil = await markQuotaPreflightAccountUnavailable(
       provider,

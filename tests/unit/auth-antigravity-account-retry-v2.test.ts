@@ -11,6 +11,7 @@ const core = await import("../../src/lib/db/core.ts");
 const providersDb = await import("../../src/lib/db/providers.ts");
 const settingsDb = await import("../../src/lib/db/settings.ts");
 const auth = await import("../../src/sse/services/auth.ts");
+const routingState = await import("../../src/sse/services/antigravityRoutingState.ts");
 
 type CreatedConnection = { id: string };
 
@@ -23,6 +24,7 @@ function connectionId(connection: unknown): string {
 
 async function resetStorage() {
   core.resetDbInstance();
+  routingState.__resetAntigravityRoutingStateForTests();
   fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
 }
@@ -30,6 +32,45 @@ async function resetStorage() {
 test.after(() => {
   core.resetDbInstance();
   fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+});
+
+test("forced Antigravity selection acquires an exact-model lease", async () => {
+  await resetStorage();
+  const conn = await providersDb.createProviderConnection({
+    provider: "antigravity",
+    authType: "oauth",
+    email: "pinned@example.test",
+    accessToken: "tok-pinned",
+    isActive: true,
+    testStatus: "active",
+  });
+
+  const first = await auth.getProviderCredentials("antigravity", null, null, "gemini-3-pro-preview", {
+    forcedConnectionId: conn.id,
+    routingRequestId: "first",
+    reserveAntigravityLease: true,
+  });
+  assert.ok(first && "routing" in first && first.routing?.leaseId);
+
+  const busy = await auth.getProviderCredentials("antigravity", null, null, "gemini-3.1-pro", {
+    forcedConnectionId: conn.id,
+    routingRequestId: "second",
+    reserveAntigravityLease: true,
+  });
+  assert.ok(busy && "leaseUnavailable" in busy && busy.leaseUnavailable);
+  if (busy && "leaseUnavailable" in busy) {
+    assert.equal(busy.selectedConnectionId, conn.id);
+    assert.equal(typeof busy.earliestLeaseExpiryMs, "number");
+  }
+
+  const otherModel = await auth.getProviderCredentials("antigravity", null, null, "claude-sonnet-4-6", {
+    forcedConnectionId: conn.id,
+    routingRequestId: "third",
+    reserveAntigravityLease: true,
+  });
+  assert.ok(otherModel && "routing" in otherModel && otherModel.routing?.leaseId);
+  if (first && "routing" in first) routingState.releaseAntigravityLease(first.routing?.leaseId);
+  if (otherModel && "routing" in otherModel) routingState.releaseAntigravityLease(otherModel.routing?.leaseId);
 });
 
 test("round-robin same-model retry treats multi-exclude as fallback LRU and skips all excluded accounts", async () => {

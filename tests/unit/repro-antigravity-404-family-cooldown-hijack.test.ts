@@ -41,7 +41,7 @@ test("Antigravity 404 Model Not Found locks exact model ONLY, not entire family"
   );
 });
 
-test("Antigravity 429 Rate Limit locks whole family", () => {
+test("Antigravity 429 Rate Limit locks the exact model only", () => {
   clearAllModelLockouts();
 
   // 1. Simulate a 429 rate limit on "gemini-3.1-flash-lite"
@@ -57,10 +57,10 @@ test("Antigravity 429 Rate Limit locks whole family", () => {
   // 2. The rate-limited model should be locked
   assert.equal(isModelLocked("antigravity", "test_connection_id", "gemini-3.1-flash-lite"), true);
 
-  // 3. Sibling models of the same family should also be locked
+  // 3. A sibling model remains eligible: quota/cooldown routing is exact-model scoped
   assert.equal(
     isModelLocked("antigravity", "test_connection_id", "gemini-1.5-flash"),
-    true,
-    "Sibling model should be locked by the family quota exhaustion"
+    false,
+    "Sibling model should not be locked by another exact model's rate limit"
   );
 });

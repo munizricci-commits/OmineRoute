@@ -17,7 +17,8 @@
  */
 
 import { getUsageForProvider } from "@omniroute/open-sse/services/usage.ts";
-import { getCachedProviderConnectionById, resolveProxyForConnection } from "@/lib/localDb";
+import { getCachedProviderConnectionById } from "@/lib/db/readCache";
+import { resolveProxyForConnection } from "@/lib/db/settings";
 import { runWithProxyContext } from "@omniroute/open-sse/utils/proxyFetch.ts";
 import { safePercentage } from "@/shared/utils/formatting";
 import {
@@ -38,6 +39,10 @@ import {
   type CodexPersistedQuotaState,
 } from "@omniroute/open-sse/services/codexAccount/index.ts";
 import { getAntigravityQuotaFamily } from "@omniroute/open-sse/services/antigravityQuotaFamily.ts";
+import {
+  resolveAntigravityModelId,
+  toClientAntigravityQuotaModelId,
+} from "@omniroute/open-sse/config/antigravityModelAliases.ts";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -163,6 +168,44 @@ function normalizeWindowKey(value: unknown): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
+}
+
+function normalizeAntigravityQuotaModel(value: unknown): string {
+  return String(value || "").trim().toLowerCase().replace(/^(antigravity|agy)\//, "");
+}
+
+function resolveAntigravityExactQuota(
+  quotas: Record<string, QuotaInfo>,
+  requestedModel: string
+): QuotaInfo | null {
+  const requested = normalizeAntigravityQuotaModel(requestedModel);
+  if (!requested) return null;
+  for (const [key, quota] of Object.entries(quotas)) {
+    if (normalizeAntigravityQuotaModel(key) === requested) return quota;
+  }
+  const upstream = normalizeAntigravityQuotaModel(resolveAntigravityModelId(requested));
+  for (const [key, quota] of Object.entries(quotas)) {
+    const bucket = normalizeAntigravityQuotaModel(key);
+    if (bucket === upstream) return quota;
+    if (normalizeAntigravityQuotaModel(toClientAntigravityQuotaModelId(bucket)) === requested) return quota;
+  }
+  return null;
+}
+
+function isUsableQuota(quota: QuotaInfo): boolean {
+  if (quota.remainingPercentage > 0) return true;
+  const resetMs = quota.resetAt ? parseDate(quota.resetAt) : null;
+  return resetMs !== null && resetMs <= Date.now();
+}
+
+function isAntigravityQuotaKeyForFamily(key: string, family: string): boolean {
+  const normalized = normalizeAntigravityQuotaModel(key);
+  const client = toClientAntigravityQuotaModelId(normalized);
+  return (
+    getAntigravityQuotaFamily(normalized) === family ||
+    (client !== null && getAntigravityQuotaFamily(client) === family) ||
+    normalized.startsWith(`${family}_`) || normalized.startsWith(`${family}-`)
+  );
 }
 
 function resolveQuotaWindow(
@@ -307,10 +350,27 @@ function isAntigravityQuotaExhausted(
   if (!requestedModel) return entry.exhausted;
   const quotaNames = Object.keys(entry.quotas || {});
   if (quotaNames.length === 0) return entry.exhausted;
-  const matchingWindows = resolveAntigravityQuotaWindowsForModel(quotaNames, requestedModel);
+
+  // A known exact bucket is authoritative.  In particular, a healthy exact
+  // model must not be poisoned by an exhausted sibling/family observation.
+  const cleanRequestedModel = requestedModel
+    .trim()
+    .toLowerCase()
+    .replace(/^(antigravity|agy)\//, "");
+  const bareRequestedModel = cleanRequestedModel.includes("/")
+    ? cleanRequestedModel.slice(cleanRequestedModel.lastIndexOf("/") + 1)
+    : cleanRequestedModel;
+  const exactWindows = quotaNames.filter((windowName) => {
+    const key = windowName.trim().toLowerCase().replace(/^(antigravity|agy)\//, "");
+    return key === cleanRequestedModel || key === bareRequestedModel;
+  });
+  const windows =
+    exactWindows.length > 0
+      ? exactWindows
+      : resolveAntigravityQuotaWindowsForModel(quotaNames, requestedModel);
   return (
-    matchingWindows.length > 0 &&
-    matchingWindows.every(
+    windows.length > 0 &&
+    windows.every(
       (windowName) =>
         getQuotaWindowStatus(connectionId, windowName, DEFAULT_QUOTA_THRESHOLD_PERCENT)
           ?.reachedThreshold

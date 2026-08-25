@@ -1,4 +1,10 @@
 import { randomUUID } from "crypto";
+import { releaseAntigravityLease } from "../services/antigravityRoutingState";
+import {
+  holdAntigravityLeaseThroughResponse,
+  isStreamingAntigravityResponse,
+  releaseAntigravityLeaseOnPreDispatchError,
+} from "../services/antigravityLeaseLifecycle";
 import { resolveChatRequestBody } from "./requestBody";
 import * as chatAdmission from "./chatAdmission.ts";
 import { buildClientRawRequest, resolveDispatchClientRawRequest } from "./chat/clientRawRequest.ts";
@@ -27,7 +33,7 @@ import {
 import { getCombo, getComboForModel, getModelInfo } from "../services/model";
 import { stripContextWindowSuffix } from "@omniroute/open-sse/services/model.ts";
 import { resolveBareModelToConnectionDefault } from "@omniroute/open-sse/services/model.ts";
-import { errorResponse } from "@omniroute/open-sse/utils/error.ts";
+import { buildErrorBody, errorResponse } from "@omniroute/open-sse/utils/error.ts";
 import { getImageModelEntry } from "@omniroute/open-sse/config/imageRegistry.ts";
 import { acceptHeaderForcesStream } from "@omniroute/open-sse/utils/aiSdkCompat.ts";
 import { applyNoThinkingAlias } from "@omniroute/open-sse/utils/noThinkingAlias.ts";
@@ -344,6 +350,25 @@ const managedComboRejection = () =>
       "Managed leases do not support this route"
     )
   );
+
+/** Local lease saturation is neither provider quota/cooldown nor breaker failure. */
+export function buildAntigravityPoolBusyResponse(earliestLeaseExpiryMs: number): Response {
+  const retryAfter = Math.max(1, Math.ceil((earliestLeaseExpiryMs - Date.now()) / 1000));
+  return new Response(
+    JSON.stringify(
+      buildErrorBody(
+        HTTP_STATUS.SERVICE_UNAVAILABLE,
+        "All eligible Antigravity accounts are currently handling an exact-model request",
+        undefined,
+        { type: "server_error", code: "POOL_BUSY" }
+      )
+    ),
+    {
+      status: HTTP_STATUS.SERVICE_UNAVAILABLE,
+      headers: { "Content-Type": "application/json", "Retry-After": String(retryAfter) },
+    }
+  );
+}
 
 const comboPromoteDeps = { updateCombo, info: log.info, warn: log.warn };
 
@@ -1553,9 +1578,12 @@ async function handleSingleModelChat(
   const occupancySessionKey =
     runtimeOptions.sessionAffinityKey ?? runtimeOptions.sessionId ?? `request:${randomUUID()}`;
   let initialPreselectedCredentials = runtimeOptions.preselectedCredentials;
+  const attemptedConnectionIds = new Set<string>();
+  let earliestLeaseExpiryMs: number | null = null;
+  const routingRequestId = runtimeOptions.correlationId ?? randomUUID();
 
   requestAttemptLoop: while (true) {
-    const excludedConnectionIds = new Set<string>();
+    const excludedConnectionIds = new Set<string>(attemptedConnectionIds);
     let lastError = requestRetryLastError;
     let lastStatus = requestRetryLastStatus;
     let lastCooldownMs = requestRetryLastCooldownMs;
@@ -1564,7 +1592,7 @@ async function handleSingleModelChat(
 
     while (true) {
       const credentials =
-        preselectedCredentials && excludedConnectionIds.size === 0
+        preselectedCredentials && excludedConnectionIds.size === 0 && provider !== "antigravity"
           ? preselectedCredentials
           : await getProviderCredentialsWithQuotaPreflight(
               provider,
@@ -1575,6 +1603,8 @@ async function handleSingleModelChat(
                 sessionKey: occupancySessionKey,
                 reserveOAuthSession: true,
                 excludeConnectionIds: Array.from(excludedConnectionIds),
+                routingRequestId,
+                reserveAntigravityLease: provider === "antigravity",
                 ...(runtimeOptions.allowRateLimitedConnection
                   ? { allowRateLimitedConnections: true }
                   : {}),
@@ -1607,6 +1637,24 @@ async function handleSingleModelChat(
             );
       preselectedCredentials = null;
 
+      if (credentials && "leaseUnavailable" in credentials && credentials.leaseUnavailable) {
+        const expiry = credentials.earliestLeaseExpiryMs;
+        if (
+          Number.isFinite(expiry) &&
+          (earliestLeaseExpiryMs === null || expiry < earliestLeaseExpiryMs)
+        ) {
+          earliestLeaseExpiryMs = expiry;
+        }
+        if (credentials.selectedConnectionId) {
+          if (hasForcedConnection) {
+            return buildAntigravityPoolBusyResponse(earliestLeaseExpiryMs ?? Date.now() + 30_000);
+          }
+          attemptedConnectionIds.add(credentials.selectedConnectionId);
+          excludedConnectionIds.add(credentials.selectedConnectionId);
+          continue;
+        }
+      }
+
       if (runtimeOptions.managedLease && credentials) {
         const leaseError = buildManagedLeaseSelectionErrorResponse(credentials);
         if (leaseError) return leaseError;
@@ -1621,6 +1669,9 @@ async function handleSingleModelChat(
         "allExpired" in credentials ||
         !credentials.connectionId
       ) {
+        if (!credentials?.allRateLimited && earliestLeaseExpiryMs !== null) {
+          return buildAntigravityPoolBusyResponse(earliestLeaseExpiryMs);
+        }
         if (credentials?.allRateLimited) {
           const retryDecision = getCooldownAwareRetryDecision({
             retryAfter: credentials.retryAfter,
@@ -1704,6 +1755,7 @@ async function handleSingleModelChat(
 
       const accountId = credentials.connectionId.slice(0, 8);
       const releaseOAuthSession = credentials.releaseOAuthSession ?? (() => {});
+      if (provider === "antigravity") attemptedConnectionIds.add(credentials.connectionId);
       // #10348: redact the account prefix by default. Gated on the narrow
       // AUTH_LOG_INCLUDE_ACCOUNT_ID flag (default off) rather than the broad
       // `debugMode` setting — `debugMode` is a general dashboard-visibility
@@ -1730,18 +1782,22 @@ async function handleSingleModelChat(
       let requestBody =
         effectiveModel !== model ? { ...body, model: `${provider}/${effectiveModel}` } : body;
       if (!runtimeOptions.reasoningDecision && runtimeOptions.reasoningIntent) {
-        const connectionRouting = await applyConnectionReasoningRule({
-          requestBody,
-          provider,
-          effectiveModel,
-          credentials,
-          apiKeyInfo,
-          reasoningIntent: runtimeOptions.reasoningIntent,
-          reasoningDecision: runtimeOptions.reasoningDecision,
-          requestRoutingTags: runtimeOptions.reasoningRequestTags,
-        });
+        const connectionRouting = await releaseAntigravityLeaseOnPreDispatchError(
+          credentials.routing?.leaseId,
+          () => applyConnectionReasoningRule({
+            requestBody,
+            provider,
+            effectiveModel,
+            credentials,
+            apiKeyInfo,
+            reasoningIntent: runtimeOptions.reasoningIntent,
+            reasoningDecision: runtimeOptions.reasoningDecision,
+            requestRoutingTags: runtimeOptions.reasoningRequestTags,
+          })
+        );
         if (connectionRouting.response) {
           releaseOAuthSession();
+          releaseAntigravityLease(credentials.routing?.leaseId);
           return connectionRouting.response;
         }
         requestBody = connectionRouting.body;
@@ -1770,9 +1826,13 @@ async function handleSingleModelChat(
       }
       let refreshedCredentials;
       try {
-        refreshedCredentials = await checkAndRefreshToken(provider, credentials);
+        refreshedCredentials = await releaseAntigravityLeaseOnPreDispatchError(
+          credentials.routing?.leaseId,
+          () => checkAndRefreshToken(provider, credentials)
+        );
       } catch (error) {
         releaseOAuthSession();
+        releaseAntigravityLease(credentials.routing?.leaseId);
         throw error;
       }
       const storeEnabled = isOpenAIResponsesStoreEnabled(
@@ -1806,9 +1866,13 @@ async function handleSingleModelChat(
       }
       let proxyInfo;
       try {
-        proxyInfo = await safeResolveProxy(credentials.connectionId, apiKeyInfo?.id, provider);
+        proxyInfo = await releaseAntigravityLeaseOnPreDispatchError(
+          credentials.routing?.leaseId,
+          () => safeResolveProxy(credentials.connectionId, apiKeyInfo?.id, provider)
+        );
       } catch (error) {
         releaseOAuthSession();
+        releaseAntigravityLease(credentials.routing?.leaseId);
         throw error;
       }
       // #5217: sink for the proxy the executor pins internally (e.g. OpencodeExecutor
@@ -1862,10 +1926,20 @@ async function handleSingleModelChat(
       }
       if (telemetry) telemetry.endPhase();
       if ("localResourcePressureResult" in execution) {
+        releaseAntigravityLease(credentials.routing?.leaseId);
         return execution.localResourcePressureResult.response;
       }
       const { result, tlsFingerprintUsed } = execution;
       if (!result.success) releaseOAuthSession();
+      if (result.success && isStreamingAntigravityResponse(result.response)) {
+        result.response = holdAntigravityLeaseThroughResponse(
+          result.response,
+          credentials.routing?.leaseId,
+          clientRawRequest?.signal
+        );
+      } else {
+        releaseAntigravityLease(credentials.routing?.leaseId);
+      }
 
       const proxyLatency = Date.now() - proxyStartTime;
       const providerAlias = PROVIDER_ID_TO_ALIAS[provider] || provider;

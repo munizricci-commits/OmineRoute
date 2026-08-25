@@ -42,15 +42,14 @@ export function getQuotaScopedModelForProvider(
   model: string | null | undefined
 ): string | null {
   if (!model) return null;
-  if (provider !== "antigravity" && provider !== "agy") return model;
-  const family = getAntigravityQuotaFamily(model);
-  return family === "other" ? model : `family:${family}`;
+  if (provider !== ANTIGRAVITY_PROVIDER_ID) return model;
+  // A 429 for a known request is exact-model scoped; never poison a sibling.
+  return normalizeModelId(model).replace(/^antigravity\//, "");
 }
 
 export function getQuotaScopeLabelForProvider(
   provider: string | null | undefined,
   model: string | null | undefined
 ): string {
-  if (provider !== "antigravity" && provider !== "agy") return "model";
-  return getAntigravityQuotaFamily(model) === "other" ? "model" : "family";
+  return "model";
 }
