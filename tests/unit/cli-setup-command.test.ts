@@ -250,3 +250,39 @@ test("setup command prioritizes an explicit --password flag over INITIAL_PASSWOR
     process.env.INITIAL_PASSWORD = ORIGINAL_INITIAL_PASSWORD;
   }
 });
+
+test("a later setup run does not re-seed INITIAL_PASSWORD over the stored password", async () => {
+  const ORIGINAL_INITIAL_PASSWORD = process.env.INITIAL_PASSWORD;
+  await withTempEnv(async (dataDir) => {
+    // A default `npm install -g omniroute` ships this in the environment, so it
+    // is present for every run below — not only the first one (#11494).
+    process.env.INITIAL_PASSWORD = "CHANGEME";
+
+    const { runSetupCommand } = await import("../../bin/cli/commands/setup.mjs");
+
+    // The operator sets their own password.
+    assert.equal(await runSetupCommand({ nonInteractive: true, password: "operator-chosen" }), 0);
+
+    // ...then runs setup again for an unrelated reason, with no --password.
+    assert.equal(await runSetupCommand({ nonInteractive: true }), 0);
+
+    const db = new Database(path.join(dataDir, "storage.sqlite"));
+    const passwordRow = db
+      .prepare("SELECT value FROM key_value WHERE namespace = 'settings' AND key = 'password'")
+      .get() as { value: string };
+    db.close();
+
+    const storedHash = JSON.parse(passwordRow.value) as string;
+    assert.equal(await bcrypt.compare("operator-chosen", storedHash), true);
+    assert.equal(
+      await bcrypt.compare("CHANGEME", storedHash),
+      false,
+      "the second run replaced the operator's password with the well-known default"
+    );
+  });
+  if (ORIGINAL_INITIAL_PASSWORD === undefined) {
+    delete process.env.INITIAL_PASSWORD;
+  } else {
+    process.env.INITIAL_PASSWORD = ORIGINAL_INITIAL_PASSWORD;
+  }
+});

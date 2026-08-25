@@ -16,7 +16,9 @@ import { t } from "../i18n.mjs";
 const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 
 async function getListCliTools() {
-  const { listCliTools } = await import(pathToFileURL(resolve(PROJECT_ROOT, "src/shared/constants/cliTools.ts")).href);
+  const { listCliTools } = await import(
+    pathToFileURL(resolve(PROJECT_ROOT, "src/shared/constants/cliTools.ts")).href
+  );
   return listCliTools;
 }
 
@@ -24,9 +26,23 @@ function wantsProviderSetup(opts) {
   return opts.addProvider || Boolean(opts.provider) || Boolean(opts.apiKey);
 }
 
-async function resolvePassword(opts, prompt, nonInteractive) {
+/**
+ * Decide which password `setup` should write, if any.
+ *
+ * `existingPassword` is the hash already stored in settings. `INITIAL_PASSWORD`
+ * seeds the *first* password only — the same rule the server applies in
+ * `src/lib/auth/managementPassword.ts`, where the stored hash wins
+ * (`storedPassword || getInitialPasswordValue(...)`). The CLI read it
+ * unconditionally (#8439), so with an `INITIAL_PASSWORD` in the environment —
+ * which a default npm install has, `.env` carrying `CHANGEME` — every later
+ * `setup` run silently replaced an operator's own password with the well-known
+ * default and reported "Admin password configured" (#11494).
+ *
+ * Exported for tests: the decision is asserted without a database or a TTY.
+ */
+export async function resolvePassword(opts, prompt, nonInteractive, existingPassword = "") {
   if (opts.password) return opts.password;
-  if (process.env.INITIAL_PASSWORD) return process.env.INITIAL_PASSWORD;
+  if (!existingPassword && process.env.INITIAL_PASSWORD) return process.env.INITIAL_PASSWORD;
   if (nonInteractive) return "";
 
   const answer = await prompt.ask("Set an admin password now? [y/N]", "N");
@@ -41,9 +57,9 @@ async function resolvePassword(opts, prompt, nonInteractive) {
 }
 
 async function setupPassword(db, opts, prompt, nonInteractive) {
-  const password = await resolvePassword(opts, prompt, nonInteractive);
+  const settings = getSettings(db);
+  const password = await resolvePassword(opts, prompt, nonInteractive, settings.password);
   if (!password) {
-    const settings = getSettings(db);
     if (!settings.password) {
       updateSettings(db, { requireLogin: false });
     }
