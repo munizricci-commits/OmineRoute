@@ -24,6 +24,75 @@ export function deriveLiveWsPath(publicUrl?: string): string {
 }
 
 /**
+ * Validate the live WebSocket port reported by the handshake endpoint.
+ *
+ * The WebSocket server exposes its actual listening port, which may differ from
+ * the compiled-in default. Only a valid TCP port should ever override the
+ * default URL.
+ */
+export function sanitizeLiveWsPort(port: unknown): number | null {
+  if (typeof port === "number") {
+    if (!Number.isInteger(port) || port < 1 || port > 65535) return null;
+    return port;
+  }
+
+  if (typeof port === "string") {
+    const trimmed = port.trim();
+    if (!/^\d+$/.test(trimmed)) return null;
+    const numericPort = Number(trimmed);
+    if (!Number.isInteger(numericPort) || numericPort < 1 || numericPort > 65535) return null;
+    return numericPort;
+  }
+
+  return null;
+}
+
+/**
+ * Resolve the browser's live dashboard WebSocket URL from the handshake values.
+ *
+ * Priority:
+ * 1. explicit wsUrl passed by the caller
+ * 2. publicUrl reported by the handshake
+ * 3. default URL with the runtime port and path applied
+ * 4. the original default URL
+ */
+export function resolveLiveWsUrl({
+  explicit,
+  handshakeUrl,
+  handshakePort,
+  handshakePath,
+  defaultUrl,
+}: {
+  explicit?: string;
+  handshakeUrl?: string | null;
+  handshakePort?: number | string | null;
+  handshakePath?: string | null;
+  defaultUrl: string;
+}): string {
+  if (typeof explicit === "string") {
+    const trimmed = explicit.trim();
+    if (trimmed.startsWith("ws://") || trimmed.startsWith("wss://")) return trimmed;
+  }
+
+  if (typeof handshakeUrl === "string") {
+    const trimmed = handshakeUrl.trim();
+    if (trimmed.startsWith("ws://") || trimmed.startsWith("wss://")) return trimmed;
+  }
+
+  try {
+    const parsed = new URL(defaultUrl);
+    const sanitizedPort = sanitizeLiveWsPort(handshakePort);
+    if (sanitizedPort !== null) parsed.port = String(sanitizedPort);
+    if (typeof handshakePath === "string" && handshakePath.startsWith("/")) {
+      parsed.pathname = handshakePath;
+    }
+    return parsed.toString();
+  } catch {
+    return defaultUrl;
+  }
+}
+
+/**
  * The operator-declared public WebSocket URL, resolved at RUNTIME.
  *
  * `NEXT_PUBLIC_*` is inlined into the client bundle at BUILD time, so a prebuilt

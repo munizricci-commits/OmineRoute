@@ -27,11 +27,20 @@ describe("sanitizeLiveWsPort", () => {
       assert.equal(sanitizeLiveWsPort(value), null, `expected null for ${String(value)}`);
     }
   });
+
+  it("rejects hexadecimal numeric strings", () => {
+    assert.equal(sanitizeLiveWsPort("0x10"), null);
+  });
+
+  it("rejects scientific-notation numeric strings", () => {
+    assert.equal(sanitizeLiveWsPort("1e3"), null);
+  });
 });
 
 describe("resolveLiveWsUrl", () => {
   it("uses the port the handshake reports instead of the compiled-in one", () => {
     const url = resolveLiveWsUrl({ handshakePort: 20140, defaultUrl: DEFAULT_URL });
+
     assert.equal(new URL(url).port, "20140");
     assert.equal(new URL(url).hostname, "omniroute.example.tld");
     assert.equal(new URL(url).pathname, "/live-ws");
@@ -51,14 +60,25 @@ describe("resolveLiveWsUrl", () => {
 
   it("applies the port and the path together", () => {
     const url = new URL(
-      resolveLiveWsUrl({ handshakePort: 9443, handshakePath: "/ws/live", defaultUrl: DEFAULT_URL })
+      resolveLiveWsUrl({
+        handshakePort: 9443,
+        handshakePath: "/ws/live",
+        defaultUrl: DEFAULT_URL,
+      })
     );
+
     assert.equal(url.port, "9443");
     assert.equal(url.pathname, "/ws/live");
   });
 
   it("ignores a path that is not a path", () => {
-    const url = new URL(resolveLiveWsUrl({ handshakePath: "live-ws", defaultUrl: DEFAULT_URL }));
+    const url = new URL(
+      resolveLiveWsUrl({
+        handshakePath: "live-ws",
+        defaultUrl: DEFAULT_URL,
+      })
+    );
+
     assert.equal(url.pathname, "/live-ws");
   });
 
@@ -85,8 +105,34 @@ describe("resolveLiveWsUrl", () => {
     );
   });
 
+  it("rejects an explicit non-websocket URL", () => {
+    assert.equal(
+      resolveLiveWsUrl({
+        explicit: "http://weird",
+        defaultUrl: DEFAULT_URL,
+      }),
+      DEFAULT_URL
+    );
+  });
+
+  it("rejects a handshake URL that is not a websocket URL", () => {
+    assert.equal(
+      resolveLiveWsUrl({
+        handshakeUrl: "https://nope",
+        defaultUrl: DEFAULT_URL,
+      }),
+      DEFAULT_URL
+    );
+  });
+
   it("falls back to the default rather than throwing on an unparseable default", () => {
-    assert.equal(resolveLiveWsUrl({ handshakePort: 20140, defaultUrl: "not a url" }), "not a url");
+    assert.equal(
+      resolveLiveWsUrl({
+        handshakePort: 20140,
+        defaultUrl: "not a url",
+      }),
+      "not a url"
+    );
   });
 
   it("leaves deriveLiveWsPath alone", () => {
