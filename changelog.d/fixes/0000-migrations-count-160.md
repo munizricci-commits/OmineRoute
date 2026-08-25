@@ -1,0 +1,1 @@
+- **fix(docs):** the documented migration count matches the migrations that ship. `README.md`, `AGENTS.md` and `llm.txt` (plus its 42 locale mirrors) claimed 159 while `src/lib/db/migrations/` holds 160, which left `check:docs-counts` — and the unit test that asserts it exits clean — failing on the release branch ([#0000](https://github.com/diegosouzapw/OmniRoute/pull/0000))
