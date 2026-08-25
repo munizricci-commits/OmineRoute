@@ -1,0 +1,1 @@
+Prefer the process cgroup's `memory.pressure` signal over host-wide PSI for resource-pressure admission, preventing unrelated host workloads from causing false `503 resource_pressure` responses while retaining `/proc/pressure/memory` as a fallback.

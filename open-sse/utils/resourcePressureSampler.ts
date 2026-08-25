@@ -234,7 +234,10 @@ export async function sampleResourceSignals(
         readText(path.join(cgroupDirectory, "memory.events")),
       ])
     : [null, null, null, null];
-  const psi = await readText("/proc/pressure/memory").catch(() => null);
+  const cgroupPsi = cgroupDirectory
+    ? await readText(path.join(cgroupDirectory, "memory.pressure")).catch(() => null)
+    : null;
+  const psi = cgroupPsi ?? (await readText("/proc/pressure/memory").catch(() => null));
 
   return {
     observedAtMs: (deps.nowMs ?? Date.now)(),
