@@ -30,6 +30,23 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+// Both array-bounding implementations that clip a stored artifact's payload
+// for log-storage size (cloneBoundedChatLogPayload in
+// open-sse/handlers/chatCore/logTruncation.ts, and cloneBoundedForLog in
+// open-sse/utils/requestLogger.ts) prepend this sentinel in place of the
+// items they dropped once an array exceeds their tail-item cap -- so a real,
+// ordinary-length conversation resolves fine, but any conversation whose
+// input/output grew past that cap gets this object silently standing in for
+// real history. Reading it back as a genuine Responses-API item sent a
+// malformed reconstructed request upstream (translator 400:
+// "input item type 'missing' cannot be represented..."), which is worse than
+// the plain cache-miss this function is otherwise designed to fail into.
+const TRUNCATED_ARRAY_MARKER = "_omniroute_truncated_array";
+
+function containsTruncatedArrayMarker(items: readonly unknown[]): boolean {
+  return items.some((item) => isPlainRecord(item) && item[TRUNCATED_ARRAY_MARKER] === true);
+}
+
 /**
  * Resolve the full input + output a prior Responses API call produced, so
  * the caller can reconstruct `full_input = stored.input + stored.output +
@@ -88,6 +105,7 @@ export function resolvePreviousResponseState(
     ? clientResponse.output
     : clientResponse?.summary?.output;
   if (!Array.isArray(input) || !Array.isArray(output)) return null;
+  if (containsTruncatedArrayMarker(input) || containsTruncatedArrayMarker(output)) return null;
 
   return { input, output };
 }
