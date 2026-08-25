@@ -76,6 +76,10 @@
     "tests/unit/plugins-sandbox.test.ts": {
       "sourceRemoved": ["src/lib/plugins/sandbox.ts"],
       "reason": "v3.8.50 #9126 (commit 8fac6bcd48): sandbox.ts foi removido por completo junto com pluginWorker.ts e signing.ts (\"zero importers confirmed\", subsistema de sandbox de plugins nunca ligado a nenhum consumidor). O teste cobria SandboxLevel/getSandboxLabel exportados por sandbox.ts; sem o arquivo-fonte não há mais símbolo a testar. Mesma causa-raiz de tests/unit/plugin-sandbox-permissions.test.ts nesta entrada."
+    },
+    "tests/unit/gemini-3-5-flash-thinking.test.ts": {
+      "replacement": "tests/unit/model-capabilities-registry.test.ts",
+      "reason": "v3.8.50 back-merge f95b03d7: the provider-neutral Gemini 3.5 Flash tier catalog was RETIRED (MODEL_SPECS entries removed; the thinking tiers now live under antigravity/gemini-3.7-flash-*), so the deleted file's thinking-capable/routing-policy fixtures pinned a retired surface and red-fail against HEAD. The replacement guards the retirement itself (retired ids have no provider-neutral specs) plus resolvable capability floors for the surviving gemini-3-flash-agent id. Verified legitimate, not masking."
     }
   },
   "tests/unit/catalog-updates-v3x.test.ts": "v3.8.45 #6248: fix(providers) remove deprecated MiMo V2 entries — os 5 asserts removidos pinavam specs de modelos mimo-v2-* que deixaram de existir no catálogo (54→49). Asserts seguem a remoção dos modelos, não enfraquecimento. Verificado legítimo. Prune após v3.8.45 mergear para main.",

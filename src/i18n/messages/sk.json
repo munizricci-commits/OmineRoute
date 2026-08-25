@@ -1266,7 +1266,7 @@
     "agentBridge": "Agent Bridge",
     "agentBridgeSubtitle": "Zachytávať prevádzku agentov IDE",
     "trafficInspector": "Inšpektor prevádzky",
-    "trafficInspectorSubtitle": "Monitorovať volania LLM + ladiť akúkoľvek HTTPS prevádzku",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "CLI Code",
     "cliCodeSubtitle": "Nástroje na kódovanie smerujúce na OmniRoute",
     "cliAgents": "CLI agenti",

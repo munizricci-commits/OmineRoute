@@ -39,8 +39,7 @@ export function isSubscriptionQuotaText(lower: string, provider?: string | null)
     // Native Claude OAuth uses this otherwise-generic 429 wording for an
     // exhausted subscription window. Keep it provider-scoped: other upstreams
     // can use the same phrase for a short RPM throttle.
-    (provider === "claude" &&
-      lower.includes("this request would exceed your account's rate limit"))
+    (provider === "claude" && lower.includes("this request would exceed your account's rate limit"))
   );
 }
 
@@ -108,9 +107,12 @@ export function isWeeklyUsageLimitText(lower: string): boolean {
 
 const MAX_WEEKLY_QUOTA_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
 
-export function buildWeeklyQuotaFallback(errorStr: string): QuotaTextFallback | null {
+export function buildWeeklyQuotaFallback(
+  errorStr: string,
+  nowMs: number = Date.now()
+): QuotaTextFallback | null {
   if (!isWeeklyUsageLimitText(errorStr.toLowerCase())) return null;
-  const parsedResetMs = parseDayGranularityResetMs(errorStr, MAX_WEEKLY_QUOTA_COOLDOWN_MS);
+  const parsedResetMs = parseDayGranularityResetMs(errorStr, MAX_WEEKLY_QUOTA_COOLDOWN_MS, nowMs);
   const cooldownMs =
     typeof parsedResetMs === "number" && parsedResetMs > 0
       ? parsedResetMs
@@ -120,7 +122,8 @@ export function buildWeeklyQuotaFallback(errorStr: string): QuotaTextFallback | 
     cooldownMs,
     reason: RateLimitReason.QUOTA_EXHAUSTED,
     usedUpstreamRetryHint: typeof parsedResetMs === "number" && parsedResetMs > 0,
-    quotaResetHintMs: typeof parsedResetMs === "number" && parsedResetMs > 0 ? parsedResetMs : undefined,
+    quotaResetHintMs:
+      typeof parsedResetMs === "number" && parsedResetMs > 0 ? parsedResetMs : undefined,
   };
 }
 

@@ -1266,7 +1266,7 @@
     "agentBridge": "에이전트 브리지",
     "agentBridgeSubtitle": "IDE 에이전트 트래픽 가로채기",
     "trafficInspector": "트래픽 인스펙터",
-    "trafficInspectorSubtitle": "LLM 호출 모니터링 + 모든 HTTPS 트래픽 디버깅",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "CLI 코드",
     "cliCodeSubtitle": "OmniRoute를 가리키는 코드 도구",
     "cliAgents": "CLI 에이전트",

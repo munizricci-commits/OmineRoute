@@ -1266,7 +1266,7 @@
     "agentBridge": "ایجنٹ برج",
     "agentBridgeSubtitle": "IDE ایجنٹ ٹریفک کو روکیں",
     "trafficInspector": "ٹریفک انسپکٹر",
-    "trafficInspectorSubtitle": "LLM کالز کی نگرانی کریں + کسی بھی HTTPS ٹریفک کو ڈیبگ کریں",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "CLI کوڈ",
     "cliCodeSubtitle": "کوڈ ٹولز جو OmniRoute کی طرف اشارہ کرتے ہیں",
     "cliAgents": "CLI ایجنٹس",

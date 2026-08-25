@@ -11,32 +11,33 @@ function makeCmd(output = "json") {
 }
 
 test("oneproxy status chama omniroute_oneproxy_stats via MCP", async () => {
-  const calls: any[] = [];
   const origFetch = globalThis.fetch;
   globalThis.fetch = makeMcpStreamFetch({ toolResult: { poolSize: 10, activeProxies: 8 } });
-  globalThis.fetch = (async (url: string, init?: any) => {
-    calls.push({ url: String(url), init });
-    return origFetch(url, init);
-  }) as any;
-
-  await import("../../bin/cli/commands/oneproxy.mjs");
-  // ensure module registers; just assert stream mock shape
+  const { mcpCallTool } = await import("../../bin/cli/mcpClient.mjs");
+  const result = await mcpCallTool("omniroute_oneproxy_stats", {});
   globalThis.fetch = origFetch;
-  assert.ok(calls.length >= 0);
+  assert.equal((result as any).poolSize, 10);
+  assert.equal((result as any).activeProxies, 8);
+  assert.ok("poolSize" in (result as object) && "activeProxies" in (result as object));
 });
 
 test("oneproxy stats passa provider e period para MCP", async () => {
   const origFetch = globalThis.fetch;
   globalThis.fetch = makeMcpStreamFetch({ toolResult: { requests: 5000 } });
   const { mcpCallTool } = await import("../../bin/cli/mcpClient.mjs");
-  const result = await mcpCallTool("omniroute_oneproxy_stats", { provider: "openai", period: "24h" });
+  const result = await mcpCallTool("omniroute_oneproxy_stats", {
+    provider: "openai",
+    period: "24h",
+  });
   globalThis.fetch = origFetch;
   assert.deepEqual(result, { requests: 5000 });
 });
 
 test("oneproxy fetch chama omniroute_oneproxy_fetch com count e type", async () => {
   const origFetch = globalThis.fetch;
-  globalThis.fetch = makeMcpStreamFetch({ toolResult: { proxies: [{ host: "10.0.0.1", type: "http" }] } });
+  globalThis.fetch = makeMcpStreamFetch({
+    toolResult: { proxies: [{ host: "10.0.0.1", type: "http" }] },
+  });
   const { mcpCallTool } = await import("../../bin/cli/mcpClient.mjs");
   const result = await mcpCallTool("omniroute_oneproxy_fetch", { count: 5, type: "http" });
   globalThis.fetch = origFetch;

@@ -181,39 +181,33 @@ async function postExchangeAntigravity(
   } else if (config.onboardUserEndpoints.length > 0) {
     // Accounts without an existing Cloud Code project need one bounded inline
     // onboarding attempt before loadCodeAssist can discover their project.
-    let onboardedWithoutProject = false;
+    let onboardSucceeded = false;
     try {
       const response = await fetchFirstOk(
         config.onboardUserEndpoints,
         { method: "POST", headers, body: JSON.stringify({ tier_id: tierId, metadata }) },
         POSTEXCHANGE_TIMEOUT_MS
       );
-      // Google BYOP (#8491): a 200 WITHOUT cloudaicompanionProject in the
-      // onboardUser body means no project was created and none ever will be —
-      // standard-tier/personal accounts must bring their own GCP project.
-      // A body that DOES carry one (string or {id}) is a real onboarding
-      // success; the retry loadCodeAssist below picks the id up (it can lag).
+      onboardSucceeded = true;
+      // The discovery retry ALWAYS runs after an accepted onboarding — the
+      // legacy `{done:true}` ack and bare-200 bodies alike can precede async
+      // server-side project creation, so skipping it would misreport real
+      // successes as failures. Google BYOP (#8491) is only CONCLUDED when the
+      // retry also comes back empty: onboarding succeeded but no Cloud Code
+      // project exists — the operator must bring their own GCP project.
       const bodyText = await response.text().catch(() => "");
-      if (bodyText && !bodyText.includes("cloudaicompanionProject")) {
-        console.log(
-          "[oauth] antigravity onboardUser succeeded without creating a project — Google BYOP (user-defined GCP project) required"
+      const retryResponse = await fetchFirstOk(
+        config.loadCodeAssistEndpoints,
+        { method: "POST", headers, body: JSON.stringify({ metadata }) },
+        POSTEXCHANGE_TIMEOUT_MS
+      );
+      projectId = extractProjectId((await retryResponse.json()) as Record<string, unknown>);
+      // Prefer the id straight from the onboarding response when discovery
+      // lags behind server-side project creation.
+      if (!projectId && bodyText) {
+        projectId = extractProjectId(
+          (await new Response(bodyText).json().catch(() => ({}))) as Record<string, unknown>
         );
-        onboardedWithoutProject = true;
-      }
-      if (!onboardedWithoutProject) {
-        const retryResponse = await fetchFirstOk(
-          config.loadCodeAssistEndpoints,
-          { method: "POST", headers, body: JSON.stringify({ metadata }) },
-          POSTEXCHANGE_TIMEOUT_MS
-        );
-        projectId = extractProjectId((await retryResponse.json()) as Record<string, unknown>);
-        // Prefer the id straight from the onboarding response when discovery
-        // lags behind server-side project creation.
-        if (!projectId) {
-          projectId = extractProjectId(
-            (await new Response(bodyText).json().catch(() => ({}))) as Record<string, unknown>
-          );
-        }
       }
     } catch (error) {
       console.log("[oauth] antigravity inline onboarding/discovery failed:", error);
@@ -223,9 +217,7 @@ async function postExchangeAntigravity(
         userInfo,
         projectId,
         tierId,
-        projectDiscoveryOutcome: onboardedWithoutProject
-          ? "requires_manual_project"
-          : "discovery_failed",
+        projectDiscoveryOutcome: onboardSucceeded ? "requires_manual_project" : "discovery_failed",
       };
     }
   } else if (loadFailed) {

@@ -252,7 +252,12 @@ test("MCP memory tools fall back to caller principal id when apiKeyId is omitted
   }
 });
 
-test("MCP memory tools reject explicit apiKeyId that does not match caller principal", async () => {
+test("MCP memory tools resolve ownership to the caller principal, ignoring a foreign explicit apiKeyId", async () => {
+  // GHSA-cpv3-xr7r-xf8q: resolveMemoryOwnerId() gives the authenticated caller's
+  // principal ABSOLUTE precedence over a caller-supplied apiKeyId (IDOR). With
+  // OMNIROUTE_API_KEY set, the env key resolves to the synthetic "env-key"
+  // principal — so a write that passes apiKeyId:"principal-b" must land in the
+  // CALLER's bucket ("env-key"), and nothing may exist under "principal-b".
   const prevEnvKey = process.env.OMNIROUTE_API_KEY;
   process.env.OMNIROUTE_API_KEY = "sk-other-principal";
   try {
@@ -265,14 +270,28 @@ test("MCP memory tools reject explicit apiKeyId that does not match caller princ
       metadata: {},
     });
     assert.equal(added.success, true);
-    assert.equal(added.data.memory.apiKeyId, "principal-b");
+    assert.equal(
+      added.data.memory.apiKeyId,
+      "env-key",
+      "caller principal wins over the foreign explicit apiKeyId"
+    );
 
-    const searched = await memoryTools.omniroute_memory_search.handler({
+    const searchedAsCaller = await memoryTools.omniroute_memory_search.handler({
       query: "cross-tenant",
       limit: 5,
     });
-    assert.equal(searched.success, true);
-    assert.equal(searched.data.count, 0);
+    assert.equal(searchedAsCaller.success, true);
+    assert.equal(searchedAsCaller.data.count, 1);
+    assert.equal(searchedAsCaller.data.memories[0].apiKeyId, "env-key");
+
+    const principalBBucket = await listMemories({
+      apiKeyId: "principal-b",
+      sessionId: "mcp-mismatch",
+    });
+    const leaked = Array.isArray(principalBBucket)
+      ? principalBBucket
+      : ((principalBBucket as { data?: unknown[] }).data ?? []);
+    assert.equal(leaked.length, 0, "no memory may be written into the foreign principal bucket");
   } finally {
     if (prevEnvKey === undefined) {
       delete process.env.OMNIROUTE_API_KEY;

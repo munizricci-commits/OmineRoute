@@ -1266,7 +1266,7 @@
     "agentBridge": "جسر الوكيل",
     "agentBridgeSubtitle": "اعتراض حركة مرور وكيل IDE",
     "trafficInspector": "مفتش حركة المرور",
-    "trafficInspectorSubtitle": "مراقبة استدعاءات LLM + تصحيح أخطاء أي حركة مرور HTTPS",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "كود CLI",
     "cliCodeSubtitle": "أدوات الكود التي تشير إلى OmniRoute",
     "cliAgents": "وكلاء CLI",

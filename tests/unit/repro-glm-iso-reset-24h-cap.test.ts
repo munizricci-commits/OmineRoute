@@ -103,7 +103,10 @@ describe("Z.AI GLM weekly quota — absolute ISO reset", () => {
   });
 
   it("buildWeeklyQuotaFallback uses the parsed ISO reset, not the 24h default", () => {
-    const result = buildWeeklyQuotaFallback(GLM_BODY);
+    // nowMs is injected: the fixture pins the reset to a fixed calendar date,
+    // so wall-clock evaluation would time-bomb once real time drifts past
+    // 5 days before it (exactly what happened in CI on 2026-08-25).
+    const result = buildWeeklyQuotaFallback(GLM_BODY, NOW);
     assert.ok(result);
     assert.equal(result!.reason, RateLimitReason.QUOTA_EXHAUSTED);
     assert.equal(result!.usedUpstreamRetryHint, true);
@@ -112,24 +115,35 @@ describe("Z.AI GLM weekly quota — absolute ISO reset", () => {
       `expected a multi-day cooldown, got ${result!.cooldownMs}`
     );
     assert.ok(result!.cooldownMs <= MAX_MS);
-    assert.ok(result!.cooldownMs !== DAY_MS, "must not fall back to WEEKLY_QUOTA_COOLDOWN_MS (24h)");
+    assert.ok(
+      result!.cooldownMs !== DAY_MS,
+      "must not fall back to WEEKLY_QUOTA_COOLDOWN_MS (24h)"
+    );
   });
 
   it("checkFallbackError classifies the GLM 429 as QUOTA_EXHAUSTED with the real wait", async () => {
-    const { checkFallbackError, parseRetryFromErrorText } = await import(
-      "../../open-sse/services/accountFallback.ts"
-    );
+    const { checkFallbackError, parseRetryFromErrorText } =
+      await import("../../open-sse/services/accountFallback.ts");
 
-    const parsed = parseRetryFromErrorText(GLM_BODY);
-    assert.ok(parsed && parsed > 5 * DAY_MS, `parsed reset was ${parsed}`);
+    // Pin the clock to the fixture's NOW: the fixture's reset is a fixed
+    // calendar date, and wall-clock evaluation fails once real time drifts
+    // within 5 days of it (CI time-bomb on 2026-08-25).
+    const realNow = Date.now;
+    Date.now = () => NOW;
+    try {
+      const parsed = parseRetryFromErrorText(GLM_BODY);
+      assert.ok(parsed && parsed > 5 * DAY_MS, `parsed reset was ${parsed}`);
 
-    const out = checkFallbackError(429, GLM_BODY, 0, "glm-5.3", "zai", null, null, null);
-    assert.equal(out.shouldFallback, true);
-    assert.equal(out.reason, RateLimitReason.QUOTA_EXHAUSTED);
-    assert.ok(
-      (out.cooldownMs ?? 0) > 5 * DAY_MS,
-      `expected a multi-day cooldown, got ${out.cooldownMs}`
-    );
-    assert.ok((out.cooldownMs ?? 0) !== DAY_MS, "must not land on the 24h weekly default");
+      const out = checkFallbackError(429, GLM_BODY, 0, "glm-5.3", "zai", null, null, null);
+      assert.equal(out.shouldFallback, true);
+      assert.equal(out.reason, RateLimitReason.QUOTA_EXHAUSTED);
+      assert.ok(
+        (out.cooldownMs ?? 0) > 5 * DAY_MS,
+        `expected a multi-day cooldown, got ${out.cooldownMs}`
+      );
+      assert.ok((out.cooldownMs ?? 0) !== DAY_MS, "must not land on the 24h weekly default");
+    } finally {
+      Date.now = realNow;
+    }
   });
 });

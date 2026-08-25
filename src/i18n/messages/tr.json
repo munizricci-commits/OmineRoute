@@ -1266,7 +1266,7 @@
     "agentBridge": "Ajan Köprüsü",
     "agentBridgeSubtitle": "IDE ajan trafiğini yakalayın",
     "trafficInspector": "Trafik Denetleyicisi",
-    "trafficInspectorSubtitle": "LLM çağrılarını izleyin + tüm HTTPS trafiğinde hata ayıklayın",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "CLI Kodu",
     "cliCodeSubtitle": "OmniRoute'a yönlendiren kod araçları",
     "cliAgents": "CLI Ajanları",

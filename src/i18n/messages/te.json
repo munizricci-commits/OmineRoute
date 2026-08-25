@@ -1266,7 +1266,7 @@
     "agentBridge": "ఏజెంట్ బ్రిడ్జ్",
     "agentBridgeSubtitle": "IDE ఏజెంట్ ట్రాఫిక్‌ను అడ్డుకోండి",
     "trafficInspector": "ట్రాఫిక్ ఇన్‌స్పెక్టర్",
-    "trafficInspectorSubtitle": "LLM కాల్స్‌ను పర్యవేక్షించండి + ఏదైనా HTTPS ట్రాఫిక్‌ను డీబగ్ చేయండి",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "CLI కోడ్",
     "cliCodeSubtitle": "OmniRoute వైపు చూపే కోడ్ సాధనాలు",
     "cliAgents": "CLI ఏజెంట్లు",

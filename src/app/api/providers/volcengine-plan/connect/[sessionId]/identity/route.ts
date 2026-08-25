@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
+import { validateBody, isValidationFailure } from "@/shared/validation/helpers";
 import { bindVolcenginePlansFromConsoleCredentials } from "@/lib/providers/volcenginePlanBinding";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error.ts";
+
+const volcengineIdentitySchema = z.object({
+  index: z.number().int().min(0),
+  timeout: z.number().int().positive().max(600_000).optional(),
+});
 
 /**
  * POST /api/providers/volcengine-plan/connect/[sessionId]/identity
@@ -16,7 +23,15 @@ export async function POST(
   if (auth) return auth;
 
   const { sessionId } = await params;
-  const body = await request.json().catch(() => ({}));
+  const rawBody = await request.json().catch(() => ({}));
+  const validation = validateBody(volcengineIdentitySchema, rawBody);
+  if (isValidationFailure(validation)) {
+    return NextResponse.json(
+      { success: false, error: validation.error.message, details: validation.error.details },
+      { status: 400 }
+    );
+  }
+  const body = validation.data;
 
   try {
     const { volcengineConsoleAutoLoginService } =
@@ -29,16 +44,8 @@ export async function POST(
       );
     }
 
-    const index = Number(body.index);
-    if (!Number.isInteger(index) || index < 0) {
-      return NextResponse.json(
-        { success: false, error: "Invalid identity index" },
-        { status: 400 }
-      );
-    }
-
-    const timeout = typeof body.timeout === "number" ? body.timeout : undefined;
-    const session = await volcengineConsoleAutoLoginService.selectIdentity(sessionId, index, {
+    const timeout = body.timeout;
+    const session = await volcengineConsoleAutoLoginService.selectIdentity(sessionId, body.index, {
       timeout,
     });
     if (!session) {

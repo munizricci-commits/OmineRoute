@@ -1266,7 +1266,7 @@
     "agentBridge": "Agent Bridge",
     "agentBridgeSubtitle": "יירוט תעבורת סוכן IDE",
     "trafficInspector": "מפקח תעבורה",
-    "trafficInspectorSubtitle": "ניטור קריאות LLM + דיבאג של כל תעבורת HTTPS",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "קוד CLI",
     "cliCodeSubtitle": "כלי קוד המצביעים על OmniRoute",
     "cliAgents": "סוכני CLI",

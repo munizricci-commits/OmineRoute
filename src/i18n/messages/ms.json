@@ -1266,7 +1266,7 @@
     "agentBridge": "Agent Bridge",
     "agentBridgeSubtitle": "Pintas trafik ejen IDE",
     "trafficInspector": "Pemeriksa Trafik",
-    "trafficInspectorSubtitle": "Pantau panggilan LLM + nyahpepijat sebarang trafik HTTPS",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "Kod CLI",
     "cliCodeSubtitle": "Alatan kod yang menghala ke OmniRoute",
     "cliAgents": "Ejen CLI",

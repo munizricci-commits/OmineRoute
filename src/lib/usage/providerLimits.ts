@@ -13,12 +13,7 @@ import {
 } from "@/lib/db/providerLimits";
 import { syncToCloud } from "@/lib/cloudSync";
 import { setQuotaCache } from "@/domain/quotaCache";
-import {
-  buildClaudeExtraUsageConnectionUpdate,
-  CLAUDE_EXTRA_USAGE_ERROR_SOURCE,
-  isClaudeExtraUsageBlockEnabled,
-  isClaudeExtraUsageQueued,
-} from "@/lib/providers/claudeExtraUsage";
+import { buildClaudeExtraUsageConnectionUpdate } from "@/lib/providers/claudeExtraUsage";
 import { isConnectionUnavailableToAuxiliaryActivity } from "@/lib/exclusiveLeaseIsolation";
 import { clearRecoveredProviderState } from "@/sse/services/auth";
 import { getMachineId } from "@/shared/utils/machine";
@@ -443,24 +438,34 @@ export function hasUsableQuota(usage: JsonRecord): boolean {
   return false;
 }
 
-// A window "still blocks" recovery when it governs quota and is either still
-// exhausted with a real reset that hasn't passed yet, or exhausted with no
-// parseable real reset at all (unknown-reset windows stay locked, matching
-// the pre-existing kimi-coding partial-refresh semantics).
-function windowStillExhaustedAfterRealReset(value: unknown, nowMs: number): boolean {
-  if (!isRecord(value)) return false;
-  if (value.unlimited === true) return false;
-  const remaining =
-    typeof value.remaining === "number"
-      ? value.remaining
-      : typeof value.remainingPercentage === "number"
-        ? value.remainingPercentage
-        : null;
-  if (remaining !== null && remaining > 0) return false;
-  if (value.resetAt == null) return true;
-  const resetMs = Date.parse(String(value.resetAt));
-  if (Number.isNaN(resetMs)) return true;
-  return resetMs > nowMs;
+// A SYNTHETIC cooldown (persisted by a poller without a parseable upstream
+// reset — e.g. the Claude-subscription SUBSCRIPTION_QUOTA_COOLDOWN_MS lock) may
+// be overruled only by POSITIVE live-window evidence: EVERY reported quota
+// window is replenished (remaining > 0) AND carries a documented reset
+// timestamp that has already elapsed. Unknown-reset windows never authorize an
+// override (matching the kimi-coding partial-refresh semantics);
+// `unlimited` windows carry no reset evidence and are rejected.
+export function syntheticCooldownOutlivedByRealWindows(
+  usage: JsonRecord,
+  nowMs: number = Date.now()
+): boolean {
+  if (!isRecord(usage) || !isRecord(usage.quotas)) return false;
+  const windows = Object.values(usage.quotas);
+  if (windows.length === 0) return false;
+  for (const value of windows) {
+    if (!isRecord(value) || value.unlimited === true) return false;
+    const remaining =
+      typeof value.remaining === "number"
+        ? value.remaining
+        : typeof value.remainingPercentage === "number"
+          ? value.remainingPercentage
+          : null;
+    if (remaining === null || remaining <= 0) return false;
+    if (value.resetAt == null) return false;
+    const resetMs = Date.parse(String(value.resetAt));
+    if (Number.isNaN(resetMs) || resetMs > nowMs) return false;
+  }
+  return true;
 }
 
 /**
@@ -513,7 +518,19 @@ export async function maybeClearRecoveredQuotaState(
 ): Promise<ProviderConnectionLike> {
   if (!hasUsableQuota(usage)) return connection;
   if (isTerminalStatusForQuotaRecovery(connection.testStatus)) return connection;
-  if (hasActiveCooldown(connection)) return connection;
+  if (hasActiveCooldown(connection)) {
+    // A future rateLimitedUntil written from a real upstream signal is a hard
+    // statement no poller may overrule (#11277) — executor-sourced rate limits
+    // and extra-usage policy blocks included. Only a SYNTHETIC cooldown (a
+    // quota_exhausted lock persisted without an upstream reset, e.g. the
+    // Claude-subscription poller's 1h lockout) yields to positive live-window
+    // evidence that the real quota has already replenished past its reset.
+    const syntheticRecoveryOverride =
+      connection.lastErrorType === "quota_exhausted" &&
+      connection.lastErrorSource !== "extra_usage" &&
+      syntheticCooldownOutlivedByRealWindows(usage);
+    if (!syntheticRecoveryOverride) return connection;
+  }
 
   const hasTransientState =
     connection.testStatus === "unavailable" ||

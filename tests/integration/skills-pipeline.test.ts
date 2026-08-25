@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { OMNIROUTE_WEB_SEARCH_FALLBACK_TOOL_NAME } from "../../open-sse/services/webSearchFallback.ts";
+import { decodeSkillToolName } from "../../src/lib/skills/injection.ts";
 
 import { createChatPipelineHarness } from "./_chatPipelineHarness.ts";
 
@@ -137,7 +138,11 @@ test("enabling a disabled skill makes it available in the request pipeline", asy
   assert.equal(updateResponse.status, 200);
   assert.equal(response.status, 200);
   assert.ok(Array.isArray(fetchBodies[0].tools));
-  assert.ok(fetchBodies[0].tools.some((tool) => tool.function.name === "lookupWeather@1.0.0"));
+  assert.ok(
+    fetchBodies[0].tools.some(
+      (tool) => decodeSkillToolName(tool.function.name) === "lookupWeather@1.0.0"
+    )
+  );
 });
 
 test("matching tool calls execute the registered skill and return tool results", async () => {
@@ -351,7 +356,7 @@ test("injectSkills() correctly injects skill context into a request", async () =
   assert.ok(Array.isArray(tools), "injectSkills should return an array");
   assert.equal(tools.length, 1, "should inject exactly one skill tool");
   assert.equal((tools[0] as any).type, "function");
-  assert.equal((tools as any)[0].function.name, "translateText@1.0.0");
+  assert.equal(decodeSkillToolName((tools as any)[0].function.name), "translateText@1.0.0");
   (assert as any).equal(
     (tools[0] as any).function.description,
     "Translate text to another language"
@@ -387,7 +392,9 @@ test("injectSkills() merges with existing tools without duplicating", async () =
   });
 
   assert.equal(tools.length, 2, "should have injected skill + existing tool");
-  const names = tools.map((t) => (t as any).function?.name || (t as any).name);
+  const names = tools
+    .map((t) => decodeSkillToolName((t as any).function?.name || (t as any).name))
+    .filter((name) => name.length > 0);
   assert.ok(names.includes("calcRoute@1.0.0"));
   assert.ok(names.includes("preExistingTool"));
 });
@@ -444,8 +451,8 @@ test("responses input context participates in AUTO skill injection", async () =>
   assert.ok(Array.isArray(fetchBodies[0].tools));
 
   const names = fetchBodies[0].tools
-    .map((tool) => tool?.function?.name)
-    .filter((name) => typeof name === "string");
+    .map((tool) => decodeSkillToolName(tool?.function?.name ?? ""))
+    .filter((name) => typeof name === "string" && name.length > 0);
 
   assert.ok(names.includes("issueSearch@1.0.0"));
   assert.ok(!names.includes("calendarPlanner@1.0.0"));
@@ -775,7 +782,9 @@ test("builtin and custom skills coexist in the injected tool list", async () => 
     })
   );
 
-  const toolNames = (fetchBodies[0].tools || []).map((tool) => tool.function.name).sort();
+  const toolNames = (fetchBodies[0].tools || [])
+    .map((tool) => decodeSkillToolName(tool.function.name))
+    .sort();
 
   assert.equal(response.status, 200);
   assert.deepEqual(toolNames, ["lookupWeather@1.0.0", "webSearch@1.0.0"]);
@@ -875,6 +884,9 @@ test("web_search fallback preserves Responses API output by appending function_c
       toolCallId: "call_responses_web_search",
       argumentsObject: {
         query: "latest omniroute roadmap",
+        // Auto-selection prefers $0 free providers (duckduckgo-free); pin the
+        // seeded serper-search connection so the mock stays deterministic.
+        provider: "serper-search",
       },
     });
   };

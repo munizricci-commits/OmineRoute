@@ -1,7 +1,15 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
+import { validateBody, isValidationFailure } from "@/shared/validation/helpers";
 import { bindVolcenginePlansFromConsoleCredentials } from "@/lib/providers/volcenginePlanBinding";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error.ts";
+
+const volcengineCodeSchema = z.object({
+  code: z.union([z.string(), z.number()]).optional(),
+  captcha: z.string().optional(),
+  timeout: z.number().int().positive().max(600_000).optional(),
+});
 
 /**
  * POST /api/providers/volcengine-plan/connect/[sessionId]/code
@@ -17,7 +25,15 @@ export async function POST(
   if (auth) return auth;
 
   const { sessionId } = await params;
-  const body = await request.json().catch(() => ({}));
+  const rawBody = await request.json().catch(() => ({}));
+  const validation = validateBody(volcengineCodeSchema, rawBody);
+  if (isValidationFailure(validation)) {
+    return NextResponse.json(
+      { success: false, error: validation.error.message, details: validation.error.details },
+      { status: 400 }
+    );
+  }
+  const body = validation.data;
 
   try {
     const { volcengineConsoleAutoLoginService } =
@@ -30,11 +46,11 @@ export async function POST(
       );
     }
 
-    const timeout = typeof body.timeout === "number" ? body.timeout : undefined;
+    const timeout = body.timeout;
     const session = await volcengineConsoleAutoLoginService.submitCode(
       sessionId,
-      String(body.code ?? ""),
-      typeof body.captcha === "string" ? body.captcha : undefined,
+      body.code != null ? String(body.code) : "",
+      body.captcha,
       { timeout }
     );
     if (!session) {

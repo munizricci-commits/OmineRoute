@@ -71,8 +71,14 @@ const EXPECTED: Record<InventoryKind, Record<string, number>> = {
     "open-sse/handlers/cursorCliProxy.ts": 1,
     "open-sse/services/alibabaFreeTier.ts": 1,
     "open-sse/services/alibabaFreeTierQuotaFetcher.ts": 1,
+    // v3.8.50 back-merge additions (f95b03d7): combo routing infra and the
+    // volcengine-plan binding/auto-sync services query connections the same
+    // way as their classified siblings.
+    "open-sse/services/combo.ts": 1,
     "open-sse/services/combo/providerWildcard.ts": 1,
     "open-sse/services/tokenRefresh.ts": 1,
+    "src/lib/providers/volcPlanAutoSyncBackfill.ts": 1,
+    "src/lib/providers/volcenginePlanBinding.ts": 1,
     "src/app/(dashboard)/dashboard/tools/agent-bridge/page.tsx": 1,
     "src/app/api/cloud/auth/route.ts": 1,
     "src/app/api/cloud/credentials/update/route.ts": 1,
@@ -179,10 +185,13 @@ const CLASSIFICATION: Record<InventoryKind, Record<string, BypassClass>> = {
         "open-sse/handlers/chatCore.ts",
         "open-sse/services/alibabaFreeTier.ts",
         "open-sse/services/alibabaFreeTierQuotaFetcher.ts",
+        "open-sse/services/combo.ts",
         "open-sse/services/combo/providerWildcard.ts",
         "open-sse/services/tokenRefresh.ts",
         "src/app/api/translator/send/route.ts",
         "src/lib/credentialHealth/scheduler.ts",
+        "src/lib/providers/volcPlanAutoSyncBackfill.ts",
+        "src/lib/providers/volcenginePlanBinding.ts",
         "src/lib/services/quotaAutoPing.ts",
         "src/lib/usage/codexResetCredits.ts",
         "src/lib/usage/providerLimits.ts",
@@ -216,7 +225,10 @@ function countCalls(): Record<InventoryKind, Record<string, number>> {
     const text = fs.readFileSync(path.join(REPO_ROOT, file), "utf8");
     const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
     const increment = (kind: InventoryKind) => {
-      actual[kind][file] = (actual[kind][file] ?? 0) + 1;
+      // Normalize to forward slashes so the frozen inventory is
+      // platform-independent (EXPECTED keys are POSIX-style).
+      const key = file.split(path.sep).join("/");
+      actual[kind][key] = (actual[kind][key] ?? 0) + 1;
     };
     const visit = (node: ts.Node): void => {
       if (ts.isCallExpression(node)) {

@@ -1266,7 +1266,7 @@
     "agentBridge": "代理桥接",
     "agentBridgeSubtitle": "拦截 IDE 代理流量",
     "trafficInspector": "流量检查器",
-    "trafficInspectorSubtitle": "监控 LLM 调用 + 调试任何 HTTPS 流量",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "CLI 代码的",
     "cliCodeSubtitle": "指向 OmniRoute 的代码工具",
     "cliAgents": "CLI 代理",

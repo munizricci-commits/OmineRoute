@@ -1266,7 +1266,7 @@
     "agentBridge": "Agent Bridge",
     "agentBridgeSubtitle": "Avskjær IDE-agenttrafikk",
     "trafficInspector": "Trafikkinspektør",
-    "trafficInspectorSubtitle": "Overvåk LLM-kall + feilsøk eventuell HTTPS-trafikk",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "CLI-kode",
     "cliCodeSubtitle": "Kodeverktøy som peker til OmniRoute",
     "cliAgents": "CLI-agenter",

@@ -1266,7 +1266,7 @@
     "agentBridge": "ஏஜென்ட் பிரிட்ஜ்",
     "agentBridgeSubtitle": "IDE ஏஜென்ட் டிராஃபிக்கை இடைமறிக்கவும்",
     "trafficInspector": "டிராஃபிக் இன்ஸ்பெக்டர்",
-    "trafficInspectorSubtitle": "LLM அழைப்புகளைக் கண்காணிக்கவும் + ஏதேனும் HTTPS டிராஃபிக்கை பிழைத்திருத்தவும்",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "CLI குறியீடு",
     "cliCodeSubtitle": "OmniRoute-ஐ சுட்டிக்காட்டும் குறியீட்டுக் கருவிகள்",
     "cliAgents": "CLI ஏஜென்ட்கள்",

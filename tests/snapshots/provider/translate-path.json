@@ -6027,6 +6027,52 @@
       "stream": "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
     }
   },
+  "volcengine-agent-plan": {
+    "format": "openai",
+    "headers": {
+      "apiKey": {
+        "Accept": "text/event-stream",
+        "Authorization": "Bearer <TOK>",
+        "Content-Type": "application/json"
+      },
+      "nonStream": {
+        "Authorization": "Bearer <TOK>",
+        "Content-Type": "application/json"
+      },
+      "oauth": {
+        "Accept": "text/event-stream",
+        "Authorization": "Bearer <TOK>",
+        "Content-Type": "application/json"
+      }
+    },
+    "url": {
+      "nonStream": "https://ark.cn-beijing.volces.com/api/plan/v3/chat/completions",
+      "stream": "https://ark.cn-beijing.volces.com/api/plan/v3/chat/completions"
+    }
+  },
+  "volcengine-coding-plan": {
+    "format": "openai",
+    "headers": {
+      "apiKey": {
+        "Accept": "text/event-stream",
+        "Authorization": "Bearer <TOK>",
+        "Content-Type": "application/json"
+      },
+      "nonStream": {
+        "Authorization": "Bearer <TOK>",
+        "Content-Type": "application/json"
+      },
+      "oauth": {
+        "Accept": "text/event-stream",
+        "Authorization": "Bearer <TOK>",
+        "Content-Type": "application/json"
+      }
+    },
+    "url": {
+      "nonStream": "https://ark.cn-beijing.volces.com/api/coding/v3/chat/completions",
+      "stream": "https://ark.cn-beijing.volces.com/api/coding/v3/chat/completions"
+    }
+  },
   "wafer": {
     "format": "claude",
     "headers": {

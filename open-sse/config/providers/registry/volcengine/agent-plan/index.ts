@@ -79,6 +79,7 @@ export const VOLCENGINE_AGENT_PLAN_MODELS: RegistryModel[] = [
     contextLength: 1048576,
     toolCalling: true,
     supportsReasoning: true,
+    supportsVision: true,
   },
   {
     id: "deepseek-v4-pro-260425",

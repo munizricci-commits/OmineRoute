@@ -1266,7 +1266,7 @@
     "agentBridge": "Agent Bridge",
     "agentBridgeSubtitle": "Chặn lưu lượng agent IDE",
     "trafficInspector": "Traffic Inspector",
-    "trafficInspectorSubtitle": "Giám sát lệnh gọi LLM + gỡ lỗi mọi lưu lượng HTTPS",
+    "trafficInspectorSubtitle": "Kiểm tra lưu lượng yêu cầu và phản hồi từ các ứng dụng của bạn",
     "trafficInspectorPurpose": "Xem chính xác những gì ứng dụng của bạn gửi đến và nhận từ các nhà cung cấp AI. Hoạt động với bất kỳ ứng dụng khách nào tương thích với OpenAI.",
     "cliCode": "CLI Code",
     "cliCodeSubtitle": "Các công cụ lập trình trỏ đến OmniRoute",

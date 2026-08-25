@@ -55,6 +55,7 @@ export const VOLCENGINE_CODING_PLAN_MODELS: RegistryModel[] = [
     contextLength: 1048576,
     toolCalling: true,
     supportsReasoning: true,
+    supportsVision: true,
   },
   {
     id: "deepseek-v4-pro",

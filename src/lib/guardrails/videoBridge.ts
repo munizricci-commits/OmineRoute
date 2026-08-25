@@ -23,7 +23,6 @@ import {
   describeVideoPart as defaultDescribeVideoPart,
   extractVideoFocusHint,
   extractVideoParts,
-  formatVideoTimestamp,
   loadVideoPartBytes,
   replaceVideoParts,
   resolveVideoDedupCandidateFrameCount,

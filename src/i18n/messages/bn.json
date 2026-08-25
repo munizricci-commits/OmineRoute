@@ -1266,7 +1266,7 @@
     "agentBridge": "এজেন্ট ব্রিজ",
     "agentBridgeSubtitle": "IDE এজেন্ট ট্র্যাফিক ইন্টারসেপ্ট করুন",
     "trafficInspector": "ট্র্যাফিক ইন্সপেক্টর",
-    "trafficInspectorSubtitle": "LLM কল মনিটর করুন + যেকোনো HTTPS ট্র্যাফিক ডিবাগ করুন",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "CLI কোড",
     "cliCodeSubtitle": "OmniRoute-এর দিকে নির্দেশিত কোড টুল",
     "cliAgents": "CLI এজেন্ট",

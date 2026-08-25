@@ -300,9 +300,31 @@ test("OAuth routes that can create provider connections require auth guard", () 
     "src/app/api/oauth/kiro/social-exchange/route.ts",
   ];
 
+  // cursor/import and kiro/import delegate to the shared requireManagementAuth()
+  // guard, which internally performs the same checks the older inline literals
+  // asserted: isAuthRequired() (auth active?), isDashboardSessionAuthenticated()
+  // (user authenticated?) and a 401 "Authentication required" response for
+  // anonymous callers. Asserting the guard wiring keeps this contract
+  // refactor-proof.
+  const guardDelegatingTargets = new Set([
+    "src/app/api/oauth/cursor/import/route.ts",
+    "src/app/api/oauth/kiro/import/route.ts",
+  ]);
+
   for (const relPath of targets) {
     const content = readIfExists(relPath);
     assert.ok(content, `${relPath} should exist`);
+    if (guardDelegatingTargets.has(relPath)) {
+      assert.ok(
+        content.includes("requireOAuthImportAuth") && content.includes("requireManagementAuth"),
+        `${relPath} must delegate auth to requireManagementAuth via requireOAuthImportAuth`
+      );
+      assert.ok(
+        content.includes("invalidApiKeyStatus: 401"),
+        `${relPath} must reject anonymous requests with 401`
+      );
+      continue;
+    }
     assert.ok(content.includes("isAuthRequired"), `${relPath} should check whether auth is active`);
     assert.ok(content.includes("isAuthenticated"), `${relPath} should require authenticated users`);
     assert.ok(content.includes("Unauthorized"), `${relPath} should reject anonymous requests`);

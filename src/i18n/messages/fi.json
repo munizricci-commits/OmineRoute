@@ -1266,7 +1266,7 @@
     "agentBridge": "Agent Bridge",
     "agentBridgeSubtitle": "Kaappaa IDE-agentin liikenne",
     "trafficInspector": "Liikennetarkastin",
-    "trafficInspectorSubtitle": "Valvo LLM-kutsuja + vianmääritä mitä tahansa HTTPS-liikennettä",
+    "trafficInspectorSubtitle": "__MISSING__:Inspect request and response traffic from your apps",
     "cliCode": "CLI-koodi",
     "cliCodeSubtitle": "OmniRouteen osoittavat koodityökalut",
     "cliAgents": "CLI-agentit",
