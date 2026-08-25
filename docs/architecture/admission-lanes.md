@@ -13,16 +13,20 @@ complementary; operators should know which one they are looking at.
 
 - **Scope:** the buffered-body/heap path for `POST /v1/chat/completions`. Guards
   against heap amplification from large coding-agent bodies (#4380).
-- **Gate:** **always on.** Each distinct API key (hashed) — or `anonymous` — gets its
-  own lane with `CHAT_MAX_HEAVY_IN_FLIGHT` capacity, so one session's burst cannot
-  starve another session's heavyweight slot.
+- **Gate:** **always on.** Every API key and `anonymous` contend for one process-global
+  heavyweight/memory budget. Hashed connection keys select round-robin fairness queues;
+  they never create per-key capacity. On a healthy process, bounded extra headroom is
+  derived from runtime memory capacity unless the operator explicitly configures it.
 - **Tuning:**
   - `OMNIROUTE_CHAT_VIRTUAL_TTL_MS` — idle-lane eviction (default 60000)
   - `OMNIROUTE_CHAT_VIRTUAL_MAX_SESSIONS` — lane count cap (default 64)
   - `OMNIROUTE_CHAT_ADMISSION_QUEUE_MS` — queue-wait before 503 (default 2000)
   - `OMNIROUTE_CHAT_ADMISSION_MAX_QUEUED_BYTES` — queued-bytes heap valve (default 4 MB)
-- **Reports:** not in `GET /api/monitoring/health` today; observable via
-  `PerConnectionAdmissionController.snapshot()` (sessionId hash, activeHeavy, idleMs).
+  - `OMNIROUTE_CHAT_ADMISSION_HEALTHY_HEADROOM` — optional exact healthy-headroom override;
+    when unset, runtime-derived extra headroom is capped at 8 and fails back to 1
+- **Reports:** `GET /api/monitoring/health` exposes only process-global counts plus
+  configured/effective healthy headroom and its allowlisted reason. Raw memory telemetry,
+  cgroup paths, credentials, account identities, and request details are never included.
 
 ## 2. Adaptive runtime virtual lanes (`open-sse/services/admission`)
 
