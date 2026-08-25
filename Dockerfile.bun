@@ -19,20 +19,27 @@ RUN apt-get update \
 FROM base AS builder
 WORKDIR /app
 
-COPY . .
+# Cache dependency layer
+COPY package.json bun.lock* pnpm-workspace.yaml* ./
+COPY open-sse/package.json ./open-sse/package.json
+COPY packages/ ./packages/
+
+# Root postinstall helpers needed during bun install lifecycle
+COPY scripts/build/ ./scripts/build/
+COPY scripts/dev/sync-env.mjs ./scripts/dev/sync-env.mjs
 
 # Fast Bun native package install
 RUN bun install --include=optional --quiet
 
-# Compile native better-sqlite3 Node-API addon under Bun
-RUN if [ -d "node_modules/better-sqlite3" ]; then \
-      (cd node_modules/better-sqlite3 && bunx node-gyp rebuild); \
-    fi
-
 # Fetch tls-client-node native binary if script exists
-RUN if [ -f "node_modules/tls-client-node/scripts/postinstall.js" ]; then \
+RUN if [ -f "node_modules/tls-client-node/scripts/postinstall.js" ] && [ ! -d "node_modules/tls-client-node/bin" ]; then \
       bun node_modules/tls-client-node/scripts/postinstall.js || true; \
     fi
+
+# Smoke check native database driver used by Bun (bun:sqlite)
+RUN bun -e "import { Database } from 'bun:sqlite'; const db = new Database(':memory:'); db.query('SELECT 1 AS ok').get(); db.close(); console.log('bun:sqlite smoke: OK');"
+
+COPY . .
 
 # Disable Turbopack for Bun builder stage (Turbopack V8 internal worker bindings require Node)
 ENV OMNIROUTE_USE_TURBOPACK=0
@@ -65,6 +72,7 @@ RUN apt-get update \
      libsecret-1-0 \
      ca-certificates \
      curl \
+     sqlite3 \
   && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production
@@ -76,10 +84,11 @@ ENV DATA_DIR=/app/data
 RUN mkdir -p /app/data
 
 COPY --from=builder /app/.build/next/standalone ./
-COPY --from=builder /app/node_modules/better-sqlite3 ./node_modules/better-sqlite3
-ENV OMNIROUTE_MIGRATIONS_DIR=/app/migrations
-
 COPY --from=builder /app/scripts/dev/healthcheck.mjs ./healthcheck.mjs
+
+RUN chown -R bun:bun /app /app/data
+
+USER bun
 
 EXPOSE 20128
 
@@ -141,6 +150,7 @@ RUN apt-get update \
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
 
-# Return to the base image non-root user after the apt install (mirrors the
-# Node Dockerfile runner-web stage, which re-asserts USER node).
+# Drop back to default non-root user
 USER bun
+
+ENTRYPOINT ["bun", "dev/run-standalone.mjs"]
