@@ -36,6 +36,8 @@ const TRUE_ENV_VALUES = new Set(["1", "true", "yes", "on"]);
 const TICK_MS = 60 * 1000; // sweep interval: every 60 seconds (restored — #7719 dropped the const but kept two call sites)
 const DEFAULT_BATCH_SIZE = 20;
 const DEFAULT_HEALTH_CHECK_INTERVAL_MIN = 60; // default per-connection interval
+const EXPIRED_RETRY_MAX = 3; // max retry attempts for expired connections before giving up
+const EXPIRED_RETRY_BACKOFF_MIN = 5; // backoff between expired retries (minutes)
 
 function isBuildProcess(): boolean {
   return typeof process !== "undefined" && process.env.NEXT_PHASE === "phase-production-build";
@@ -98,6 +100,42 @@ function isGitHubAccessTokenOnlyConnection(conn: any): boolean {
   );
 }
 
+// ── Expired-retry state helpers ──────────────────────────────────────────────
+// `expiredRetryCount` and `expiredRetryAt` are stored inside providerSpecificData
+// (as `expiredRetry: { count, at }`) rather than top-level columns: the
+// provider_connections schema does not have these columns, so top-level fields
+// were silently dropped by _buildUpdateConnectionRowParams. This pattern mirrors
+// `refreshCircuit` which already lives in providerSpecificData.
+
+function getExpiredRetryCount(conn: any): number {
+  return conn?.providerSpecificData?.expiredRetry?.count ?? conn?.expiredRetryCount ?? 0;
+}
+
+function getExpiredRetryAt(conn: any): string | null {
+  return conn?.providerSpecificData?.expiredRetry?.at ?? conn?.expiredRetryAt ?? null;
+}
+
+function getPsd(conn: any): Record<string, unknown> {
+  const psd = conn?.providerSpecificData;
+  return typeof psd === "object" && psd !== null ? psd : {};
+}
+
+function withExpiredRetry(
+  psd: Record<string, unknown>,
+  count: number,
+  at: string
+): Record<string, unknown> {
+  return { ...psd, expiredRetry: { count, at } };
+}
+
+function withClearedExpiredRetry(
+  psd: Record<string, unknown>
+): Record<string, unknown> {
+  const next = { ...psd };
+  delete next.expiredRetry;
+  return next;
+}
+
 /**
  * Resolve the Copilot token endpoint base URL for a connection. github.com
  * Copilot always uses api.github.com; GHE Copilot uses its own per-enterprise
@@ -155,18 +193,20 @@ export function buildRefreshFailureUpdate(
   }
 ) {
   const wasExpired = conn.testStatus === "expired";
-  const retryCount = (conn.expiredRetryCount ?? 0) + (wasExpired ? 1 : 0);
+  const retryCount = getExpiredRetryCount(conn) + (wasExpired ? 1 : 0);
 
   // Circuit breaker: increment the consecutive-failure streak and set an
   // exponential backoff window so the next sweep skips this connection instead
   // of retrying every 60s. Cleared by a successful refresh (clearRefreshCircuit).
-  // Guard: providerSpecificData may be a primitive or null - treat as empty.
-  const psd =
-    typeof conn.providerSpecificData === "object" && conn.providerSpecificData !== null
-      ? conn.providerSpecificData
-      : {};
+  const psd = getPsd(conn);
   const prevStreak = psd.refreshCircuit?.streak ?? 0;
   const streak = prevStreak + 1;
+
+  const updatedPsd = {
+    ...psd,
+    refreshCircuit: { streak, until: getRefreshBackoffUntil(streak, now), lastFailAt: now },
+    ...(wasExpired ? { expiredRetry: { count: retryCount, at: now } } : {}),
+  };
 
   return {
     lastHealthCheckAt: now,
@@ -179,10 +219,9 @@ export function buildRefreshFailureUpdate(
     lastErrorType: "token_refresh_failed",
     lastErrorSource: "oauth",
     errorCode: "refresh_failed",
-    providerSpecificData: {
-      ...psd,
-      refreshCircuit: { streak, until: getRefreshBackoffUntil(streak, now), lastFailAt: now },
-    },
+    providerSpecificData: updatedPsd,
+    // Expose expiredRetryCount on the return value for log callers / tests that
+    // read the update object (they do NOT reach the DB — only providerSpecificData does).
     ...(wasExpired ? { expiredRetryCount: retryCount, expiredRetryAt: now } : {}),
     ...(overrides || {}),
   };
@@ -200,14 +239,10 @@ export function buildRefreshFailureUpdate(
  */
 export function buildTransientRefreshRetryUpdate(conn: any, now: string) {
   const wasExpired = conn.testStatus === "expired";
-  const retryCount = (conn.expiredRetryCount ?? 0) + (wasExpired ? 1 : 0);
+  const retryCount = getExpiredRetryCount(conn) + (wasExpired ? 1 : 0);
   // Preserve existing streak from any prior permanent failures so a transient
   // error does not reset the exponential backoff ladder.
-  // Guard: providerSpecificData may be a primitive or null - treat as empty.
-  const psd =
-    typeof conn.providerSpecificData === "object" && conn.providerSpecificData !== null
-      ? conn.providerSpecificData
-      : {};
+  const psd = getPsd(conn);
   const existingCircuit = psd.refreshCircuit;
   const existingStreak = existingCircuit?.streak ?? 0;
   const parsedExistingUntil = existingCircuit?.until
@@ -242,7 +277,9 @@ export function buildTransientRefreshRetryUpdate(conn: any, now: string) {
         // observers can distinguish this from a pure transient retry.
         transient: useTransient,
       },
+      ...(wasExpired ? { expiredRetry: { count: retryCount, at: now } } : {}),
     },
+    // Expose on return value for log callers (does NOT reach DB as a column).
     ...(wasExpired ? { expiredRetryCount: retryCount, expiredRetryAt: now } : {}),
   };
 }
@@ -255,9 +292,11 @@ export function clearRefreshCircuit(
   providerSpecificData: Record<string, unknown> | null | undefined
 ): Record<string, unknown> | undefined {
   if (!providerSpecificData || typeof providerSpecificData !== "object") return undefined;
-  if (!("refreshCircuit" in providerSpecificData)) return undefined;
+  if (!("refreshCircuit" in providerSpecificData) && !("expiredRetry" in providerSpecificData))
+    return undefined;
   const next = { ...providerSpecificData };
   delete next.refreshCircuit;
+  delete next.expiredRetry;
   return next;
 }
 
@@ -513,7 +552,14 @@ export async function checkConnection(conn) {
   // Determine interval (0 = disabled)
   const intervalMin = conn.healthCheckInterval ?? DEFAULT_HEALTH_CHECK_INTERVAL_MIN;
   if (intervalMin <= 0) return;
-  if (!conn.isActive) return;
+  if (!conn.isActive) {
+    // #P0: allow expired connections with retry budget remaining to pass
+    // through so transient OAuth failures can self-heal instead of being
+    // permanently skipped. Exhausted retries stay terminal.
+    if (!(conn.testStatus === "expired" && getExpiredRetryCount(conn) < EXPIRED_RETRY_MAX)) {
+      return;
+    }
+  }
 
   // #8182: skip terminal connections (credits_exhausted / banned / expired).
   // These can never self-heal via a token refresh — probing them wastes
@@ -543,12 +589,17 @@ export async function checkConnection(conn) {
     conn.testStatus === "expired" &&
     String(conn.provider || "").toLowerCase() === "cursor" &&
     conn.lastErrorType !== "account_deactivated";
+  const isRecoverableExpiredWithRetryBudget =
+    conn.testStatus === "expired" &&
+    conn.lastErrorType !== "account_deactivated" &&
+    getExpiredRetryCount(conn) < EXPIRED_RETRY_MAX;
   const terminalStatuses = new Set(["credits_exhausted", "banned", "expired"]);
   if (
     typeof conn.testStatus === "string" &&
     terminalStatuses.has(conn.testStatus.toLowerCase()) &&
     !isRecoverableGithubCopilotNoRefresh &&
-    !isRecoverableCursorExpired
+    !isRecoverableCursorExpired &&
+    !isRecoverableExpiredWithRetryBudget
   ) {
     return;
   }
@@ -691,11 +742,12 @@ export async function checkConnection(conn) {
           lastErrorSource: copilotAboutToExpire && !refreshedProviderSpecificData ? "oauth" : null,
           errorCode:
             copilotAboutToExpire && !refreshedProviderSpecificData ? "refresh_failed" : null,
-          expiredRetryCount: null,
-          expiredRetryAt: null,
+          // Clear expired retry state — persisted inside providerSpecificData.
+          // The top-level keys are kept for backward compat but the real clear
+          // happens by merging withClearedExpiredRetry into the psd below.
           ...(refreshedProviderSpecificData
-            ? { providerSpecificData: refreshedProviderSpecificData }
-            : {}),
+            ? { providerSpecificData: withClearedExpiredRetry(refreshedProviderSpecificData) }
+            : { providerSpecificData: withClearedExpiredRetry(getPsd(conn)) }),
         });
       } else {
         await updateProviderConnection(conn.id, {
@@ -756,12 +808,19 @@ export async function checkConnection(conn) {
 
   // Retry expired connections with exponential backoff up to EXPIRED_RETRY_MAX times.
   if (conn.testStatus === "expired") {
-    const retryCount = conn.expiredRetryCount ?? 0;
-    if (retryCount >= EXPIRED_RETRY_MAX) return;
+    const retryCount = getExpiredRetryCount(conn);
+    if (retryCount >= EXPIRED_RETRY_MAX) {
+      // Retry budget exhausted: mark terminal. Idempotent write.
+      if (conn.isActive !== false) {
+        await updateProviderConnection(conn.id, { isActive: false });
+      }
+      return;
+    }
 
-    const lastRetry = conn.expiredRetryAt ? new Date(conn.expiredRetryAt).getTime() : 0;
+    const lastRetry = getExpiredRetryAt(conn);
+    const lastRetryMs = lastRetry ? new Date(lastRetry).getTime() : 0;
     const backoffMs = EXPIRED_RETRY_BACKOFF_MIN * 60 * 1000 * Math.pow(2, retryCount);
-    if (Date.now() - lastRetry < backoffMs) return;
+    if (Date.now() - lastRetryMs < backoffMs) return;
 
     log(
       `${LOG_PREFIX} Retrying expired ${conn.provider}/${getConnectionLogLabel(conn)} (attempt ${retryCount + 1}/${EXPIRED_RETRY_MAX})`
@@ -1029,17 +1088,25 @@ export async function checkConnection(conn) {
       return;
     }
 
+    const expiredRetryCount = getExpiredRetryCount(conn) + 1;
+    const isRetryBudgetExhausted = expiredRetryCount >= EXPIRED_RETRY_MAX;
+    const errorLabel = result.code || result.error;
+    const psd = getPsd(conn);
+
     await updateProviderConnection(conn.id, {
       lastHealthCheckAt: now,
       testStatus: "expired",
       lastError: isRotatingProvider
-        ? `Refresh token consumed (${result.error}). Please re-authenticate this account.`
-        : `Refresh token rejected (${result.error}). Please re-authenticate this account.`,
+        ? `Refresh token consumed (${errorLabel}). Please re-authenticate this account.`
+        : `Refresh token rejected (${errorLabel}). Please re-authenticate this account.`,
       lastErrorAt: now,
       lastErrorType: result.error,
       lastErrorSource: "oauth",
-      errorCode: result.error,
-      isActive: false,
+      errorCode: errorLabel,
+      providerSpecificData: withExpiredRetry(psd, expiredRetryCount, now),
+      // #P0: only deactivate when the retry budget is exhausted. Before that,
+      // keep the connection active so subsequent sweeps can retry the refresh.
+      ...(isRetryBudgetExhausted ? { isActive: false } : {}),
       // Only rotating-token providers (Codex/OpenAI/etc.) have single-use refresh
       // tokens that are genuinely consumed and worthless after a failed refresh, so
       // clearing them is safe. For non-rotating providers (Google: antigravity /
@@ -1050,8 +1117,10 @@ export async function checkConnection(conn) {
     });
     logError(
       `${LOG_PREFIX} ✗ ${conn.provider}/${getConnectionLogLabel(conn)} — ` +
-        `Refresh token is permanently invalid (${result.error}). ` +
-        `Connection deactivated. Re-authenticate to restore.`
+        `Refresh token is permanently invalid (${errorLabel}). ` +
+        (isRetryBudgetExhausted
+          ? `Connection deactivated. Re-authenticate to restore.`
+          : `Retry ${expiredRetryCount}/${EXPIRED_RETRY_MAX} used; keeping connection active for retry.`)
     );
     return;
   }

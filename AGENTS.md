@@ -197,7 +197,7 @@ baseCooldownMs * 2 ** failureIndex;
 The anti-thundering-herd guard prevents concurrent failures on the same connection from
 repeatedly extending the cooldown or double-incrementing `backoffLevel`.
 
-Terminal states are not cooldowns. `banned`, `expired`, and `credits_exhausted` are
+Terminal states are not cooldowns. `banned`, `expired` (which becomes terminal only after N bounded retries via `EXPIRED_RETRY_MAX`), and `credits_exhausted` are
 intended to stay unavailable until credentials/settings change or an operator resets
 them. Do not overwrite terminal states with transient cooldown state.
 
