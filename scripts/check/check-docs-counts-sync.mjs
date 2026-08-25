@@ -66,6 +66,25 @@ function countRoutingStrategies() {
   return (m[1].match(/"[^"]+"/g) || []).length;
 }
 
+// PURE: count the factors the Auto-Combo scorer actually declares.
+// The engine is described as "N-factor" in prose, in code comments and in the
+// strategy descriptions; N is `DEFAULT_WEIGHTS`, and nothing else. Two of those
+// factors sit at weight 0 by default — they are still computed and consumed
+// (`cacheAffinity > 0` gates prompt-cache dedup), so they count as declared.
+export function parseScoringFactors(sourceText) {
+  if (!sourceText) return 0;
+  const m = sourceText.match(/DEFAULT_WEIGHTS[^=]*=\s*\{([\s\S]*?)\n\};/);
+  if (!m) return 0;
+  const body = m[1].replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+  return (body.match(/^\s*([A-Za-z_$][\w$]*)\s*:/gm) || []).length;
+}
+
+function countScoringFactors() {
+  const file = path.join(ROOT, "open-sse", "services", "autoCombo", "scoring.ts");
+  if (!fs.existsSync(file)) return 0;
+  return parseScoringFactors(fs.readFileSync(file, "utf8"));
+}
+
 // PURE: parse the canonical provider total out of the auto-generated catalog text.
 export function parseProviderTotal(referenceText) {
   if (!referenceText) return 0;
@@ -478,6 +497,36 @@ export function buildChecks() {
       docKey: "executors",
       strict: false,
       files: ["docs/architecture/ARCHITECTURE.md", "docs/architecture/CODEBASE_DOCUMENTATION.md"],
+    },
+    {
+      // The Auto-Combo engine is advertised as "N-factor" in a dozen places, in
+      // prose and in code comments alike, and N had drifted to five different
+      // values (6, 9, 12, 13, 14) against a code that declares 15. The number
+      // now comes from `DEFAULT_WEIGHTS`; adding a factor without touching the
+      // prose fails here. `CHANGELOG.md` is deliberately out of scope: its old
+      // entries record what was true when they were written.
+      label: "Auto-Combo scoring factors count",
+      actual: countScoringFactors(),
+      docKey: "scoring factors",
+      strict: true,
+      files: [
+        "README.md",
+        "AGENTS.md",
+        "docs/routing/AUTO-COMBO.md",
+        "docs/guides/TIERS.md",
+        "docs/guides/FEATURES.md",
+        "docs/guides/FREE_PROVIDER_RANKINGS.md",
+        "docs/diagrams/strategies-grid.svg",
+        "docs/diagrams/auto-combo-12factor.mmd",
+        "open-sse/services/autoCombo/routerStrategy.ts",
+        "open-sse/services/taskAwareRouter.ts",
+        "tests/unit/lkgp-enabled-context-11181.test.ts",
+        "tests/integration/combo-matrix/auto.test.ts",
+      ],
+      validate: makeNumberClaimValidator(countScoringFactors(), {
+        what: "scoring factors",
+        pattern: /(\d+)[- ]factors?\b/gi,
+      }),
     },
     {
       label: "Routing strategies count",

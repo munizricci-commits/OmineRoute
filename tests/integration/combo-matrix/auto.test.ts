@@ -9,7 +9,7 @@
 //   - combo.ts fetches getLKGP(combo.name, combo.id) = getLKGP("auto", "auto") → key "auto:auto".
 //   - LKGPStrategy: if a LKGP record exists for that provider AND the provider is in the
 //     candidate pool, it pins that provider deterministically (no randomness).
-//   - Without a LKGP record, falls back to "rules" 9-factor scorer.
+//   - Without a LKGP record, falls back to "rules" 15-factor scorer.
 //
 // Test 1 strategy: single-request, deterministic.
 //   We seed a LKGP record pointing to "openai" via settingsDb.setLKGP("auto","auto","openai").

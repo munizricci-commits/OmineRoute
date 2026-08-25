@@ -26,7 +26,7 @@ export interface ScoringFactors {
   /**
    * Feedback-driven quality signal [0,1] from the routing-event quality tracker
    * (open-sse/services/routing/quality.ts). Optional so cold candidates with no
-   * observed events default to neutral (1.0) and are never penalized.
+   * observed events default to neutral (0.5) and are never penalized.
    */
   quality?: number;
 }

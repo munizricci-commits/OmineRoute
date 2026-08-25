@@ -280,3 +280,48 @@ test("SVG gate ignores coordinates, sizes and unrelated small counts", () => {
   const r = checkSvg(noise, SVG_EXPECTED);
   assert.equal(r.ok, true, `coordinates/attrs must never register claims: ${r.detail}`);
 });
+
+// --- Auto-Combo scoring factors ------------------------------------------------------
+// The engine was described as 6-, 9-, 12-, 13- and 14-factor across the repo while
+// `DEFAULT_WEIGHTS` declared 15. The count is now read from the source of truth.
+
+import { parseScoringFactors } from "../../scripts/check/check-docs-counts-sync.mjs";
+
+const parseFactors = parseScoringFactors as (sourceText: string) => number;
+
+const WEIGHTS_SOURCE = `
+export const DEFAULT_WEIGHTS: ScoringWeights = {
+  quota: 0.1429,
+  health: 0.1605,
+  // A comment naming a decoy: fake: 0.5
+  cacheAffinity: 0,
+  /* block comment with another decoy: alsoFake: 0.2 */
+  quality: 0.03,
+};
+`;
+
+test("counts every factor DEFAULT_WEIGHTS declares, comments included as noise", () => {
+  assert.equal(parseFactors(WEIGHTS_SOURCE), 4);
+});
+
+test("a zero-weight factor still counts as declared", () => {
+  // `cacheAffinity` and `resetWindowAffinity` sit at 0 but are computed, and
+  // `cacheAffinity` gates prompt-cache dedup outside the score.
+  assert.ok(WEIGHTS_SOURCE.includes("cacheAffinity: 0"));
+  assert.equal(parseFactors(WEIGHTS_SOURCE.replace("cacheAffinity: 0,", "")), 3);
+});
+
+test("returns 0 rather than a wrong number when the source cannot be read", () => {
+  assert.equal(parseFactors(""), 0);
+  assert.equal(parseFactors("export const SOMETHING_ELSE = { a: 1 };"), 0);
+});
+
+test("scoring factor validator flags every stale count the repo carried", () => {
+  const v = makeValidator(15, { what: "scoring factors", pattern: /(\d+)[- ]factors?\b/gi });
+  assert.equal(v("a **15-factor** scoring function").ok, true);
+  assert.equal(v("scores every candidate on **15 factors**").ok, true);
+  assert.equal(v("a doc with no claim at all").ok, true);
+  for (const stale of ["6-factor", "9-factor", "12-factor", "13-factor", "14-factor"]) {
+    assert.equal(v(`the ${stale} scoring engine`).ok, false, `expected ${stale} to be flagged`);
+  }
+});
