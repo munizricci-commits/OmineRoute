@@ -887,12 +887,6 @@ export class OpencodeExecutor extends BaseExecutor {
     }
     if (modifiedBody && typeof modifiedBody === "object" && !Array.isArray(modifiedBody)) {
       const mb = modifiedBody as Record<string, unknown>;
-      if (Array.isArray(mb.tools) && mb.tools.length > 128) {
-        mb.tools = mb.tools.slice(0, 128);
-      }
-    }
-    if (modifiedBody && typeof modifiedBody === "object" && !Array.isArray(modifiedBody)) {
-      const mb = modifiedBody as Record<string, unknown>;
       const parsed = parseEffortLevel(model);
       if (parsed) {
         mb.model = parsed.baseModel;
