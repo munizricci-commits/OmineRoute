@@ -1,0 +1,1 @@
+- Fixed the v3.8.50 Costs and Analytics dashboards so flat-rate Claude Code usage can be shown as an explicitly requested token-price estimate without changing default billed-cost semantics.

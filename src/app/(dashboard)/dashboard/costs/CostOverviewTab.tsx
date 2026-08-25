@@ -344,6 +344,7 @@ export default function CostOverviewTab() {
         const params = new URLSearchParams({
           range,
           presets: "1d,7d,30d",
+          includeFlatRateEstimates: "true",
         });
         if (apiKeyFilter) params.set("apiKeyIds", apiKeyFilter);
         const response = await fetch(`/api/usage/analytics?${params.toString()}`);
