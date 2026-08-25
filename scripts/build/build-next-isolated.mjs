@@ -131,9 +131,9 @@ function runNextBuild() {
 }
 
 export function resolveNextBuildBundlerFlag(baseEnv = process.env) {
-  // Turbopack is the default on Node.js; on Bun or when explicitly disabled (=0),
-  // use Webpack (--webpack) to avoid Turbopack V8 internal worker API mismatches.
-  if (process.versions.bun || baseEnv.OMNIROUTE_USE_TURBOPACK === "0") {
+  // Turbopack is the default (on Node.js and Bun 1.4+).
+  // When explicitly disabled (OMNIROUTE_USE_TURBOPACK=0), use Webpack (--webpack) as fallback.
+  if (baseEnv.OMNIROUTE_USE_TURBOPACK === "0") {
     return "--webpack";
   }
   return "--turbopack";
