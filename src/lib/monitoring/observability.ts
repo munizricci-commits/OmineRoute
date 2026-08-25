@@ -24,6 +24,17 @@ export type ChatAdmissionHealthSummary = {
   shedTotal: number;
   shedsByReason: Record<string, number>;
   lanes: Array<{ key: string; waiting: number }>;
+  /** #503-fanout: live ingest bytes reserved through the byte-budget gate. */
+  inflightBytes: number;
+  /** #503-fanout: the auto-derived (or overridden) budget ceiling. */
+  maxInflightBytes: number;
+  /** #503-fanout: which signal the budget was derived from. */
+  budgetSource: string;
+  /** #503-fanout: live multi-signal resource-pressure severity. */
+  pressureSeverity: string;
+  /** #503-fanout: false on a default deployment — proves the byte-budget
+   * gate, not the legacy request-count cap, is what is actually binding. */
+  countCapEnabled: boolean;
 };
 
 /**
@@ -42,6 +53,11 @@ export function projectChatAdmissionSummary(
     shedTotal: snapshot.shedTotal,
     shedsByReason: { ...(snapshot.shedsByReason ?? {}) },
     lanes: (snapshot.lanes ?? []).map((lane) => ({ key: lane.key, waiting: lane.waiting })),
+    inflightBytes: snapshot.inflightBytes,
+    maxInflightBytes: snapshot.maxInflightBytes,
+    budgetSource: snapshot.budgetSource,
+    pressureSeverity: snapshot.pressureSeverity,
+    countCapEnabled: snapshot.countCapEnabled,
   };
 }
 

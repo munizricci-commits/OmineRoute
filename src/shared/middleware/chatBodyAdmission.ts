@@ -20,6 +20,11 @@ import { createLogger } from "../utils/logger";
 import { createHmac } from "crypto";
 import v8 from "node:v8";
 import { trackRequest } from "../../lib/gracefulShutdown";
+import { resolveIngestByteBudget, type IngestBudgetSource } from "./admissionBudget";
+import {
+  getResourcePressureObservation,
+  type PressureSeverity,
+} from "@omniroute/open-sse/utils/resourcePressure.ts";
 
 function parsePositiveInt(value: string | undefined, fallback: number): number {
   const parsed = Number.parseInt(String(value), 10);
@@ -180,7 +185,31 @@ interface AdmissionWaiter {
  * A client abort mid-wait is deliberately NOT a shed: capacity was never denied,
  * the caller simply left (its 503 is dropped on the dead connection).
  */
-export type ChatAdmissionShedReason = "queue_timeout" | "queued_bytes_budget";
+export type ChatAdmissionShedReason =
+  | "queue_timeout"
+  | "queued_bytes_budget"
+  /** #503-fanout: the additive ingest byte-budget gate ran out of headroom. */
+  | "inflight_bytes_budget"
+  /** #503-fanout: shed before ingestion because the multi-signal resource-pressure
+   * tracker reported "critical" (V8 heap ratio, cgroup, PSI, OOM events — see
+   * open-sse/utils/resourcePressurePolicy.ts). */
+  | "resource_pressure";
+
+/**
+ * Live multi-signal resource-pressure severity, consulted by the ingest
+ * byte-budget gate (#503-fanout). Deliberately reads
+ * `getResourcePressureObservation()` (cheap, cached, hysteresis-smoothed) —
+ * NOT `checkResourcePressureGuard()`, which builds a full 503 Response; this
+ * gate only wants the severity. Any read failure fails open to "normal" so a
+ * transient sampling error never turns into a false shed.
+ */
+export function defaultPressureSeverity(): PressureSeverity {
+  try {
+    return getResourcePressureObservation().state.severity;
+  } catch {
+    return "normal";
+  }
+}
 
 /**
  * One structural-shed observation, emitted to the shed sink at warn level.
@@ -239,6 +268,23 @@ export class ChatAdmissionController {
   #shedsByReason = new Map<string, number>();
   readonly #onShed: ChatAdmissionShedSink;
 
+  /**
+   * Additive ingest byte-budget gate (#503-fanout). Fully independent of
+   * `#activeHeavy`/`#queues` above — a second, isolated accounting so the
+   * legacy count-based gate's tested behavior (every existing test constructs
+   * a `ChatAdmissionController` directly and never touches these fields) is
+   * byte-identical to before. Only the production singleton wires a real
+   * budget; every other caller gets the default "unlimited, always normal
+   * pressure" no-op below.
+   */
+  #inflightBytes = 0;
+  readonly maxInflightBytes: number;
+  readonly budgetSource: IngestBudgetSource;
+  readonly #checkPressureSeverity: () => PressureSeverity;
+  #budgetQueues = new Map<string, Array<{ resolve: () => void }>>();
+  #budgetFairKeys: string[] = [];
+  #budgetFairCursor = 0;
+
   constructor(
     readonly maxHeavyInFlight = 1,
     readonly maxQueuedBytes = CHAT_ADMISSION_MAX_QUEUED_BYTES,
@@ -248,7 +294,13 @@ export class ChatAdmissionController {
     readonly healthyHeadroom = CHAT_ADMISSION_HEALTHY_HEADROOM,
     /** #11244: sink notified once per structural shed. Defaults to the shared pino
      * logger (warn); tests inject a capture/no-op sink. */
-    onShed: ChatAdmissionShedSink = defaultChatAdmissionShedSink
+    onShed: ChatAdmissionShedSink = defaultChatAdmissionShedSink,
+    /** #503-fanout: see the field-level comment above `#inflightBytes`. */
+    budgetOptions: {
+      maxInflightBytes?: number;
+      budgetSource?: IngestBudgetSource;
+      checkPressureSeverity?: () => PressureSeverity;
+    } = {}
   ) {
     if (!Number.isSafeInteger(maxHeavyInFlight) || maxHeavyInFlight < 1) {
       throw new RangeError("maxHeavyInFlight must be a positive integer");
@@ -260,6 +312,9 @@ export class ChatAdmissionController {
       throw new RangeError("healthyHeadroom must be a non-negative integer");
     }
     this.#onShed = onShed;
+    this.maxInflightBytes = budgetOptions.maxInflightBytes ?? Number.MAX_SAFE_INTEGER;
+    this.budgetSource = budgetOptions.budgetSource ?? "v8_heap";
+    this.#checkPressureSeverity = budgetOptions.checkPressureSeverity ?? (() => "normal");
   }
 
   get activeHeavy(): number {
@@ -505,6 +560,138 @@ export class ChatAdmissionController {
       return;
     }
   }
+
+  // ── Ingest byte-budget gate (additive, #503-fanout) ──────────────────────
+  //
+  // Everything below is a second, isolated accounting layer alongside the
+  // count-based gate above. It never reads or writes `#activeHeavy`/`#queues`,
+  // so every existing test (which constructs a `ChatAdmissionController`
+  // directly and only calls `tryAcquireHeavy`/`acquireHeavyWithin`) is
+  // unaffected. `maxInflightBytes` defaults to unlimited, so these methods are
+  // a true no-op for any controller that doesn't opt in via `budgetOptions`.
+
+  /** Live ingest bytes currently reserved through the byte-budget gate. */
+  get inflightBytes(): number {
+    return this.#inflightBytes;
+  }
+
+  /** Live pressure severity consulted by the byte-budget gate. */
+  pressureSeverity(): PressureSeverity {
+    return this.#checkPressureSeverity();
+  }
+
+  /** Reserve `bytes` from the byte-budget gate. `bytes <= 0` never fails. */
+  tryAcquireBudget(bytes: number): ChatAdmissionLease | null {
+    const charge = Math.max(0, Math.floor(bytes));
+    if (this.#inflightBytes + charge > this.maxInflightBytes) return null;
+    this.#inflightBytes += charge;
+    let released = false;
+    return {
+      get released() {
+        return released;
+      },
+      release: () => {
+        if (released) return;
+        released = true;
+        this.#inflightBytes = Math.max(0, this.#inflightBytes - charge);
+        this.#dispatchBudgetFair();
+      },
+    };
+  }
+
+  /**
+   * Bounded wait for byte-budget capacity, mirroring `acquireHeavyWithin`'s
+   * per-key round-robin fairness against the independent byte counter above.
+   * `timeoutMs <= 0` is immediate reject-on-busy.
+   */
+  async acquireBudgetWithin(
+    bytes: number,
+    timeoutMs: number,
+    signal?: AbortSignal,
+    sessionKey = "default"
+  ): Promise<ChatAdmissionLease | null> {
+    const deadline = Date.now() + Math.max(0, Math.floor(timeoutMs));
+    for (;;) {
+      if (signal?.aborted) return null;
+      const lease = this.tryAcquireBudget(bytes);
+      if (lease) return lease;
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) {
+        this.recordShed("inflight_bytes_budget", sessionKey);
+        return null;
+      }
+      let queue = this.#budgetQueues.get(sessionKey);
+      if (!queue) {
+        queue = [];
+        this.#budgetQueues.set(sessionKey, queue);
+        this.#budgetFairKeys.push(sessionKey);
+      }
+      const lane = queue;
+      let resolveParked: (() => void) | null = null;
+      const waiter = { resolve: () => resolveParked?.() };
+      const parked = new Promise<void>((resolve) => {
+        resolveParked = () => resolve();
+        lane.push(waiter);
+      });
+      let deadlineTimer: ReturnType<typeof setTimeout> | null = null;
+      const races: Array<Promise<boolean>> = [
+        parked.then(() => false),
+        new Promise<boolean>((resolve) => {
+          deadlineTimer = setTimeout(() => resolve(true), remaining);
+        }),
+      ];
+      let onAbort: (() => void) | null = null;
+      if (signal) {
+        races.push(
+          new Promise<boolean>((resolve) => {
+            const listener = () => resolve(true);
+            onAbort = listener;
+            signal.addEventListener("abort", listener, { once: true });
+            if (signal.aborted) resolve(true);
+          })
+        );
+      }
+      const timedOut = await Promise.race(races);
+      this.#removeBudgetWaiter(sessionKey, waiter);
+      if (deadlineTimer) clearTimeout(deadlineTimer);
+      if (onAbort) signal?.removeEventListener("abort", onAbort);
+      if (timedOut) {
+        if (!signal?.aborted) this.recordShed("inflight_bytes_budget", sessionKey);
+        return null;
+      }
+    }
+  }
+
+  #removeBudgetWaiter(key: string, waiter: { resolve: () => void }): void {
+    const queue = this.#budgetQueues.get(key);
+    if (!queue) return;
+    const index = queue.indexOf(waiter);
+    if (index >= 0) queue.splice(index, 1);
+    if (queue.length === 0) this.#removeBudgetFairKey(key);
+  }
+
+  #removeBudgetFairKey(key: string): void {
+    this.#budgetQueues.delete(key);
+    const index = this.#budgetFairKeys.indexOf(key);
+    if (index < 0) return;
+    this.#budgetFairKeys.splice(index, 1);
+    if (index < this.#budgetFairCursor) this.#budgetFairCursor -= 1;
+    if (this.#budgetFairKeys.length === 0) this.#budgetFairCursor = 0;
+  }
+
+  #dispatchBudgetFair(): void {
+    if (this.#budgetFairKeys.length === 0) return;
+    for (let i = 0; i < this.#budgetFairKeys.length; i++) {
+      const key = this.#budgetFairKeys[this.#budgetFairCursor % this.#budgetFairKeys.length];
+      this.#budgetFairCursor += 1;
+      const queue = this.#budgetQueues.get(key);
+      if (!queue || queue.length === 0) continue;
+      const waiter = queue.shift() as { resolve: () => void };
+      if (queue.length === 0) this.#removeBudgetFairKey(key);
+      waiter.resolve();
+      return;
+    }
+  }
 }
 
 const defaultAdmissionController = new ChatAdmissionController(CHAT_MAX_HEAVY_IN_FLIGHT);
@@ -583,13 +770,26 @@ export class PerConnectionAdmissionController {
     // accepted for API compatibility and ignored — there are no per-session lanes
     // to evict. `onShed` (#11244) is live: it replaces the shed sink of the shared
     // controller (tests inject a capture/no-op sink; production keeps the pino warn).
-    _opts?: { maxSessions?: number; sessionTtlMs?: number; onShed?: ChatAdmissionShedSink }
+    // `budget` (#503-fanout) is live: the additive ingest byte-budget gate — see
+    // `ChatAdmissionController`'s constructor comment. Absent for every caller
+    // except the production singleton below.
+    _opts?: {
+      maxSessions?: number;
+      sessionTtlMs?: number;
+      onShed?: ChatAdmissionShedSink;
+      budget?: {
+        maxInflightBytes?: number;
+        budgetSource?: IngestBudgetSource;
+        checkPressureSeverity?: () => PressureSeverity;
+      };
+    }
   ) {
     this.#controller = new ChatAdmissionController(
       maxHeavyInFlight,
       undefined,
       undefined,
-      _opts?.onShed
+      _opts?.onShed,
+      _opts?.budget
     );
   }
 
@@ -611,6 +811,17 @@ export class PerConnectionAdmissionController {
     lanes: ReadonlyArray<{ key: string; waiting: number }>;
     shedTotal: number;
     shedsByReason: Record<string, number>;
+    /** #503-fanout: live ingest bytes reserved through the byte-budget gate. */
+    inflightBytes: number;
+    /** #503-fanout: the auto-derived (or overridden) budget ceiling. */
+    maxInflightBytes: number;
+    /** #503-fanout: which signal the budget was derived from. */
+    budgetSource: IngestBudgetSource;
+    /** #503-fanout: live multi-signal resource-pressure severity. */
+    pressureSeverity: PressureSeverity;
+    /** #503-fanout: false on a default deployment — the legacy count cap only
+     * binds when the operator explicitly set OMNIROUTE_CHAT_MAX_HEAVY_IN_FLIGHT. */
+    countCapEnabled: boolean;
   } {
     return {
       activeHeavy: this.#controller.activeHeavy,
@@ -620,6 +831,11 @@ export class PerConnectionAdmissionController {
       lanes: this.#controller.waitersByKey,
       shedTotal: this.#controller.shedTotal,
       shedsByReason: this.#controller.shedsByReason,
+      inflightBytes: this.#controller.inflightBytes,
+      maxInflightBytes: this.#controller.maxInflightBytes,
+      budgetSource: this.#controller.budgetSource,
+      pressureSeverity: this.#controller.pressureSeverity(),
+      countCapEnabled: this.#controller.maxHeavyInFlight < Number.MAX_SAFE_INTEGER,
     };
   }
 
@@ -641,8 +857,32 @@ export class PerConnectionAdmissionController {
   }
 }
 
+/**
+ * The legacy count cap (#503-fanout) now binds ONLY when the operator has
+ * explicitly set `OMNIROUTE_CHAT_MAX_HEAVY_IN_FLIGHT`. Left unset — the
+ * default on every deployment that produced the multi-subagent 503 storm —
+ * it resolves to effectively unlimited, so the auto-derived ingest byte
+ * budget below (`resolveIngestByteBudget()`) is the gate that actually binds.
+ * A deployment that already tuned this env var (e.g. `infra/app.env.example`
+ * setting `=5`) keeps its exact prior behavior layered on top of the budget.
+ */
+function resolveLegacyCountCap(): number {
+  const raw = process.env.OMNIROUTE_CHAT_MAX_HEAVY_IN_FLIGHT;
+  if (raw === undefined || raw.trim() === "") return Number.MAX_SAFE_INTEGER;
+  return CHAT_MAX_HEAVY_IN_FLIGHT;
+}
+
+const productionIngestBudget = resolveIngestByteBudget();
+
 export const perConnectionAdmissionController = new PerConnectionAdmissionController(
-  CHAT_MAX_HEAVY_IN_FLIGHT
+  resolveLegacyCountCap(),
+  {
+    budget: {
+      maxInflightBytes: productionIngestBudget.bytes,
+      budgetSource: productionIngestBudget.source,
+      checkPressureSeverity: defaultPressureSeverity,
+    },
+  }
 );
 
 export type ChatRequestAdmission =
@@ -673,6 +913,52 @@ function rejectionResponse(status: 413 | 503, hardMaxBytes: number): Response {
     }),
     { status, headers }
   );
+}
+
+/**
+ * #503-fanout: shed BEFORE ingestion when the multi-signal resource-pressure
+ * tracker reports "critical" — distinct from `rejectionResponse`'s
+ * `chat_admission_busy` (a capacity-exhaustion shed) so operators can tell
+ * "the process is genuinely under memory pressure" apart from "the ingest
+ * byte budget is momentarily busy."
+ */
+function resourcePressureRejectionResponse(): Response {
+  return new Response(
+    JSON.stringify({
+      error: {
+        message: "Service temporarily unavailable due to resource pressure. Retry shortly.",
+        type: "server_error",
+        code: "resource_pressure",
+      },
+    }),
+    {
+      status: 503,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json", "Retry-After": "2" },
+    }
+  );
+}
+
+/**
+ * Bounded wait for the ingest byte-budget gate under NORMAL pressure
+ * (#503-fanout): capped short so a momentarily-busy budget resolves quickly
+ * instead of dragging the full `queueMs` when nothing is actually wrong.
+ * `high` pressure uses the full `queueMs` — the bounded wait genuinely
+ * matters there.
+ */
+const INGEST_NORMAL_MAX_WAIT_MS = 250;
+
+function composeChatAdmissionLease(...leases: ChatAdmissionLease[]): ChatAdmissionLease {
+  let released = false;
+  return {
+    get released() {
+      return released;
+    },
+    release: () => {
+      if (released) return;
+      released = true;
+      for (const lease of leases) lease.release();
+    },
+  };
 }
 
 function structuralRejectionResponse(status: 413 | 503, maxMessages: number): Response {
@@ -803,9 +1089,21 @@ export async function admitChatStructure(
       ? perConnectionAdmissionController.getController(options.sessionId)
       : defaultAdmissionController);
 
-  // Uncontended fast path: capacity is free, no need to consult heap pressure at all.
-  const immediate = controller.tryAcquireHeavy();
-  if (immediate) return { admit: true, lease: immediate };
+  // Uncontended fast path: capacity is free on BOTH the legacy count gate and
+  // the byte-budget gate (#503-fanout) — mirrors admitChatRequest's composed
+  // reserve(). When the count cap is unlimited (the production default since
+  // this fix), the byte-budget gate is what actually decides "uncontended":
+  // without composing both here, a structurally-heavy-but-byte-light request
+  // would always take this fast path and the heap-pressure-conditional shed
+  // below would never be reachable in production.
+  const immediateCount = controller.tryAcquireHeavy();
+  if (immediateCount) {
+    const immediateBudget = controller.tryAcquireBudget(CHAT_LARGE_BODY_BYTES);
+    if (immediateBudget) {
+      return { admit: true, lease: composeChatAdmissionLease(immediateCount, immediateBudget) };
+    }
+    immediateCount.release();
+  }
 
   // Heavyweight capacity is momentarily busy (a concurrent heavy request holds the
   // lease). #10183 / #10268: only enter the bounded-wait / shed path — with its
@@ -833,15 +1131,28 @@ export async function admitChatStructure(
   // Structural-only waits happen on byte-light bodies (a byte-heavy body already
   // holds the byte-stage lease), so the conservative 256KB weight bounds the
   // parsed JSON the waiter keeps resident while parked.
-  const acquired = await controller.acquireHeavyWithin(
+  const acquiredCount = await controller.acquireHeavyWithin(
     options.queueMs ?? 0,
     options.signal,
     CHAT_LARGE_BODY_BYTES,
     options.sessionId
   );
-  return acquired
-    ? { admit: true, lease: acquired }
-    : { admit: false, response: structuralRejectionResponse(503, maxMessages) };
+  if (!acquiredCount) {
+    return { admit: false, response: structuralRejectionResponse(503, maxMessages) };
+  }
+
+  // #503-fanout: same composed count+budget gate as the fast path above.
+  const acquiredBudget = await controller.acquireBudgetWithin(
+    CHAT_LARGE_BODY_BYTES,
+    options.queueMs ?? 0,
+    options.signal,
+    options.sessionId
+  );
+  if (!acquiredBudget) {
+    acquiredCount.release();
+    return { admit: false, response: structuralRejectionResponse(503, maxMessages) };
+  }
+  return { admit: true, lease: composeChatAdmissionLease(acquiredCount, acquiredBudget) };
 }
 
 function parseContentLength(header: string | null): number | null {
@@ -1004,6 +1315,14 @@ export async function admitChatRequest(
     return { admit: true, request: rebuildRequest(request, body), lease: NULL_LEASE };
   }
 
+  // #503-fanout: shed before spending any bytes on ingestion when the process
+  // is under genuine critical resource pressure. No-op for every controller a
+  // test constructs directly (default severity is always "normal").
+  if (controller.pressureSeverity() === "critical") {
+    controller.recordShed("resource_pressure", sessionId);
+    return { admit: false, response: resourcePressureRejectionResponse() };
+  }
+
   if (contentLength !== null && contentLength > hardMaxBytes) {
     return { admit: false, response: rejectionResponse(413, hardMaxBytes) };
   }
@@ -1011,8 +1330,35 @@ export async function admitChatRequest(
   let lease: ChatAdmissionLease | null = null;
   const reserve = async (bytes = 0): Promise<boolean> => {
     if (lease) return true;
-    lease = await controller.acquireHeavyWithin(queueMs, request.signal, bytes, sessionId);
-    return lease !== null;
+    const countLease = await controller.acquireHeavyWithin(
+      queueMs,
+      request.signal,
+      bytes,
+      sessionId
+    );
+    if (!countLease) return false;
+
+    // Additive ingest byte-budget gate (#503-fanout), layered on top of the
+    // legacy count gate above. `maxInflightBytes` defaults to unlimited for
+    // every controller a test constructs directly, so this resolves
+    // synchronously true there — only the production singleton (built with a
+    // real host-derived budget) is ever actually gated by it.
+    const severity = controller.pressureSeverity();
+    const budgetWaitMs =
+      severity === "high" ? queueMs : Math.min(queueMs, INGEST_NORMAL_MAX_WAIT_MS);
+    const budgetLease = await controller.acquireBudgetWithin(
+      bytes,
+      budgetWaitMs,
+      request.signal,
+      sessionId
+    );
+    if (!budgetLease) {
+      countLease.release();
+      return false;
+    }
+
+    lease = composeChatAdmissionLease(countLease, budgetLease);
+    return true;
   };
 
   // A known-large declaration can reserve before ingestion. Unknown lengths are boundedly
