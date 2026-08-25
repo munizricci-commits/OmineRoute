@@ -30,6 +30,10 @@ import { isAutomatedTestProcess } from "@/shared/utils/testProcess";
 import { refreshGithubCopilotSubTokenIfNeeded } from "@/lib/tokenHealthCheckCopilot";
 import { checkCursorConnectionIfNeeded } from "@/lib/tokenHealthCheckCursor";
 import { checkKimiWebConnectionIfNeeded } from "@/lib/tokenHealthCheckKimi";
+import {
+  checkWebCookieConnectionIfNeeded,
+  isWebCookieHealthProbeCandidate,
+} from "@/lib/tokenHealthCheckWebCookie";
 
 const LOG_PREFIX = "[HealthCheck]";
 const TRUE_ENV_VALUES = new Set(["1", "true", "yes", "on"]);
@@ -442,7 +446,12 @@ export async function sweep(): Promise<number> {
   }
   state.sweeping = true;
   try {
-    const connections = await getProviderConnections({ authType: "oauth" });
+    const connections = [
+      ...(await getProviderConnections({ authType: "oauth" })),
+      // #11488: web-cookie rows (auth_type 'cookie') were never swept — a dead
+      // cookie stayed "active" until a live request failed against it.
+      ...(await getProviderConnections({ authType: "cookie" })),
+    ];
 
     if (!connections || connections.length === 0) return 0;
 
@@ -614,6 +623,22 @@ export async function checkConnection(conn) {
       log,
       logWarn,
       logError,
+      getConnectionLogLabel,
+      logPrefix: LOG_PREFIX,
+    });
+    return;
+  }
+
+  // Generic web-cookie verify-only probe (#11488): every catalogued cookie
+  // provider without its own bespoke leaf above. Kimi-web already returned.
+  if (isWebCookieHealthProbeCandidate(conn.provider)) {
+    const now = new Date().toISOString();
+    await checkWebCookieConnectionIfNeeded({
+      conn,
+      now,
+      intervalMin,
+      log,
+      logWarn,
       getConnectionLogLabel,
       logPrefix: LOG_PREFIX,
     });
