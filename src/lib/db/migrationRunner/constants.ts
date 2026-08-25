@@ -179,6 +179,38 @@ export const RENAMED_MIGRATION_COMPATIBILITY = [
     toVersion: "153",
     toName: "radar_local_model_state",
   },
+  {
+    // PR #10409 published team_cost_centers at 153, then 154, then 155 on the public
+    // Draft before live claimed 153/154/155 (radar_local_model_state, call_logs_response_id,
+    // agentic_conversations), 160 (rename_freepik_to_magnific), 161 (config_audit_log),
+    // and 162 (remove_hackclub_provider). Rehome already-applied Team rows to the final slot
+    // so the canonical live migrations can still run.
+    fromVersion: "153",
+    fromName: "team_cost_centers",
+    toVersion: "163",
+    toName: "team_cost_centers",
+  },
+  {
+    // PR #10409 public Draft intermediate slot; see the 153 compatibility note above.
+    fromVersion: "154",
+    fromName: "team_cost_centers",
+    toVersion: "163",
+    toName: "team_cost_centers",
+  },
+  {
+    // PR #10409 public Draft intermediate slot; see the 153 compatibility note above.
+    fromVersion: "155",
+    fromName: "team_cost_centers",
+    toVersion: "163",
+    toName: "team_cost_centers",
+  },
+  {
+    // PR #10409 candidate slot before live claimed 161_config_audit_log.
+    fromVersion: "161",
+    fromName: "team_cost_centers",
+    toVersion: "163",
+    toName: "team_cost_centers",
+  },
 ] as const;
 
 export const LEGACY_VERSION_SLOT_MIGRATIONS = [

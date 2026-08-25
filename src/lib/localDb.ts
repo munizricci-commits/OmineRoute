@@ -90,6 +90,8 @@ export {
   deleteCombo,
 } from "./db/combos";
 export * from "./db/ccrBlocks";
+export * from "./db/teams";
+export * from "./db/teamUsageAnalytics";
 export * from "./db/compressionCacheStats";
 export * from "./db/compressionCombos";
 export * from "./db/compressionContextBudget";

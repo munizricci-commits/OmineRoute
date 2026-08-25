@@ -25,7 +25,7 @@ export interface OpenApiEndpoint {
   hasRequestBody: boolean;
 }
 
-export const OPENAPI_VERSION = "3.8.35";
+export const OPENAPI_VERSION = "3.8.50";
 export const OPENAPI_TITLE = "OmniRoute API";
 
 export const OPENAPI_ENDPOINTS: OpenApiEndpoint[] = [
@@ -70,6 +70,17 @@ export const OPENAPI_ENDPOINTS: OpenApiEndpoint[] = [
     hasRequestBody: true,
   },
   {
+    path: "/api/v1/audio/translations",
+    method: "POST",
+    summary: "Translate audio to English",
+    description:
+      "OpenAI Whisper–compatible audio translation (multipart/form-data). Unlike `/api/v1/audio/transcriptions`, output is always English regardless of the source language. Success responses carry the `X-OmniRoute-*` cost-telemetry headers.",
+    tag: "Audio",
+    tags: ["Audio"],
+    requiresAuth: true,
+    hasRequestBody: true,
+  },
+  {
     path: "/api/v1/chat/completions",
     method: "POST",
     summary: "Create chat completion",
@@ -98,6 +109,82 @@ export const OPENAPI_ENDPOINTS: OpenApiEndpoint[] = [
     tags: ["Images"],
     requiresAuth: true,
     hasRequestBody: true,
+  },
+  {
+    path: "/api/v1/management/proxy-subscriptions",
+    method: "GET",
+    summary: "List proxy subscriptions",
+    description:
+      "Lists all operator-supplied proxy subscription links. Also starts the background auto-refresh scheduler (idempotent) so enabled subscriptions stay in sync. Credentials embedded in `url` are redacted in the response.",
+    tag: "Proxy Subscriptions",
+    tags: ["Proxy Subscriptions"],
+    requiresAuth: true,
+    hasRequestBody: false,
+  },
+  {
+    path: "/api/v1/management/proxy-subscriptions",
+    method: "POST",
+    summary: "Create a proxy subscription",
+    description:
+      "Creates a subscription record. If `mode` is `rule`, at least one entry in `ruleProviders` is required. `updateIntervalMinutes` defaults to 60 and `enabled` defaults to `false` when omitted or not exactly `true`.",
+    tag: "Proxy Subscriptions",
+    tags: ["Proxy Subscriptions"],
+    requiresAuth: true,
+    hasRequestBody: true,
+  },
+  {
+    path: "/api/v1/management/proxy-subscriptions/{id}",
+    method: "DELETE",
+    summary: "Delete a proxy subscription",
+    description:
+      "Removes the subscription record and unbinds/drops its synced proxy_registry rows.",
+    tag: "Proxy Subscriptions",
+    tags: ["Proxy Subscriptions"],
+    requiresAuth: true,
+    hasRequestBody: false,
+  },
+  {
+    path: "/api/v1/management/proxy-subscriptions/{id}",
+    method: "GET",
+    summary: "Get a proxy subscription",
+    description: "",
+    tag: "Proxy Subscriptions",
+    tags: ["Proxy Subscriptions"],
+    requiresAuth: true,
+    hasRequestBody: false,
+  },
+  {
+    path: "/api/v1/management/proxy-subscriptions/{id}",
+    method: "PATCH",
+    summary: "Update a proxy subscription",
+    description:
+      "Partial update — only fields present in the body are changed (name/url/mode/ruleProviders/localCoreEndpoint/updateIntervalMinutes/enabled).",
+    tag: "Proxy Subscriptions",
+    tags: ["Proxy Subscriptions"],
+    requiresAuth: true,
+    hasRequestBody: true,
+  },
+  {
+    path: "/api/v1/management/proxy-subscriptions/{id}/nodes",
+    method: "GET",
+    summary: "Get a subscription's last-parsed node summary",
+    description:
+      "Returns the last-parsed node list without re-fetching the (possibly slow) subscription URL.",
+    tag: "Proxy Subscriptions",
+    tags: ["Proxy Subscriptions"],
+    requiresAuth: true,
+    hasRequestBody: false,
+  },
+  {
+    path: "/api/v1/management/proxy-subscriptions/{id}/refresh",
+    method: "POST",
+    summary: "Refresh a proxy subscription",
+    description:
+      "Re-fetches and re-parses the subscription URL, syncs its nodes into `proxy_registry`, and (re)binds the pool.",
+    tag: "Proxy Subscriptions",
+    tags: ["Proxy Subscriptions"],
+    requiresAuth: true,
+    hasRequestBody: false,
   },
   {
     path: "/api/v1/messages",
@@ -138,6 +225,48 @@ export const OPENAPI_ENDPOINTS: OpenApiEndpoint[] = [
     tags: ["Moderations"],
     requiresAuth: true,
     hasRequestBody: true,
+  },
+  {
+    path: "/api/v1/multimodal-embeddings",
+    method: "GET",
+    summary: "List embedding models (Jina multimodal-embeddings alias)",
+    description: "",
+    tag: "Embeddings",
+    tags: ["Embeddings"],
+    requiresAuth: true,
+    hasRequestBody: false,
+  },
+  {
+    path: "/api/v1/multimodal-embeddings",
+    method: "POST",
+    summary: "Create embeddings (Jina multimodal-embeddings alias)",
+    description:
+      "Same handler as `POST /api/v1/embeddings`. Provided so Jina-compatible clients that call `/v1/multimodal-embeddings` do not receive HTTP 404 `unknown_route`.",
+    tag: "Embeddings",
+    tags: ["Embeddings"],
+    requiresAuth: true,
+    hasRequestBody: true,
+  },
+  {
+    path: "/api/v1/ocr",
+    method: "POST",
+    summary: "Document OCR",
+    description:
+      "Multi-provider document OCR endpoint (Mistral OCR–compatible request and response shape). Accepts a JSON body referencing a document/image and returns extracted text. `model` selects the provider via a `provider/model` prefix (e.g. `mistral/mistral-ocr-latest`, `azure-document-intelligence/prebuilt-read`, `vertex-deepseek-ocr/deepseek-ocr-maas`); a bare model id (e.g. `mistral-ocr-latest`) resolves to its registered provider, and an omitted `model` defaults to Mistral. Azure Document Intelligence is asynchronous upstream — the handler polls the returned operation until it succeeds or fails before responding, so this endpoint can take longer to return for that provider. Success responses carry the `X-OmniRoute-*` cost-telemetry headers.",
+    tag: "Images",
+    tags: ["Images"],
+    requiresAuth: true,
+    hasRequestBody: true,
+  },
+  {
+    path: "/api/v1/provider-plugin-manifest",
+    method: "GET",
+    summary: "Provider plugin manifest",
+    description: "Returns the manifest describing installed provider plugins.",
+    tag: "Providers",
+    tags: ["Providers"],
+    requiresAuth: false,
+    hasRequestBody: false,
   },
   {
     path: "/api/v1/providers/{provider}/chat/completions",
@@ -181,6 +310,17 @@ export const OPENAPI_ENDPOINTS: OpenApiEndpoint[] = [
     hasRequestBody: false,
   },
   {
+    path: "/api/v1/providers/suggested-models",
+    method: "GET",
+    summary: "Suggested media models",
+    description:
+      "Read-only server-side proxy to the public HuggingFace Hub models search API, used by the dashboard to suggest models for a media provider kind without exposing an HF token client-side. Never accepts or returns credentials.",
+    tag: "Providers",
+    tags: ["Providers"],
+    requiresAuth: false,
+    hasRequestBody: false,
+  },
+  {
     path: "/api/v1/rerank",
     method: "POST",
     summary: "Rerank documents",
@@ -201,11 +341,22 @@ export const OPENAPI_ENDPOINTS: OpenApiEndpoint[] = [
     hasRequestBody: true,
   },
   {
+    path: "/api/v1/session-leases",
+    method: "POST",
+    summary: "Acquire, renew, or release an exclusive managed connection lease",
+    description:
+      "Requires an API key with `lease:exclusive` and an explicit non-empty\n`allowedConnections` policy. The opaque owner is bound to the authenticated API key;\nthe lease owns an eligible connection, not a provider or model. Managed inference\nrequests present the owner and exact generation headers. Temporary foreign occupancy\nreturns 429 `WAITING_FOR_CAPACITY` with `Retry-After`.\n",
+    tag: "Session Leases",
+    tags: ["Session Leases"],
+    requiresAuth: true,
+    hasRequestBody: true,
+  },
+  {
     path: "/api/v1/ws",
     method: "GET",
     summary: "Chat completion over WebSocket (handshake + upgrade)",
     description:
-      'OpenAI-compatible chat over a WebSocket connection. `GET` with `?handshake=1` returns the connection descriptor (auth path, message protocol and live-event channels) as JSON; a plain `GET` without an Upgrade returns `426 Upgrade Required`. After upgrading, the client exchanges JSON frames — `{type:"request", id, payload:{model, messages}}` to start a completion and `{type:"cancel", id}` to abort it. A separate live channel (default port `LIVE_WS_PORT=20132`, path `/live`) streams dashboard events on the `requests`, `combo` and `credentials` topics with a 15s heartbeat. Requires an API key.',
+      'OpenAI-compatible chat over a WebSocket connection. `GET` with `?handshake=1` returns the connection descriptor (auth path, message protocol and live-event channels) as JSON; a plain `GET` without an Upgrade returns `426 Upgrade Required`. After upgrading, the client exchanges JSON frames — `{type:"request", id, payload:{model, messages}}` to start a completion and `{type:"cancel", id}` to abort it. A separate live channel (default port `LIVE_WS_PORT=20129`, path `/live`) streams dashboard events on the `requests`, `combo` and `credentials` topics with a 15s heartbeat. Requires an API key.',
     tag: "Chat",
     tags: ["Chat"],
     requiresAuth: true,

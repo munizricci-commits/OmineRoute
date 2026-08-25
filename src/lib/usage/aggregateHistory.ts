@@ -151,6 +151,58 @@ export async function rollupUsageHistoryBeforeDate(beforeDate: string): Promise<
   };
 
   try {
+    const rollupStartedAt = new Date().toISOString();
+    const teamAggregateQuery = `
+      INSERT INTO daily_team_usage_summary (
+        team_id, api_key_id, api_key_name, provider, model, service_tier, date,
+        total_requests, successful_requests, total_input_tokens, total_output_tokens,
+        total_cache_read_tokens, total_cache_creation_tokens, total_reasoning_tokens,
+        successful_input_tokens, successful_output_tokens, successful_cache_read_tokens,
+        successful_cache_creation_tokens, successful_reasoning_tokens
+      )
+      SELECT
+        billing_team_id,
+        COALESCE(NULLIF(api_key_id, ''), 'unknown'),
+        MAX(NULLIF(api_key_name, '')),
+        LOWER(provider),
+        LOWER(model),
+        COALESCE(NULLIF(service_tier, ''), 'standard'),
+        DATE(timestamp),
+        COUNT(*),
+        COALESCE(SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END), 0),
+        COALESCE(SUM(tokens_input), 0),
+        COALESCE(SUM(tokens_output), 0),
+        COALESCE(SUM(tokens_cache_read), 0),
+        COALESCE(SUM(tokens_cache_creation), 0),
+        COALESCE(SUM(tokens_reasoning), 0),
+        COALESCE(SUM(CASE WHEN success = 1 THEN tokens_input ELSE 0 END), 0),
+        COALESCE(SUM(CASE WHEN success = 1 THEN tokens_output ELSE 0 END), 0),
+        COALESCE(SUM(CASE WHEN success = 1 THEN tokens_cache_read ELSE 0 END), 0),
+        COALESCE(SUM(CASE WHEN success = 1 THEN tokens_cache_creation ELSE 0 END), 0),
+        COALESCE(SUM(CASE WHEN success = 1 THEN tokens_reasoning ELSE 0 END), 0)
+      FROM usage_history
+      WHERE timestamp < ?
+        AND billing_team_id IS NOT NULL AND billing_team_id != ''
+        AND team_rollup_processed_at IS NULL
+        AND provider IS NOT NULL AND provider != ''
+        AND model IS NOT NULL AND model != ''
+      GROUP BY billing_team_id, COALESCE(NULLIF(api_key_id, ''), 'unknown'),
+        LOWER(provider), LOWER(model), COALESCE(NULLIF(service_tier, ''), 'standard'), DATE(timestamp)
+      ON CONFLICT(team_id, api_key_id, provider, model, service_tier, date) DO UPDATE SET
+        api_key_name = COALESCE(excluded.api_key_name, daily_team_usage_summary.api_key_name),
+        total_requests = daily_team_usage_summary.total_requests + excluded.total_requests,
+        successful_requests = daily_team_usage_summary.successful_requests + excluded.successful_requests,
+        total_input_tokens = daily_team_usage_summary.total_input_tokens + excluded.total_input_tokens,
+        total_output_tokens = daily_team_usage_summary.total_output_tokens + excluded.total_output_tokens,
+        total_cache_read_tokens = daily_team_usage_summary.total_cache_read_tokens + excluded.total_cache_read_tokens,
+        total_cache_creation_tokens = daily_team_usage_summary.total_cache_creation_tokens + excluded.total_cache_creation_tokens,
+        total_reasoning_tokens = daily_team_usage_summary.total_reasoning_tokens + excluded.total_reasoning_tokens,
+        successful_input_tokens = daily_team_usage_summary.successful_input_tokens + excluded.successful_input_tokens,
+        successful_output_tokens = daily_team_usage_summary.successful_output_tokens + excluded.successful_output_tokens,
+        successful_cache_read_tokens = daily_team_usage_summary.successful_cache_read_tokens + excluded.successful_cache_read_tokens,
+        successful_cache_creation_tokens = daily_team_usage_summary.successful_cache_creation_tokens + excluded.successful_cache_creation_tokens,
+        successful_reasoning_tokens = daily_team_usage_summary.successful_reasoning_tokens + excluded.successful_reasoning_tokens
+    `;
     const aggregateQuery = `
       INSERT INTO daily_usage_summary (provider, model, date, total_requests, total_input_tokens, total_output_tokens, total_cost)
       SELECT
@@ -172,8 +224,20 @@ export async function rollupUsageHistoryBeforeDate(beforeDate: string): Promise<
         total_output_tokens = daily_usage_summary.total_output_tokens + excluded.total_output_tokens
     `;
 
-    const stmt = db.prepare(aggregateQuery);
-    const runResult = stmt.run(beforeDate);
+    const runRollup = db.transaction(() => {
+      db.prepare(teamAggregateQuery).run(beforeDate);
+      db.prepare(
+        `UPDATE usage_history
+         SET team_rollup_processed_at = ?
+         WHERE timestamp < ?
+           AND billing_team_id IS NOT NULL AND billing_team_id != ''
+           AND team_rollup_processed_at IS NULL
+           AND provider IS NOT NULL AND provider != ''
+           AND model IS NOT NULL AND model != ''`
+      ).run(rollupStartedAt, beforeDate);
+      return db.prepare(aggregateQuery).run(beforeDate);
+    });
+    const runResult = runRollup();
 
     result.processed = runResult.changes;
     result.inserted = runResult.changes;

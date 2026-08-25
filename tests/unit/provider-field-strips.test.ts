@@ -76,4 +76,3 @@ test("stripGroqUnsupportedFields drops unsupported messages[].model and other me
   assert.equal("messageId" in out.messages[1], false);
   assert.equal("sender" in out.messages[1], false);
 });
-
