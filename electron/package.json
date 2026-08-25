@@ -45,6 +45,7 @@
     "copyright": "Copyright © 2025 OmniRoute",
     "buildDependenciesFromSource": false,
     "npmRebuild": false,
+    "afterPack": "../scripts/build/afterpack-copy-node-modules.mjs",
     "directories": {
       "output": "dist-electron",
       "buildResources": "assets"
@@ -58,6 +59,7 @@
       "main.js",
       "preload.js",
       "loginManager.js",
+      "lib/loginHeaderCapture.js",
       "processTree.js",
       "sqlite-inspection.js",
       "remoteServerPromptPreload.js",

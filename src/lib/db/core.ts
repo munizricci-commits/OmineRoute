@@ -1284,6 +1284,11 @@ export function getDbInstance(): SqliteDatabase {
   }
 
   const db = openSqliteDatabase(sqliteFile);
+  // Emit the same "[DB] Driver: ..." line openDatabaseAsync() prints so the
+  // packaged-app smoke guard (#7592) can assert the native driver was
+  // selected on the server's primary DB path too, not only the backup-import
+  // route.
+  console.log(`[DB] Driver: ${db.driver} | file: ${sqliteFile}`);
   db.pragma("journal_mode = WAL");
   // better-sqlite3 is synchronous, so a contended write parks the Node event loop for up to
   // busy_timeout ms (a 0-CPU freeze that stacks under load → /health stops responding). The

@@ -2372,16 +2372,6 @@
       "count": 2
     }
   },
-  "src/lib/guardrails/videoBridgeContactSheet.ts": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
-  "src/lib/guardrails/videoBridgeRuntime.ts": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
   "src/lib/guardrails/visionBridgeHelpers.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
