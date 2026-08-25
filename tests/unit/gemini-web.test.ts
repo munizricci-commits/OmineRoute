@@ -7,9 +7,9 @@ const { getExecutor, hasSpecializedExecutor } = await import("../../open-sse/exe
 
 // ─── Registration ───────────────────────────────────────────────────────────
 
-test("GeminiWebExecutor is registered in executor index", () => {
+test("GeminiWebExecutor is registered in executor index", async () => {
   assert.ok(hasSpecializedExecutor("gemini-web"));
-  const executor = getExecutor("gemini-web");
+  const executor = await getExecutor("gemini-web");
   assert.ok(executor instanceof GeminiWebExecutor);
 });
 

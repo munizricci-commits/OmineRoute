@@ -15,8 +15,9 @@ const { cursorProvider, cursor_apiProvider } =
   await import("../../open-sse/config/providers/registry/cursor/index.ts");
 const { REGISTRY, generateAliasMap, getProviderCategory } =
   await import("../../open-sse/config/providerRegistry.ts");
-const { CursorExecutor, getExecutor, hasSpecializedExecutor } =
+const { getExecutor, hasSpecializedExecutor } =
   await import("../../open-sse/executors/index.ts");
+const { CursorExecutor } = await import("../../open-sse/executors/cursor.ts");
 const { __resetCursorApiKeyAuthForTest } =
   await import("../../open-sse/services/cursorApiKeyAuth.ts");
 const { validateProviderApiKey } = await import("../../src/lib/providers/validation.ts");
@@ -54,14 +55,14 @@ describe("cursor-api provider wiring", () => {
     assert.equal(isManagedProviderConnectionId("cursor-api"), true);
   });
 
-  it("routes cursor-api and its alias to a CursorExecutor bound to the cursor-api id", () => {
+  it("routes cursor-api and its alias to a CursorExecutor bound to the cursor-api id", async () => {
     for (const key of ["cursor-api", "cua"]) {
       assert.equal(hasSpecializedExecutor(key), true, key);
-      const executor = getExecutor(key);
+      const executor = await getExecutor(key);
       assert.ok(executor instanceof CursorExecutor, key);
       assert.equal(executor.getProvider(), "cursor-api");
     }
-    assert.equal(getExecutor("cursor").getProvider(), "cursor");
+    assert.equal((await getExecutor("cursor")).getProvider(), "cursor");
   });
 });
 
@@ -154,6 +155,9 @@ describe("CursorExecutor credential resolution", () => {
       body: { messages: [] },
       stream: false,
       credentials: { apiKey: API_KEY, connectionId: "cursor-api-test" },
+      signal: null,
+      log: null,
+      upstreamExtraHeaders: null,
     });
 
     assert.equal(result.response.status, 500);

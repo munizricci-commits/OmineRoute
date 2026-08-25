@@ -142,8 +142,8 @@ export function diffComboStrategies(
  * getExecutor() na função main().
  */
 export function extractExecutorAliases(indexSource: string): string[] {
-  const start = indexSource.indexOf("const executors = {");
-  if (start < 0) throw new Error("could not find `const executors = {` in executors/index.ts");
+  const start = indexSource.indexOf("const lazyExecutors");
+  if (start < 0) throw new Error("could not find 'const lazyExecutors' in executors/index.ts");
   const end = indexSource.indexOf("\n};", start);
   if (end < 0) throw new Error("could not find end of executors map (`\\n};`)");
   const block = indexSource.slice(start, end);

@@ -39,7 +39,7 @@ function geminiConnection() {
 }
 
 test("falls back to the existing accessToken for a non-github provider when refreshCredentials returns null", async () => {
-  const exec = getExecutor("gemini");
+  const exec = await getExecutor("gemini");
   const origNeeds = exec.needsRefresh;
   const origRefresh = exec.refreshCredentials;
   exec.needsRefresh = () => true; // force the refresh attempt
@@ -65,7 +65,7 @@ test("falls back to the existing accessToken for a non-github provider when refr
 });
 
 test("still throws when refresh fails AND there is no accessToken to fall back on", async () => {
-  const exec = getExecutor("gemini");
+  const exec = await getExecutor("gemini");
   const origNeeds = exec.needsRefresh;
   const origRefresh = exec.refreshCredentials;
   exec.needsRefresh = () => true;

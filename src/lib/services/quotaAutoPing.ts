@@ -23,6 +23,7 @@
 import { logger } from "@omniroute/open-sse/utils/logger.ts";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error.ts";
 import { getExecutor } from "@omniroute/open-sse/executors/index.ts";
+import type { BaseExecutor } from "@omniroute/open-sse/executors/base";
 import { getCodexUsage } from "@omniroute/open-sse/services/usage/codex.ts";
 import { getSettings, getProviderConnections, updateProviderConnection } from "@/lib/localDb";
 import { isConnectionUnavailableToAuxiliaryActivity } from "@/lib/exclusiveLeaseIsolation";
@@ -67,7 +68,7 @@ export interface QuotaAutoPingDeps {
     accessToken?: string,
     providerSpecificData?: JsonRecord
   ) => Promise<JsonRecord>;
-  getExecutor: (provider: string) => { execute: (input: JsonRecord) => Promise<JsonRecord> };
+  getExecutor: (provider: string) => Promise<BaseExecutor>;
   canExecuteProvider: (provider: string) => boolean;
   isConnectionUnavailableToAuxiliaryActivity: (connectionId: string) => Promise<boolean>;
 }
@@ -208,7 +209,7 @@ async function sendCodexPing(
   providerConfig: QuotaAutoPingProviderConfig,
   deps: QuotaAutoPingDeps
 ): Promise<boolean> {
-  const executor = deps.getExecutor("codex");
+  const executor = await deps.getExecutor("codex");
   const result = await executor.execute({
     model: providerConfig.pingModel,
     stream: true,

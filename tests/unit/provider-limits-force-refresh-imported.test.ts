@@ -33,7 +33,7 @@ function importedCodexConnection() {
 }
 
 test("force re-mints an imported rotating account that needsRefresh would skip (#3019 reactive)", async () => {
-  const exec = getExecutor("codex");
+  const exec = await getExecutor("codex");
   const origNeeds = exec.needsRefresh;
   const origRefresh = exec.refreshCredentials;
   let refreshCalls = 0;
@@ -65,7 +65,7 @@ test("force re-mints an imported rotating account that needsRefresh would skip (
 });
 
 test("force does NOT override the bulk #3019 guard (no allowRotatingRefresh → no mint)", async () => {
-  const exec = getExecutor("codex");
+  const exec = await getExecutor("codex");
   const origNeeds = exec.needsRefresh;
   const origRefresh = exec.refreshCredentials;
   let refreshCalls = 0;

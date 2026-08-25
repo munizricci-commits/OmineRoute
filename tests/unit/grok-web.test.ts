@@ -83,9 +83,9 @@ test.afterEach(() => {
 
 // ─── Registration ───────────────────────────────────────────────────────────
 
-test("GrokWebExecutor is registered in executor index", () => {
+test("GrokWebExecutor is registered in executor index", async () => {
   assert.ok(hasSpecializedExecutor("grok-web"));
-  const executor = getExecutor("grok-web");
+  const executor = await getExecutor("grok-web");
   assert.ok(executor instanceof GrokWebExecutor);
 });
 

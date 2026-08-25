@@ -41,7 +41,7 @@ after(() => {
 test("no config (disabled by default) returns the provider's own executor", async () => {
   clearUpstreamProxyConfigCache("openai");
   const exec = await resolveExecutorWithProxy("openai");
-  assert.equal(exec, getExecutor("openai"));
+  assert.equal(exec, await getExecutor("openai"));
 });
 
 test("mode 'native' returns the provider's own executor", async () => {
@@ -52,7 +52,7 @@ test("mode 'native' returns the provider's own executor", async () => {
   });
   clearUpstreamProxyConfigCache("openai");
   const exec = await resolveExecutorWithProxy("openai");
-  assert.equal(exec, getExecutor("openai"));
+  assert.equal(exec, await getExecutor("openai"));
 });
 
 test("mode 'cliproxyapi' returns the CLIProxyAPI passthrough executor", async () => {
@@ -63,7 +63,7 @@ test("mode 'cliproxyapi' returns the CLIProxyAPI passthrough executor", async ()
   });
   clearUpstreamProxyConfigCache("anthropic");
   const exec = await resolveExecutorWithProxy("anthropic");
-  assert.equal(exec, getExecutor("cliproxyapi"));
+  assert.equal(exec, await getExecutor("cliproxyapi"));
 });
 
 test("mode 'fallback' returns a distinct wrapper owning its own execute()", async () => {
@@ -74,8 +74,8 @@ test("mode 'fallback' returns a distinct wrapper owning its own execute()", asyn
   });
   clearUpstreamProxyConfigCache("openai");
   const exec = await resolveExecutorWithProxy("openai");
-  assert.notEqual(exec, getExecutor("openai"));
-  assert.notEqual(exec, getExecutor("cliproxyapi"));
+  assert.notEqual(exec, await getExecutor("openai"));
+  assert.notEqual(exec, await getExecutor("cliproxyapi"));
   assert.equal(typeof exec.execute, "function");
 });
 
@@ -94,7 +94,7 @@ test("connection override 'claude-native' selects CLIProxyAPI even when provider
   const exec = await resolveExecutorWithProxy("openai", undefined, {
     cliproxyapiMode: "claude-native",
   });
-  assert.equal(exec, getExecutor("cliproxyapi"));
+  assert.equal(exec, await getExecutor("cliproxyapi"));
 });
 
 test("connection override 'claude-native' selects CLIProxyAPI even with no provider config (default)", async () => {
@@ -102,7 +102,7 @@ test("connection override 'claude-native' selects CLIProxyAPI even with no provi
   const exec = await resolveExecutorWithProxy("anthropic", undefined, {
     cliproxyapiMode: "claude-native",
   });
-  assert.equal(exec, getExecutor("cliproxyapi"));
+  assert.equal(exec, await getExecutor("cliproxyapi"));
 });
 
 test("no connection override + provider mode native → native executor (unchanged)", async () => {
@@ -115,13 +115,13 @@ test("no connection override + provider mode native → native executor (unchang
   const exec = await resolveExecutorWithProxy("openai", undefined, {
     someOtherField: "x",
   });
-  assert.equal(exec, getExecutor("openai"));
+  assert.equal(exec, await getExecutor("openai"));
 });
 
 test("connection override absent (undefined providerSpecificData) preserves default behaviour", async () => {
   clearUpstreamProxyConfigCache("openai");
   const exec = await resolveExecutorWithProxy("openai");
-  assert.equal(exec, getExecutor("openai"));
+  assert.equal(exec, await getExecutor("openai"));
 });
 
 test("connection override wins over provider mode 'fallback'", async () => {
@@ -135,5 +135,5 @@ test("connection override wins over provider mode 'fallback'", async () => {
     cliproxyapiMode: "claude-native",
   });
   // Connection override short-circuits to the passthrough executor, not the fallback wrapper.
-  assert.equal(exec, getExecutor("cliproxyapi"));
+  assert.equal(exec, await getExecutor("cliproxyapi"));
 });

@@ -370,16 +370,16 @@ function reset() {
 
 // ─── Registration ───────────────────────────────────────────────────────────
 
-test("ChatGptWebExecutor is registered in executor index", () => {
+test("ChatGptWebExecutor is registered in executor index", async () => {
   assert.ok(hasSpecializedExecutor("chatgpt-web"));
   assert.ok(hasSpecializedExecutor("cgpt-web"));
-  const executor = getExecutor("chatgpt-web");
+  const executor = await getExecutor("chatgpt-web");
   assert.ok(executor instanceof ChatGptWebExecutor);
 });
 
-test("ChatGptWebExecutor alias resolves to same type", () => {
-  const a = getExecutor("chatgpt-web");
-  const b = getExecutor("cgpt-web");
+test("ChatGptWebExecutor alias resolves to same type", async () => {
+  const a = await getExecutor("chatgpt-web");
+  const b = await getExecutor("cgpt-web");
   assert.ok(a instanceof ChatGptWebExecutor);
   assert.ok(b instanceof ChatGptWebExecutor);
 });

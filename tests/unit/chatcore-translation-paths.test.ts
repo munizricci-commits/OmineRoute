@@ -456,7 +456,7 @@ test("chatCore times out upstream execution before provider response headers", a
   // (fresh-DB default leaves it off → the waitFor below would never resolve;
   // failed deterministically on CI and on an isolated run, incl. at v3.8.18).
   await settingsDb.updateSettings({ call_log_pipeline_enabled: true });
-  const executor = getExecutor("openai");
+  const executor = await getExecutor("openai");
   const originalGetTimeoutMs = executor.getTimeoutMs?.bind(executor);
   executor.getTimeoutMs = () => 200;
 

@@ -19,12 +19,12 @@ import type { ProviderCredentials } from "../../executors/base.ts";
 
 type ExecutorInput = {
   credentials: ProviderCredentials;
-  [key: string]: unknown;
 };
 
+// No index signature: executors (BaseExecutor subclasses) must satisfy this
+// structurally, and class instances don't carry index signatures.
 type ExecutorLike = {
   execute: (input: ExecutorInput) => Promise<unknown>;
-  [key: string]: unknown;
 };
 
 /**

@@ -241,7 +241,7 @@ describe("DuckDuckGoWebExecutor", () => {
 
     it("should be registered in executor index", async () => {
       const { getExecutor } = await import("../../open-sse/executors/index.ts");
-      const executor = getExecutor("duckduckgo-web");
+      const executor = await getExecutor("duckduckgo-web");
       assert.ok(executor, "executor should be registered in index");
       assert.equal(
         typeof executor.execute,

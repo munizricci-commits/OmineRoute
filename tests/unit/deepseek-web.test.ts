@@ -18,13 +18,13 @@ test("DeepSeekWebExecutor registered as deepseek-web and ds-web", () => {
   assert.ok(hasSpecializedExecutor("ds-web"));
 });
 
-test("getExecutor returns DeepSeekWebWithAutoRefreshExecutor", () => {
-  const exec = getExecutor("deepseek-web");
+test("getExecutor returns DeepSeekWebWithAutoRefreshExecutor", async () => {
+  const exec = await getExecutor("deepseek-web");
   assert.ok(exec instanceof DeepSeekWebWithAutoRefreshExecutor);
 });
 
-test("alias ds-web resolves same executor", () => {
-  assert.ok(getExecutor("ds-web") instanceof DeepSeekWebWithAutoRefreshExecutor);
+test("alias ds-web resolves same executor", async () => {
+  assert.ok(await getExecutor("ds-web") instanceof DeepSeekWebWithAutoRefreshExecutor);
 });
 
 test("provider name is deepseek-web", () => {

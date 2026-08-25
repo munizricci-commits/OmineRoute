@@ -119,7 +119,7 @@ describe("web-cookie + noauth executor wrapper contract sweep", () => {
   describe("WEB_COOKIE_PROVIDERS (26)", () => {
     for (const providerId of WEB_COOKIE_IDS) {
       it(`${providerId} executor returns wrapper shape`, async () => {
-        const executor = getExecutor(providerId);
+        const executor = await getExecutor(providerId);
         assert.ok(executor, `[${providerId}] getExecutor must return an executor`);
 
         const result = await executor.execute({
@@ -160,7 +160,7 @@ describe("web-cookie + noauth executor wrapper contract sweep", () => {
 
     for (const providerId of TARGETS) {
       it(`${providerId} noauth executor returns wrapper shape`, async () => {
-        const executor = getExecutor(providerId);
+        const executor = await getExecutor(providerId);
         assert.ok(executor, `[${providerId}] getExecutor must return an executor`);
 
         // Use a pre-aborted signal so the executor short-circuits via

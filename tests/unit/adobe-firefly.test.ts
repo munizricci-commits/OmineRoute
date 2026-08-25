@@ -84,7 +84,7 @@ test("adobe-firefly is registered in VIDEO_PROVIDERS with adobe-firefly-video fo
 });
 
 test("getExecutor(adobe-firefly) rejects chat completions", async () => {
-  const executor = getExecutor("adobe-firefly");
+  const executor = await getExecutor("adobe-firefly");
   assert.ok(executor);
   const result = await executor.execute({
     model: "adobe-firefly/nano-banana-pro",
@@ -95,9 +95,10 @@ test("getExecutor(adobe-firefly) rejects chat completions", async () => {
     stream: false,
     credentials: { apiKey: "tok" },
   });
-  assert.ok(result.response, "executor must return a Response wrapper");
-  assert.equal(result.response.status, 400);
-  const bodyText = await result.response.text();
+  const response = result instanceof Response ? result : result.response;
+  assert.ok(response, "executor must return a Response wrapper");
+  assert.equal(response.status, 400);
+  const bodyText = await response.text();
   assert.match(bodyText, /images\/generations|videos\/generations|media-generation/i);
 });
 

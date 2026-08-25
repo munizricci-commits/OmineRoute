@@ -73,8 +73,8 @@ for (const [id, subPath] of Object.entries(SUB_PATHS)) {
     );
   });
 
-  test(`#6650 ${id} resolves through getExecutor() as a DefaultExecutor instance`, () => {
-    const executor = getExecutor(id);
+  test(`#6650 ${id} resolves through getExecutor() as a DefaultExecutor instance`, async () => {
+    const executor = await getExecutor(id);
     assert.ok(
       executor instanceof DefaultExecutor,
       `${id} has no custom executor — must fall through to DefaultExecutor`

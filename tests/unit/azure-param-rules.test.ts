@@ -5,7 +5,8 @@ import {
   applyAzureParamRules,
   AZURE_COMPLETION_TOKEN_DEPLOYMENT,
 } from "../../open-sse/executors/azureParamRules.ts";
-import { getExecutor, AzureAiExecutor } from "../../open-sse/executors/index.ts";
+import { getExecutor } from "../../open-sse/executors/index.ts";
+import { AzureAiExecutor } from "../../open-sse/executors/azure-ai.ts";
 
 /**
  * Regression guards for two Azure 400s observed against a live Azure AI Foundry
@@ -87,8 +88,8 @@ test("the regex does not match unrelated names by accident", () => {
   assert.equal(AZURE_COMPLETION_TOKEN_DEPLOYMENT.test("Kimi-K2.7-Code"), false);
 });
 
-test("azure-ai resolves to AzureAiExecutor, not the bare DefaultExecutor", () => {
-  const executor = getExecutor("azure-ai");
+test("azure-ai resolves to AzureAiExecutor, not the bare DefaultExecutor", async () => {
+  const executor = await getExecutor("azure-ai");
   assert.ok(
     executor instanceof AzureAiExecutor,
     "azure-ai must have its own executor so it inherits the Azure param rules"

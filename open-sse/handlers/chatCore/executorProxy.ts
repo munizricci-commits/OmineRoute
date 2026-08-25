@@ -76,12 +76,15 @@ async function loadCliproxyapiSettings(): Promise<{
  * dedicated-credential wrappers applied. Used by the direct `cliproxyapi` leg
  * and the CLIProxyAPI branch of `fallback`.
  */
-function resolveCliproxyapiExecutor(
+async function resolveCliproxyapiExecutor(
   cliproxyapiModelMapping: Record<string, unknown> | null,
   dedicatedApiKey: string | null
 ) {
   return wrapExecutorWithCliproxyapiCredentials(
-    wrapExecutorWithCliproxyapiModelMapping(getExecutor("cliproxyapi"), cliproxyapiModelMapping),
+    wrapExecutorWithCliproxyapiModelMapping(
+      await getExecutor("cliproxyapi"),
+      cliproxyapiModelMapping
+    ),
     dedicatedApiKey
   );
 }
@@ -138,7 +141,7 @@ export async function resolveExecutorWithProxy(
   // backend on specific failures. The backend defaults to CLIProxyAPI so every
   // pre-existing fallback config behaves exactly as before; fallbackBackend
   // === "dario" opts the retry leg over to Dario instead.
-  const nativeExec = getExecutor(prov);
+  const nativeExec = await getExecutor(prov);
   const fallbackBackend: FallbackBackend = cfg.fallbackBackend;
   const { fallbackCodes, dedicatedApiKey } = await loadCliproxyapiSettings();
 
@@ -146,8 +149,8 @@ export async function resolveExecutorWithProxy(
   // the native leg must keep seeing the original, unmapped model.
   const proxyExec =
     fallbackBackend === "dario"
-      ? getExecutor("dario")
-      : resolveCliproxyapiExecutor(cfg.cliproxyapiModelMapping, dedicatedApiKey);
+      ? await getExecutor("dario")
+      : await resolveCliproxyapiExecutor(cfg.cliproxyapiModelMapping, dedicatedApiKey);
   const backendLabel = fallbackBackend === "dario" ? "Dario" : "CLIProxyAPI";
   const isRetryableStatus = (s: number) => fallbackCodes.includes(s) || s === 0;
 

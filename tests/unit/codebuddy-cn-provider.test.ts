@@ -185,10 +185,10 @@ test("codebuddy-cn vision flag is set on the visual models", () => {
   }
 });
 
-test("getExecutor returns the CodeBuddyCnExecutor for 'codebuddy-cn' and the 'cbcn' alias", () => {
-  const e = getExecutor("codebuddy-cn");
+test("getExecutor returns the CodeBuddyCnExecutor for 'codebuddy-cn' and the 'cbcn' alias", async () => {
+  const e = await getExecutor("codebuddy-cn");
   assert.ok(e instanceof CodeBuddyCnExecutor, "executor must be CodeBuddyCnExecutor");
-  const aliasExec = getExecutor("cbcn");
+  const aliasExec = await getExecutor("cbcn");
   assert.ok(aliasExec instanceof CodeBuddyCnExecutor, "alias 'cbcn' must resolve to same executor");
 });
 

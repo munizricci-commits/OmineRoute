@@ -21,13 +21,13 @@ test.after(() => {
   fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
 });
 
-test("built-ins are registered at module load and resolve through the registry", () => {
+test("built-ins are registered at module load and resolve through the registry", async () => {
   const aliases = listExecutorAliases();
   assert.ok(aliases.length >= 100, `expected the built-in table, got ${aliases.length} aliases`);
   for (const alias of ["antigravity", "kiro", "glm", "9router", "conol-web"]) {
     assert.ok(hasRegisteredExecutor(alias), `missing built-in: ${alias}`);
-    assert.equal(getExecutor(alias), getRegisteredExecutor(alias));
-    assert.ok(getExecutor(alias) instanceof BaseExecutor);
+    assert.equal(await getExecutor(alias), getRegisteredExecutor(alias));
+    assert.ok((await getExecutor(alias)) instanceof BaseExecutor);
   }
 });
 
@@ -37,21 +37,21 @@ test("registerExecutor throws on duplicate alias", () => {
   });
 });
 
-test("registering a new alias makes it resolvable via getExecutor and hasSpecializedExecutor", () => {
+test("registering a new alias makes it resolvable via getExecutor and hasSpecializedExecutor", async () => {
   const alias = "registry-test-provider";
   assert.equal(hasSpecializedExecutor(alias), false);
   const instance = new DefaultExecutor(alias);
   registerExecutor(alias, instance);
   assert.equal(hasSpecializedExecutor(alias), true);
-  assert.equal(getExecutor(alias), instance);
+  assert.equal(await getExecutor(alias), instance);
 });
 
-test("registry lookup is exact — Object.prototype names are not executors", () => {
+test("registry lookup is exact — Object.prototype names are not executors", async () => {
   // The old object-literal lookup (`executors[provider]`) leaked prototype
   // members: getExecutor("constructor") returned Object's constructor. The Map
   // registry must treat these as unknown providers (DefaultExecutor fallback).
   for (const name of ["constructor", "toString", "hasOwnProperty", "__proto__"]) {
     assert.equal(hasSpecializedExecutor(name), false, name);
-    assert.ok(getExecutor(name) instanceof DefaultExecutor, name);
+    assert.ok((await getExecutor(name)) instanceof DefaultExecutor, name);
   }
 });

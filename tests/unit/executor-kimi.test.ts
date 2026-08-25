@@ -47,10 +47,10 @@ function credentials(
 }
 
 describe("KimiExecutor", () => {
-  it("forces the primary Kimi upstream to stream while preserving JSON client semantics", () => {
+  it("forces the primary Kimi upstream to stream while preserving JSON client semantics", async () => {
     assert.equal(REGISTRY.kimi?.forceStream, true);
 
-    const executor = getExecutor("kimi");
+    const executor = await getExecutor("kimi");
     assert.ok(executor instanceof MoonshotExecutor);
     assert.equal(
       executor.buildUrl("kimi-k2.5", true, 0, credentials(FORMATS.OPENAI)),

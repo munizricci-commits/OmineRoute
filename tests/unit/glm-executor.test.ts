@@ -129,10 +129,10 @@ test("GlmExecutor normalizes GLM coding and Anthropic URLs without duplicating e
   );
 });
 
-test("GlmExecutor separates OpenAI-compatible coding headers from Anthropic headers", () => {
-  assert.equal(getExecutor("glm") instanceof GlmExecutor, true);
-  assert.equal(getExecutor("glm-cn") instanceof GlmExecutor, true);
-  assert.equal(getExecutor("glmt") instanceof GlmExecutor, true);
+test("GlmExecutor separates OpenAI-compatible coding headers from Anthropic headers", async () => {
+  assert.equal(await getExecutor("glm") instanceof GlmExecutor, true);
+  assert.equal(await getExecutor("glm-cn") instanceof GlmExecutor, true);
+  assert.equal(await getExecutor("glmt") instanceof GlmExecutor, true);
 
   const executor = new GlmExecutor("glm");
   const codingHeaders = executor.buildHeaders(

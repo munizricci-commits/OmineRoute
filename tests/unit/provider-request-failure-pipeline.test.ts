@@ -153,7 +153,7 @@ test("network failure persisted call log includes providerRequest in pipeline pa
 
 test("network timeout persisted call log includes providerRequest in pipeline payloads", async () => {
   const { getExecutor } = await import("../../open-sse/executors/index.ts");
-  const executor = getExecutor("openai");
+  const executor = await getExecutor("openai");
   const originalGetTimeoutMs = executor.getTimeoutMs?.bind(executor);
   executor.getTimeoutMs = () => 200;
 
