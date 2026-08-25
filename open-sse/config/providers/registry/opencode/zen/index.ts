@@ -79,18 +79,35 @@ export const opencode_zenProvider: RegistryEntry = {
     },
 
     // ── DeepSeek ────────────────────────────────────────────────
-    { id: "deepseek-v4-pro", name: "DeepSeek V4 Pro" },
-    { id: "deepseek-v4-flash", name: "DeepSeek V4 Flash" },
+    // #10788: same tier vocabulary as opencode-go's DeepSeek rows — the Zen
+    // upstream accepts the identical effort set on these models.
+    {
+      id: "deepseek-v4-pro",
+      name: "DeepSeek V4 Pro",
+      supportsReasoning: true,
+      supportedThinkingEfforts: ["none", "low", "high", "max"],
+    },
+    {
+      id: "deepseek-v4-flash",
+      name: "DeepSeek V4 Flash",
+      supportsReasoning: true,
+      supportedThinkingEfforts: ["none", "low", "high", "max"],
+    },
 
     // ── GLM / Z.AI ─────────────────────────────────────────────
-    { id: "glm-5.2", name: "GLM-5.2" },
+    {
+      id: "glm-5.2",
+      name: "GLM-5.2",
+      supportsReasoning: true,
+      supportedThinkingEfforts: ["high", "max"],
+    },
 
     // ── MiniMax ────────────────────────────────────────────────
     // #3110: MiniMax M3 — frontier coding model with 1M context
     { id: "minimax-m3", name: "MiniMax M3", contextLength: 1048576, supportsVision: true },
 
     // ── Kimi / Moonshot ────────────────────────────────────────
-    { id: "kimi-k3", name: "Kimi K3" },
+    { id: "kimi-k3", name: "Kimi K3", supportsReasoning: true, supportedThinkingEfforts: ["max"] },
     // kimi-k2.7-code declared identically on opencode-go — see OPENCODE_ZEN_GO_SHARED_MODELS.
 
     // ── Qwen ───────────────────────────────────────────────────

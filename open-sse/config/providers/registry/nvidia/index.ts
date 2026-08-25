@@ -18,7 +18,17 @@ export const nvidiaProvider: RegistryEntry = {
   passthroughModels: true,
   models: [
     // #6108: z-ai/glm-5.1 EOL'd 2026-07-02 (direct probe returns 410) — dropped.
-    { id: "z-ai/glm-5.2", name: "GLM 5.2" },
+    // #10788: NVIDIA's hosted GLM-5.2 exposes a BINARY thinking switch
+    // (chat_template_kwargs.enable_thinking), not effort tiers — see
+    // mapNvidiaGlm52ReasoningParams. Declaring an empty tier list keeps the
+    // catalog from synthesizing unresolvable -low/-high/-max variant ids while
+    // still marking the model reasoning-capable.
+    {
+      id: "z-ai/glm-5.2",
+      name: "GLM 5.2",
+      supportsReasoning: true,
+      supportedThinkingEfforts: [],
+    },
     // #3329/#6108: minimaxai/minimax-m3 stays excluded from the nvidia tier — it
     // still 404s here for most callers; the single 200 probe in #6108 was not
     // reproducible enough to override the #3329 guard. Re-add only once NVIDIA
