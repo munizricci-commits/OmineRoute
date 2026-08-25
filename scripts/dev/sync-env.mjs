@@ -93,12 +93,38 @@ function hasEncryptedCredentials(dataDir) {
   const dbPath = join(dataDir, "storage.sqlite");
   if (!existsSync(dbPath)) return false;
 
+  const require = createRequire(import.meta.url);
+
+  if (process.versions.bun) {
+    try {
+      const { Database } = require("bun:sqlite");
+      const db = new Database(dbPath, { readonly: true, create: false });
+      try {
+        const row = db
+          .query(
+            `SELECT 1
+               FROM provider_connections
+              WHERE access_token LIKE 'enc:v1:%'
+                 OR refresh_token LIKE 'enc:v1:%'
+                 OR api_key LIKE 'enc:v1:%'
+                 OR id_token LIKE 'enc:v1:%'
+              LIMIT 1`
+          )
+          .get();
+        return !!row;
+      } finally {
+        db.close();
+      }
+    } catch {
+      return false;
+    }
+  }
+
   try {
     // Resolve `require` lazily here (not at module top-level): when this file is
     // bundled into a standalone route, a top-level `createRequire(import.meta.url)`
     // throws during module evaluation and 500s the whole route (#5006). Inside this
     // guarded block, any failure simply returns false (the safe default below).
-    const require = createRequire(import.meta.url);
     const Database = require("better-sqlite3");
     const db = new Database(dbPath, { readonly: true, fileMustExist: true });
     try {
