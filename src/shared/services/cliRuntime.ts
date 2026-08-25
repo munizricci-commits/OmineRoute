@@ -242,7 +242,7 @@ const CLI_TOOLS: Record<string, any> = {
     requiresBinary: true,
     healthcheckTimeoutMs: 8000,
     paths: {
-      config: ".jcode/config.json",
+      config: ".jcode/config.toml",
     },
   },
   "prime-agent": {

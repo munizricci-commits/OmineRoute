@@ -53,3 +53,46 @@ export function resolveLiveWsPublicUrl(env: NodeJS.ProcessEnv = process.env): st
 export function getLiveWsPath(): string {
   return deriveLiveWsPath(resolveLiveWsPublicUrl() ?? undefined);
 }
+
+/**
+ * Validate a handshake-reported live-WS port. The `/api/v1/ws?handshake=1`
+ * response echoes the port the WS server actually bound (so a runtime
+ * LIVE_WS_PORT override reaches prebuilt images, #11331); anything that is not
+ * a real TCP port is rejected so a malformed handshake can never poison the
+ * dial URL.
+ */
+export function sanitizeLiveWsPort(port: unknown): number | null {
+  const value =
+    typeof port === "number" ? port : typeof port === "string" ? Number.parseInt(port, 10) : NaN;
+  if (!Number.isInteger(value) || value < 1 || value > 65535) return null;
+  return value;
+}
+
+/**
+ * Resolve the effective live-WS URL from the layered sources, strongest first:
+ * caller-supplied `explicit` URL, handshake-reported public URL, then the
+ * default URL with any handshake-reported port/path overrides applied.
+ */
+export function resolveLiveWsUrl(options: {
+  explicit?: string | null;
+  handshakeUrl?: string | null;
+  handshakePort?: number | null;
+  handshakePath?: string | null;
+  defaultUrl: string;
+}): string {
+  const { explicit, handshakeUrl, handshakePort, handshakePath, defaultUrl } = options;
+  if (explicit) return explicit;
+  if (handshakeUrl) return handshakeUrl;
+  try {
+    const url = new URL(defaultUrl);
+    if (handshakePort !== null && handshakePort !== undefined) {
+      url.port = String(handshakePort);
+    }
+    if (handshakePath && handshakePath.startsWith("/")) {
+      url.pathname = handshakePath;
+    }
+    return url.toString();
+  } catch {
+    return defaultUrl;
+  }
+}
