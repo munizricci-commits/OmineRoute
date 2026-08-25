@@ -1,7 +1,9 @@
 // OpenAI/Gemini-format + Bedrock provider key validators (bedrock, openai-like, command-code, gemini-like, openai-compatible).
 // Extracted from validation.ts (god-file decomposition) — top-level functions; behavior is
 // byte-identical to the original inline defs.
+import { randomUUID } from "node:crypto";
 import { getRegistryEntry } from "@omniroute/open-sse/config/providerRegistry.ts";
+import { COMMAND_CODE_VERSION } from "@omniroute/open-sse/executors/commandCode.ts";
 import {
   discoverBedrockNativeModels,
   isBedrockNativeApiError,
@@ -202,7 +204,7 @@ export async function validateCommandCodeProvider({ apiKey, providerSpecificData
     entry?.models?.find((model) => model.id === "deepseek/deepseek-v4-flash")?.id ||
     "deepseek/deepseek-v4-flash";
 
-  return validateDirectChatProvider({
+  const result = await validateDirectChatProvider({
     url,
     providerSpecificData,
     headers: {
@@ -217,6 +219,66 @@ export async function validateCommandCodeProvider({ apiKey, providerSpecificData
       max_tokens: 1,
     },
   });
+
+  if (result.valid) {
+    return result;
+  }
+
+  // Fallback: Accounts on the Go plan receive 403 on /provider/v1/chat/completions
+  // because API access is restricted to Provider tier. Fallback to probing /alpha/generate.
+  try {
+    const alphaUrl = `${baseUrl}/alpha/generate`;
+    const alphaHeaders: Record<string, string> = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+      "x-command-code-version": COMMAND_CODE_VERSION,
+      "x-cli-environment": "external",
+      "x-project-slug": "pi-cc",
+      "x-taste-learning": "false",
+      "x-co-flag": "false",
+      "x-session-id": randomUUID(),
+    };
+    applyCustomUserAgent(alphaHeaders, providerSpecificData);
+
+    const alphaBody = {
+      config: { environment: "external" },
+      permissionMode: "standard",
+      skills: "",
+      params: {
+        model: validationModelId,
+        stream: true,
+        max_tokens: 1,
+        messages: [{ role: "user", content: "test" }],
+      },
+    };
+
+    const alphaRes = await validationWrite(alphaUrl, {
+      method: "POST",
+      headers: alphaHeaders,
+      body: JSON.stringify(alphaBody),
+    });
+
+    if (alphaRes.ok) {
+      return { valid: true, error: null, method: "command_code_alpha" };
+    }
+
+    if (alphaRes.status === 401 || alphaRes.status === 403) {
+      return { valid: false, error: "Invalid API key" };
+    }
+
+    // 400 (e.g. insufficient credits), 422, 429 indicates key is authentic and recognized
+    if (alphaRes.status === 400 || alphaRes.status === 422 || alphaRes.status === 429) {
+      return { valid: true, error: null, method: "command_code_alpha" };
+    }
+
+    if (alphaRes.status >= 500) {
+      return { valid: false, error: `Provider unavailable (${alphaRes.status})` };
+    }
+  } catch (error: any) {
+    return toValidationErrorResult(error);
+  }
+
+  return result;
 }
 
 // HuggingFace fine-grained Inference-Provider tokens are valid even when
