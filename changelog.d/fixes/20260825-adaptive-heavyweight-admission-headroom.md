@@ -1,0 +1,1 @@
+- **fix(admission):** derive bounded healthy heavyweight headroom from process memory capacity and pressure while preserving exact operator overrides and process-global safety.

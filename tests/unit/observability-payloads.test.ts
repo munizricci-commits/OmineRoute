@@ -345,6 +345,9 @@ test("buildHealthPayload projects allowlisted structural chatAdmission fields on
   const snapshot = {
     activeHeavy: 1,
     activeHealthyHeadroom: 1,
+    configuredHealthyHeadroom: null,
+    effectiveHealthyHeadroom: 4,
+    healthyHeadroomReason: "runtime_capacity",
     waiting: 2,
     queuedBytes: 524_288,
     shedTotal: 3,
@@ -356,6 +359,8 @@ test("buildHealthPayload projects allowlisted structural chatAdmission fields on
     // Extra keys that must never leak into the public payload.
     internalController: { secret: "controller-state" },
     rawAuthorization: "Bearer raw-SHOULD-NOT-LEAK",
+    heapLimitBytes: 4_294_967_296,
+    rawCgroupPath: "/sys/fs/cgroup/private-tenant.slice",
   } as unknown as import("../../src/lib/monitoring/observability.ts").ChatAdmissionSnapshot;
 
   const payload = buildHealthPayload({
@@ -384,6 +389,9 @@ test("buildHealthPayload projects allowlisted structural chatAdmission fields on
   assert.deepEqual(payload.chatAdmission, {
     activeHeavy: 1,
     activeHealthyHeadroom: 1,
+    configuredHealthyHeadroom: null,
+    effectiveHealthyHeadroom: 4,
+    healthyHeadroomReason: "runtime_capacity",
     waiting: 2,
     queuedBytes: 524_288,
     shedTotal: 3,
@@ -400,6 +408,8 @@ test("buildHealthPayload projects allowlisted structural chatAdmission fields on
   assert.equal(json.includes("controller-state"), false);
   assert.equal(json.includes("raw-SHOULD-NOT-LEAK"), false);
   assert.equal(json.includes("internalController"), false);
+  assert.equal(json.includes("4294967296"), false);
+  assert.equal(json.includes("private-tenant.slice"), false);
 
   // Absent / null snapshot projects to null (degraded path parity).
   assert.equal(projectChatAdmissionSummary(null), null);

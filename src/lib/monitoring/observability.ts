@@ -19,6 +19,9 @@ export type ChatAdmissionSnapshot = ReturnType<PerConnectionAdmissionController[
 export type ChatAdmissionHealthSummary = {
   activeHeavy: number;
   activeHealthyHeadroom: number;
+  configuredHealthyHeadroom: number | null;
+  effectiveHealthyHeadroom: number;
+  healthyHeadroomReason: ChatAdmissionSnapshot["healthyHeadroomReason"];
   waiting: number;
   queuedBytes: number;
   shedTotal: number;
@@ -37,6 +40,9 @@ export function projectChatAdmissionSummary(
   return {
     activeHeavy: snapshot.activeHeavy,
     activeHealthyHeadroom: snapshot.activeHealthyHeadroom,
+    configuredHealthyHeadroom: snapshot.configuredHealthyHeadroom,
+    effectiveHealthyHeadroom: snapshot.effectiveHealthyHeadroom,
+    healthyHeadroomReason: snapshot.healthyHeadroomReason,
     waiting: snapshot.waiting,
     queuedBytes: snapshot.queuedBytes,
     shedTotal: snapshot.shedTotal,
