@@ -1528,8 +1528,10 @@ export async function isModelAllowedForKey(
       const shortModelId = lookupTarget?.modelId || effectiveModelId.split("/").slice(1).join("/");
       if (!providerId || !shortModelId) return false;
 
-      const syncedModelsByConnection = await getSyncedAvailableModelsByConnection(providerId);
-      const customModels = await getCustomModels(providerId);
+      const [syncedModelsByConnection, customModels] = await Promise.all([
+        getSyncedAvailableModelsByConnection(providerId),
+        getCustomModels(providerId),
+      ]);
 
       // Combine synced and custom models
       const allDiscoveredModels = Object.values(syncedModelsByConnection)

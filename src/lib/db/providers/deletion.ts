@@ -88,8 +88,11 @@ export async function deleteProviderConnection(id: string) {
     db.prepare("DELETE FROM provider_connections WHERE id = ?").run(id);
   })();
 
-  await _cleanupDeletedComboConnectionRefs(id);
-  await _cleanupDeletedLKGPConnectionRefs(id);
+  // These two helpers touch disjoint tables (combos vs lkgp) and are safe to run concurrently.
+  await Promise.all([
+    _cleanupDeletedComboConnectionRefs(id),
+    _cleanupDeletedLKGPConnectionRefs(id),
+  ]);
   void import("@omniroute/open-sse/services/combo/nativeCodexTurnPin.ts")
     .then((module) => module.revokeNativeCodexTurnPinsForConnection(id))
     .catch(() => {});
@@ -129,8 +132,10 @@ export async function deleteProviderConnections(ids: string[]): Promise<number> 
     return result.changes ?? 0;
   })();
 
-  await _cleanupDeletedComboConnectionRefs(existingIds);
-  await _cleanupDeletedLKGPConnectionRefs(existingIds);
+  await Promise.all([
+    _cleanupDeletedComboConnectionRefs(existingIds),
+    _cleanupDeletedLKGPConnectionRefs(existingIds),
+  ]);
 
   for (const id of ids) {
     removeConnectionHealth(id);
@@ -169,8 +174,10 @@ export async function deleteProviderConnectionsByProvider(providerId: string) {
     return db.prepare("DELETE FROM provider_connections WHERE provider = ?").run(providerId);
   })();
 
-  await _cleanupDeletedComboConnectionRefs(connectionIds);
-  await _cleanupDeletedLKGPConnectionRefs(connectionIds);
+  await Promise.all([
+    _cleanupDeletedComboConnectionRefs(connectionIds),
+    _cleanupDeletedLKGPConnectionRefs(connectionIds),
+  ]);
 
   for (const connectionId of connectionIds) {
     removeConnectionHealth(connectionId);
