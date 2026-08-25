@@ -49,15 +49,12 @@
  *      same set, by construction — no new enforcement point needed.
  */
 import {
+  allowsNoAuthShortcut,
   FREE_MODEL_BUDGETS,
   grantsFreeAccess,
   type FreeModelBudget,
 } from "@omniroute/open-sse/config/freeModelCatalog.ts";
 import { SYNTHETIC_NOAUTH_CONNECTION_ID } from "./resilienceCandidateFilter";
-
-/** Types whose allowance needs no runtime verification: no credential exists
- * for the candidate at all, so no request against it can ever be billed. */
-const KEYLESS_FREE_TYPES = new Set<FreeModelBudget["freeType"]>(["keyless"]);
 
 export type FreeAccessStatus = "SAFE" | "EXHAUSTED" | "UNKNOWN";
 
@@ -174,7 +171,7 @@ export function evaluateCandidateConnections(
   if (!budgetEntry) return []; // not in the catalog at all → paid, or genuinely unknown
 
   const isGenuineNoAuthCandidate = candidate.connectionId === SYNTHETIC_NOAUTH_CONNECTION_ID;
-  if (KEYLESS_FREE_TYPES.has(budgetEntry.freeType)) {
+  if (allowsNoAuthShortcut(budgetEntry.freeType)) {
     // The keyless shortcut is trustworthy ONLY when this specific candidate
     // instance actually has no credential behind it. A `keyless`-catalogued
     // model reached through a real DB connection (connectionId is a real id,

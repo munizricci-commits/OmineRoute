@@ -67,32 +67,105 @@ export interface FreeModelTotals {
   headline: string;
 }
 
-const RECURRING = new Set<FreeModelFreeType>(["recurring-daily", "recurring-monthly", "keyless"]);
+/**
+ * Which figure a regime's allowance belongs to. Every regime lands in exactly
+ * one bucket, so a regime added tomorrow cannot quietly contribute to nothing:
+ * the compiler asks which figure it feeds.
+ */
+export type FreeRegimeTokenBucket =
+  | "steady-monthly" // summed into the steady recurring headline
+  | "recurring-credit" // credit that refills, reported next to the steady figure
+  | "one-time-credit" // signup credit, first month only
+  | "uncapped" // real access, no published cap — listed, never summed
+  | "none"; // grants nothing, so it feeds no figure
+
+interface FreeRegimeTraits {
+  /** Can a request route here without paying? */
+  grantsFreeAccess: boolean;
+  /** Which totals figure this regime's allowance belongs to. */
+  tokenBucket: FreeRegimeTokenBucket;
+  /**
+   * May a candidate of this regime skip the live allowance check when it is
+   * reached through the synthetic no-auth path? True only where the catalogue
+   * says no credential exists at all, so no request against it can be billed.
+   *
+   * This is NOT "this provider needs no API key". `providerCredentialRequirement.ts`
+   * answers that other question and documents (`:1-16`) the cost of confusing the
+   * two: blackbox, friendliai, iflytek and sparkdesk are catalogued `keyless` yet
+   * answer 401 without a credential. Keep the two questions apart.
+   */
+  allowsNoAuthShortcut: boolean;
+}
 
 /**
- * What each free-tier regime engages for "can I route here without paying?".
- * Exhaustive by construction: adding a member to `FreeModelFreeType` will not
- * compile until it is classified here. `discontinued` is the one regime a
- * provider uses to retire a free tier behind a paid key — it does NOT grant
- * free access, and the shared predicate (`isFreeModel`) must read this instead
- * of treating every catalogued id as free. `RECURRING` (above) answers a
- * different question (which regimes feed the headline token totals) and is left
- * independent on purpose — deriving it from this table would silently change
- * the homepage totals.
+ * What each free-tier regime engages, for every question the codebase asks of a
+ * regime. Exhaustive by construction: adding a member to `FreeModelFreeType`
+ * will not compile until it is classified here, on every axis.
+ *
+ * `discontinued` is the regime a provider uses to retire a free tier behind a
+ * paid key — it grants no access, so the shared predicate (`isFreeModel`) reads
+ * this table instead of treating every catalogued id as free.
  */
-const FREE_REGIME_TRAITS = {
-  "recurring-daily": { grantsFreeAccess: true },
-  "recurring-monthly": { grantsFreeAccess: true },
-  "recurring-credit": { grantsFreeAccess: true },
-  "recurring-uncapped": { grantsFreeAccess: true },
-  "one-time-initial": { grantsFreeAccess: true },
-  keyless: { grantsFreeAccess: true },
-  discontinued: { grantsFreeAccess: false },
-} satisfies Record<FreeModelFreeType, { grantsFreeAccess: boolean }>;
+export const FREE_REGIME_TRAITS = {
+  "recurring-daily": {
+    grantsFreeAccess: true,
+    tokenBucket: "steady-monthly",
+    allowsNoAuthShortcut: false,
+  },
+  "recurring-monthly": {
+    grantsFreeAccess: true,
+    tokenBucket: "steady-monthly",
+    allowsNoAuthShortcut: false,
+  },
+  "recurring-credit": {
+    grantsFreeAccess: true,
+    tokenBucket: "recurring-credit",
+    allowsNoAuthShortcut: false,
+  },
+  "recurring-uncapped": {
+    grantsFreeAccess: true,
+    tokenBucket: "uncapped",
+    allowsNoAuthShortcut: false,
+  },
+  "one-time-initial": {
+    grantsFreeAccess: true,
+    tokenBucket: "one-time-credit",
+    allowsNoAuthShortcut: false,
+  },
+  keyless: {
+    grantsFreeAccess: true,
+    tokenBucket: "steady-monthly",
+    allowsNoAuthShortcut: true,
+  },
+  discontinued: {
+    grantsFreeAccess: false,
+    tokenBucket: "none",
+    allowsNoAuthShortcut: false,
+  },
+} satisfies Record<FreeModelFreeType, FreeRegimeTraits>;
 
 export function grantsFreeAccess(freeType: FreeModelFreeType): boolean {
   return FREE_REGIME_TRAITS[freeType].grantsFreeAccess;
 }
+
+/** The regimes whose allowance belongs to `bucket`, derived from the table. */
+export function freeTypesInBucket(bucket: FreeRegimeTokenBucket): Set<FreeModelFreeType> {
+  return new Set(
+    (Object.keys(FREE_REGIME_TRAITS) as FreeModelFreeType[]).filter(
+      (freeType) => FREE_REGIME_TRAITS[freeType].tokenBucket === bucket
+    )
+  );
+}
+
+/** See `FreeRegimeTraits.allowsNoAuthShortcut` — routing question, not a credential one. */
+export function allowsNoAuthShortcut(freeType: FreeModelFreeType): boolean {
+  return FREE_REGIME_TRAITS[freeType].allowsNoAuthShortcut;
+}
+
+const STEADY_MONTHLY = freeTypesInBucket("steady-monthly");
+const RECURRING_CREDIT = freeTypesInBucket("recurring-credit");
+const ONE_TIME_CREDIT = freeTypesInBucket("one-time-credit");
+const UNCAPPED = freeTypesInBucket("uncapped");
 
 /**
  * Deposit-unlock boosts: a one-time small top-up that permanently raises a
@@ -139,30 +212,30 @@ export function computeFreeModelTotals(opts: { excludeTosAvoid?: boolean } = {})
   const steadyRecurringTokens = dedupedSum(
     models,
     (m) => m.monthlyTokens,
-    (m) => RECURRING.has(m.freeType)
+    (m) => STEADY_MONTHLY.has(m.freeType)
   );
   const recurringCredits = dedupedSum(
     models,
     (m) => m.creditTokens,
-    (m) => m.freeType === "recurring-credit"
+    (m) => RECURRING_CREDIT.has(m.freeType)
   );
   const oneTimeCredits = dedupedSum(
     models,
     (m) => m.creditTokens,
-    (m) => m.freeType === "one-time-initial"
+    (m) => ONE_TIME_CREDIT.has(m.freeType)
   );
 
   const steadyWithRecurringCreditsTokens = steadyRecurringTokens + recurringCredits;
   const firstMonthRealisticTokens = steadyWithRecurringCreditsTokens + oneTimeCredits;
 
   const poolCount = new Set(
-    models.filter((m) => RECURRING.has(m.freeType) && m.poolKey).map((m) => m.poolKey)
+    models.filter((m) => STEADY_MONTHLY.has(m.freeType) && m.poolKey).map((m) => m.poolKey)
   ).size;
 
   // Deposit-unlock boost: sum the FREE_TIER_BOOSTS whose pool still has a live
   // recurring model in the (optionally ToS-filtered) set.
   const livePools = new Set(
-    models.filter((m) => RECURRING.has(m.freeType) && m.poolKey).map((m) => m.poolKey)
+    models.filter((m) => STEADY_MONTHLY.has(m.freeType) && m.poolKey).map((m) => m.poolKey)
   );
   const boostMonthlyTokens = Object.entries(FREE_TIER_BOOSTS)
     .filter(([pool]) => livePools.has(pool))
@@ -170,7 +243,7 @@ export function computeFreeModelTotals(opts: { excludeTosAvoid?: boolean } = {})
 
   // Permanently-free-but-uncapped providers (real access, no published cap).
   const uncappedProviders = [
-    ...new Set(models.filter((m) => m.freeType === "recurring-uncapped").map((m) => m.provider)),
+    ...new Set(models.filter((m) => UNCAPPED.has(m.freeType)).map((m) => m.provider)),
   ].sort();
 
   return {
