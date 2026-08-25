@@ -244,6 +244,14 @@ export function resolveKiroRegion(
 export { kiroRuntimeHost };
 
 /**
+ * Status codes for which trying the next candidate endpoint may succeed where the
+ * current one failed (auth/profile mismatch, not a payload problem). Mirrors
+ * 9router's KIRO_ENDPOINT_FALLBACK_STATUSES — a 400 (malformed body) is deliberately
+ * excluded since resending the same body to another host cannot fix it.
+ */
+const KIRO_ENDPOINT_FALLBACK_STATUSES = new Set([401, 403, 404]);
+
+/**
  * KiroExecutor - Executor for Kiro AI (AWS CodeWhisperer)
  * Uses AWS CodeWhisperer streaming API with AWS EventStream binary format
  */
@@ -334,17 +342,47 @@ export class KiroExecutor extends BaseExecutor {
     // Center accounts (e.g. eu-central-1) are rejected by the default us-east-1 host; only the
     // regional endpoint accepts the region-bound token + profileArn.
     const region = resolveKiroRegion(credentials);
-    const url = `${kiroRuntimeHost(region)}/generateAssistantResponse`;
+    const regionalUrl = `${kiroRuntimeHost(region)}/generateAssistantResponse`;
+
+    // The Kiro IDE's own branded gateway (runtime.*.kiro.dev) only exists for
+    // us-east-1 and only accepts Kiro OIDC/social tokens — it rejects
+    // TokenType=API_KEY and external-IdP/IdC SSO tokens outright (403 "bearer
+    // token invalid"), so those auth methods go straight to the region-resolved
+    // CodeWhisperer/Amazon Q surface (mirrors 9router's getOrderedBaseUrls in
+    // open-sse/executors/kiro.js). For everything else, try the branded gateway
+    // first — it is the surface the native Kiro IDE itself talks to — and fall
+    // back to the raw AWS host on an auth/profile-shaped failure.
+    const authMethod =
+      typeof credentials.providerSpecificData?.authMethod === "string"
+        ? credentials.providerSpecificData.authMethod
+        : undefined;
+    const isCodeWhispererOnly =
+      authMethod === "api_key" || authMethod === "idc" || isExternalIdpAuthMethod(authMethod);
+    const candidateUrls =
+      region === "us-east-1" && !isCodeWhispererOnly
+        ? ["https://runtime.us-east-1.kiro.dev/generateAssistantResponse", regionalUrl]
+        : [regionalUrl];
+
     const headers = this.buildHeaders(credentials, stream);
     mergeUpstreamExtraHeaders(headers, upstreamExtraHeaders);
     const transformedBody = await this.transformRequest(model, body, stream, credentials);
+    const requestBody = JSON.stringify(transformedBody);
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(transformedBody),
-      signal,
-    });
+    let response!: Response;
+    let url = candidateUrls[0];
+    for (let i = 0; i < candidateUrls.length; i++) {
+      url = candidateUrls[i];
+      response = await fetch(url, {
+        method: "POST",
+        headers,
+        body: requestBody,
+        signal,
+      });
+      const hasFallback = i + 1 < candidateUrls.length;
+      if (response.ok || !hasFallback || !KIRO_ENDPOINT_FALLBACK_STATUSES.has(response.status)) {
+        break;
+      }
+    }
 
     if (!response.ok) {
       return { response, url, headers, transformedBody };
