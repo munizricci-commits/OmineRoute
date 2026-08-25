@@ -12485,7 +12485,12 @@
     "typeApikey": "API کی",
     "sortTypeFirst": "سب سے آسان پہلے",
     "sortTypeFirstHelp": "سائن اپ کی کوشش کے لحاظ سے گروپ کریں (سائن اپ کے بغیر ← OAuth لاگ ان ← API کی)، ہر گروپ کے اندر معیار کی ترتیب کو برقرار رکھتے ہوئے",
-    "typeLegend": "سائن اپ کے بغیر = صفر سیٹ اپ · OAuth لاگ ان = اپنے اکاؤنٹ سے سائن ان کریں · API کی = اپنی کی لائیں یا اس فراہم کنندہ کا فری ٹیئر"
+    "typeLegend": "سائن اپ کے بغیر = صفر سیٹ اپ · OAuth لاگ ان = اپنے اکاؤنٹ سے سائن ان کریں · API کی = اپنی کی لائیں یا اس فراہم کنندہ کا فری ٹیئر",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "فراہم کنندہ کی دریافت",

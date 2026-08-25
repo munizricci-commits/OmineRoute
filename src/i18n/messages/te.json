@@ -12485,7 +12485,12 @@
     "typeApikey": "API కీ",
     "sortTypeFirst": "సులభమైనవి మొదట",
     "sortTypeFirstHelp": "సైన్ అప్ శ్రమ ఆధారంగా సమూహపరచండి (సైన్ అప్ అవసరం లేదు → OAuth లాగిన్ → API కీ), ప్రతి సమూహంలో నాణ్యత క్రమాన్ని అలాగే ఉంచండి",
-    "typeLegend": "సైన్ అప్ అవసరం లేదు = జీరో సెటప్ · OAuth లాగిన్ = మీ స్వంత ఖాతాతో సైన్ ఇన్ చేయండి · API కీ = మీ స్వంత కీని లేదా ఆ ప్రొవైడర్ ఉచిత శ్రేణిని ఉపయోగించండి"
+    "typeLegend": "సైన్ అప్ అవసరం లేదు = జీరో సెటప్ · OAuth లాగిన్ = మీ స్వంత ఖాతాతో సైన్ ఇన్ చేయండి · API కీ = మీ స్వంత కీని లేదా ఆ ప్రొవైడర్ ఉచిత శ్రేణిని ఉపయోగించండి",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "ప్రొవైడర్ డిస్కవరీ",

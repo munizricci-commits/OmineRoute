@@ -12485,7 +12485,12 @@
     "typeApikey": "API કી",
     "sortTypeFirst": "સૌથી સરળ પહેલા",
     "sortTypeFirstHelp": "દરેક જૂથમાં ગુણવત્તાનો ક્રમ જાળવી રાખીને, સાઇનઅપ પ્રયાસ દ્વારા જૂથબદ્ધ કરો (કોઈ સાઇનઅપ નહીં → OAuth લૉગિન → API કી)",
-    "typeLegend": "કોઈ સાઇનઅપ નહીં = શૂન્ય સેટઅપ · OAuth લૉગિન = તમારા પોતાના એકાઉન્ટથી સાઇન ઇન કરો · API કી = તમારી પોતાની કી અથવા તે પ્રદાતાના ફ્રી ટાયરનો ઉપયોગ કરો"
+    "typeLegend": "કોઈ સાઇનઅપ નહીં = શૂન્ય સેટઅપ · OAuth લૉગિન = તમારા પોતાના એકાઉન્ટથી સાઇન ઇન કરો · API કી = તમારી પોતાની કી અથવા તે પ્રદાતાના ફ્રી ટાયરનો ઉપયોગ કરો",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "પ્રદાતા શોધ",

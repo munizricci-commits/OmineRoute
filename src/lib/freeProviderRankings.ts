@@ -297,6 +297,19 @@ export interface FreeProviderRankingFilterOptions {
   usageRange?: ProviderHealthMatrixRange;
 }
 
+/**
+ * PURE: does this request need the connection snapshot loaded?
+ *
+ * `usage` is grafted onto `reliability`, which only exists once the snapshot is
+ * loaded — so `withUsage` on its own used to return rankings with no
+ * `reliability` at all, silently. It now pulls the snapshot itself.
+ * `filterFreeProviderRankings` is a no-op when neither filter is set, so an
+ * unfiltered caller still gets every provider back.
+ */
+export function needsConnectionSnapshot(opts: FreeProviderRankingFilterOptions): boolean {
+  return Boolean(opts.configuredOnly || opts.availableOnly || opts.withUsage);
+}
+
 /** Group connection states by provider id (shared by filter and reliability attach). */
 function groupConnectionsByProvider(
   connections: ConnectionState[]
@@ -530,7 +543,7 @@ export async function computeFreeProviderRankings(
   // Apply the additive configured/available filters (if requested) BEFORE the
   // limit slice, so `limit` counts providers that survive the filter.
   let filtered = rankings;
-  if (opts.configuredOnly || opts.availableOnly) {
+  if (needsConnectionSnapshot(opts)) {
     // `getProviderConnections` returns a loose JsonRecord[]; ConnectionState is a
     // structural subset of it, so TS needs the explicit `unknown` hop (TS2352).
     const connections = (await getProviderConnections({

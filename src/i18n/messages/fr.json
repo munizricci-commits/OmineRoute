@@ -12485,7 +12485,12 @@
     "typeApikey": "Clé API",
     "sortTypeFirst": "Le plus simple en premier",
     "sortTypeFirstHelp": "Grouper par effort d'inscription (Sans inscription → Connexion OAuth → Clé API), en conservant l'ordre de qualité au sein de chaque groupe",
-    "typeLegend": "Sans inscription = configuration nulle · Connexion OAuth = connectez-vous avec votre propre compte · Clé API = utilisez votre propre clé ou le forfait gratuit de ce fournisseur"
+    "typeLegend": "Sans inscription = configuration nulle · Connexion OAuth = connectez-vous avec votre propre compte · Clé API = utilisez votre propre clé ou le forfait gratuit de ce fournisseur",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "Découverte de fournisseurs",

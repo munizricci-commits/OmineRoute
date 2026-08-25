@@ -8,27 +8,11 @@ import {
   sortRankingsAuthTypeFirst,
   type ProviderAuthType,
 } from "@/lib/freeProviderRankingsAuthType";
-
-interface ProviderModelScore {
-  modelId: string;
-  modelName: string;
-  score: number;
-  eloRaw: number | null;
-  confidence: string | null;
-  category: string;
-}
-
-interface FreeProviderRanking {
-  id: string;
-  name: string;
-  icon: string;
-  color: string;
-  textIcon?: string;
-  category: ProviderAuthType;
-  topModel: ProviderModelScore | null;
-  averageScore: number;
-  modelCount: number;
-}
+import { formatUsageReliability, usageToneClass } from "@/lib/freeProviderRankingsUsage";
+// Type-only: `freeProviderRankings` wires DB modules at import time, so a
+// client component must never take a runtime value from it. The page used to
+// keep its own copy of this shape, which had already drifted past the API.
+import type { FreeProviderRanking } from "@/lib/freeProviderRankings";
 
 /**
  * Convert a normalized task-fit score (0.4–0.98) to a human-readable label.
@@ -86,11 +70,11 @@ export default function FreeProviderRankingsPage() {
         if (category) params.set("category", category);
         if (opts?.configuredOnly) params.set("configuredOnly", "1");
         if (opts?.availableOnly) params.set("availableOnly", "1");
-        const qs = params.toString();
-        const url = qs
-          ? `/api/free-provider-rankings?${qs}`
-          : "/api/free-provider-rankings";
-        const res = await fetch(url);
+        // Always: an ELO-only ranking describes a provider that errors on every
+        // call as healthy. `usageRange` matches the health matrix default.
+        params.set("withUsage", "1");
+        params.set("usageRange", "24h");
+        const res = await fetch(`/api/free-provider-rankings?${params.toString()}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         setRankings(data.rankings || []);
@@ -265,6 +249,9 @@ export default function FreeProviderRankingsPage() {
                       <th className="pb-3 font-medium">{t("colTopModel")}</th>
                       <th className="pb-3 font-medium text-right">{t("colScore")}</th>
                       <th className="pb-3 font-medium text-right">{t("colAvgScore")}</th>
+                      <th className="pb-3 font-medium text-right" title={t("colReliabilityHelp")}>
+                        {t("colReliability")}
+                      </th>
                       <th className="pb-3 font-medium text-right">{t("colModels")}</th>
                       <th className="pb-3 font-medium text-right" title={t("typeLegend")}>
                         {t("colType")}
@@ -302,6 +289,29 @@ export default function FreeProviderRankingsPage() {
                         </td>
                         <td className="py-3 text-right font-mono text-text-muted">
                           {scoreLabel(provider.averageScore)}
+                        </td>
+                        <td className="py-3 text-right">
+                          {(() => {
+                            const u = formatUsageReliability(provider.reliability?.usage);
+                            const title =
+                              u.kind === "rate"
+                                ? t("reliabilitySample", {
+                                    successes: u.successes,
+                                    requests: u.requests,
+                                    hours: u.windowHours,
+                                  })
+                                : u.kind === "insufficient"
+                                  ? t("reliabilityTooFew", {
+                                      requests: u.requests,
+                                      hours: u.windowHours,
+                                    })
+                                  : t("reliabilityNoTraffic");
+                            return (
+                              <span className={`font-mono ${usageToneClass(u.tone)}`} title={title}>
+                                {u.kind === "rate" ? `${u.percent}%` : "—"}
+                              </span>
+                            );
+                          })()}
                         </td>
                         <td className="py-3 text-right text-text-muted">{provider.modelCount}</td>
                         <td className="py-3 text-right">

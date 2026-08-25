@@ -12487,7 +12487,12 @@
     "typeApikey": "Khóa API",
     "sortTypeFirst": "Dễ thiết lập trước",
     "sortTypeFirstHelp": "Nhóm theo mức độ thiết lập (Không cần đăng ký → Đăng nhập OAuth → Khóa API), đồng thời giữ thứ tự chất lượng trong từng nhóm",
-    "typeLegend": "Không cần đăng ký = không cần thiết lập · Đăng nhập OAuth = đăng nhập bằng tài khoản của bạn · Khóa API = dùng khóa riêng hoặc gói miễn phí của nhà cung cấp"
+    "typeLegend": "Không cần đăng ký = không cần thiết lập · Đăng nhập OAuth = đăng nhập bằng tài khoản của bạn · Khóa API = dùng khóa riêng hoặc gói miễn phí của nhà cung cấp",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "Khám phá nhà cung cấp",

@@ -12485,7 +12485,12 @@
     "typeApikey": "Ключ API",
     "sortTypeFirst": "Спочатку найпростіші",
     "sortTypeFirstHelp": "Групувати за зусиллями для реєстрації (Без реєстрації → Вхід через OAuth → Ключ API), зберігаючи порядок якості всередині кожної групи",
-    "typeLegend": "Без реєстрації = нульове налаштування · Вхід через OAuth = увійдіть за допомогою власного облікового запису · Ключ API = використовуйте власний ключ або безкоштовний тарифний план цього провайдера"
+    "typeLegend": "Без реєстрації = нульове налаштування · Вхід через OAuth = увійдіть за допомогою власного облікового запису · Ключ API = використовуйте власний ключ або безкоштовний тарифний план цього провайдера",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "Виявлення провайдерів",

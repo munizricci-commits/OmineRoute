@@ -12485,7 +12485,12 @@
     "typeApikey": "API 金鑰",
     "sortTypeFirst": "最簡單優先",
     "sortTypeFirstHelp": "按註冊難度分組（無需註冊 → OAuth 登入 → API 金鑰），在各組內保持品質順序",
-    "typeLegend": "無需註冊 = 零設定 · OAuth 登入 = 使用自己的帳戶登入 · API 金鑰 = 自帶金鑰或使用該提供者的免費方案"
+    "typeLegend": "無需註冊 = 零設定 · OAuth 登入 = 使用自己的帳戶登入 · API 金鑰 = 自帶金鑰或使用該提供者的免費方案",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "提供者探索",

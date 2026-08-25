@@ -12485,7 +12485,12 @@
     "typeApikey": "Kunci API",
     "sortTypeFirst": "Termudah dahulu",
     "sortTypeFirstHelp": "Kelompokkan berdasarkan upaya pendaftaran (Tanpa Pendaftaran → Login OAuth → Kunci API), dengan tetap menjaga urutan kualitas dalam setiap kelompok",
-    "typeLegend": "Tanpa Pendaftaran = tanpa penyiapan · Login OAuth = masuk dengan akun Anda sendiri · Kunci API = bawa kunci Anda sendiri atau gunakan tingkat gratis penyedia tersebut"
+    "typeLegend": "Tanpa Pendaftaran = tanpa penyiapan · Login OAuth = masuk dengan akun Anda sendiri · Kunci API = bawa kunci Anda sendiri atau gunakan tingkat gratis penyedia tersebut",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "Penemuan Penyedia",

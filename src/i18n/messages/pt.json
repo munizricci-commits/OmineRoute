@@ -12485,7 +12485,12 @@
     "typeApikey": "Chave de API",
     "sortTypeFirst": "Mais fáceis primeiro",
     "sortTypeFirstHelp": "Agrupar por esforço de registo (Sem Registo → Início de Sessão OAuth → Chave de API), mantendo a ordem de qualidade dentro de cada grupo",
-    "typeLegend": "Sem Registo = configuração zero · Início de Sessão OAuth = iniciar sessão com a sua própria conta · Chave de API = traga a sua própria chave ou o nível gratuito desse fornecedor"
+    "typeLegend": "Sem Registo = configuração zero · Início de Sessão OAuth = iniciar sessão com a sua própria conta · Chave de API = traga a sua própria chave ou o nível gratuito desse fornecedor",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "Deteção de Fornecedores",

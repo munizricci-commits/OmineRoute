@@ -12487,7 +12487,12 @@
     "typeApikey": "API-Schlüssel",
     "sortTypeFirst": "Einfachste zuerst",
     "sortTypeFirstHelp": "Nach Registrierungsaufwand gruppieren (Keine Registrierung → OAuth-Login → API-Schlüssel), Qualitätsreihenfolge innerhalb jeder Gruppe beibehalten",
-    "typeLegend": "Keine Registrierung = kein Einrichtungsaufwand · OAuth-Login = mit eigenem Konto anmelden · API-Schlüssel = eigenen Schlüssel oder kostenloses Kontingent des Anbieters nutzen"
+    "typeLegend": "Keine Registrierung = kein Einrichtungsaufwand · OAuth-Login = mit eigenem Konto anmelden · API-Schlüssel = eigenen Schlüssel oder kostenloses Kontingent des Anbieters nutzen",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "Anbieter-Erkennung",

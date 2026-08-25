@@ -12485,7 +12485,12 @@
     "typeApikey": "API கீ",
     "sortTypeFirst": "எளிதானது முதலில்",
     "sortTypeFirstHelp": "பதிவு செய்யும் முயற்சியின் அடிப்படையில் குழுவாக்குங்கள் (பதிவு செய்ய தேவையில்லை → OAuth உள்நுழைவு → API கீ), ஒவ்வொரு குழுவிலும் தர வரிசையைத் தக்க வைத்துக் கொள்ளுங்கள்",
-    "typeLegend": "பதிவு செய்ய தேவையில்லை = பூஜ்ஜிய அமைப்பு · OAuth உள்நுழைவு = உங்கள் சொந்த கணக்குடன் உள்நுழையவும் · API கீ = உங்கள் சொந்த கீயைக் கொண்டு வாருங்கள் அல்லது அந்த வழங்குநரின் இலவச அடுக்கு"
+    "typeLegend": "பதிவு செய்ய தேவையில்லை = பூஜ்ஜிய அமைப்பு · OAuth உள்நுழைவு = உங்கள் சொந்த கணக்குடன் உள்நுழையவும் · API கீ = உங்கள் சொந்த கீயைக் கொண்டு வாருங்கள் அல்லது அந்த வழங்குநரின் இலவச அடுக்கு",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "வழங்குநர் கண்டறிதல்",

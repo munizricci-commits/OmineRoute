@@ -12485,7 +12485,12 @@
     "typeApikey": "API 키",
     "sortTypeFirst": "쉬운 순서대로",
     "sortTypeFirstHelp": "가입 난이도별로 그룹화(가입 불필요 → OAuth 로그인 → API 키)하고, 각 그룹 내에서 품질 순서 유지",
-    "typeLegend": "가입 불필요 = 설정 없음 · OAuth 로그인 = 본인 계정으로 로그인 · API 키 = 본인 키 사용 또는 해당 제공업체의 무료 등급"
+    "typeLegend": "가입 불필요 = 설정 없음 · OAuth 로그인 = 본인 계정으로 로그인 · API 키 = 본인 키 사용 또는 해당 제공업체의 무료 등급",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "제공업체 탐색",

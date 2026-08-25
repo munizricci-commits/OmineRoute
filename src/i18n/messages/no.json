@@ -12485,7 +12485,12 @@
     "typeApikey": "API-nøkkel",
     "sortTypeFirst": "Enkleste først",
     "sortTypeFirstHelp": "Grupper etter registreringsinnsats (Ingen registrering → OAuth-innlogging → API-nøkkel), og behold kvalitetsrekkefølgen innenfor hver gruppe",
-    "typeLegend": "Ingen registrering = null oppsett · OAuth-innlogging = logg inn med din egen konto · API-nøkkel = ta med din egen nøkkel eller leverandørens gratisnivå"
+    "typeLegend": "Ingen registrering = null oppsett · OAuth-innlogging = logg inn med din egen konto · API-nøkkel = ta med din egen nøkkel eller leverandørens gratisnivå",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "Leverandøroppdagelse",

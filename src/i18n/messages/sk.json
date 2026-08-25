@@ -12485,7 +12485,12 @@
     "typeApikey": "API kľúč",
     "sortTypeFirst": "Najjednoduchšie ako prvé",
     "sortTypeFirstHelp": "Zoskupiť podľa náročnosti registrácie (Bez registrácie → Prihlásenie cez OAuth → API kľúč), so zachovaním poradia kvality v rámci každej skupiny",
-    "typeLegend": "Bez registrácie = nulové nastavenie · Prihlásenie cez OAuth = prihlásenie pomocou vlastného účtu · API kľúč = vlastný kľúč alebo bezplatný program daného poskytovateľa"
+    "typeLegend": "Bez registrácie = nulové nastavenie · Prihlásenie cez OAuth = prihlásenie pomocou vlastného účtu · API kľúč = vlastný kľúč alebo bezplatný program daného poskytovateľa",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "Vyhľadávanie poskytovateľov",

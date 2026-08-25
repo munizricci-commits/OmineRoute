@@ -12485,7 +12485,12 @@
     "typeApikey": "API की",
     "sortTypeFirst": "सर्वात सोपे आधी",
     "sortTypeFirstHelp": "साइन-अपच्या त्रासानुसार गटबद्ध करा (साइन-अप नाही → OAuth लॉगिन → API की), प्रत्येक गटामध्ये गुणवत्तेचा क्रम राखून",
-    "typeLegend": "साइन-अप नाही = शून्य सेटअप · OAuth लॉगिन = तुमच्या स्वतःच्या खात्याने साइन इन करा · API की = तुमची स्वतःची की आणा किंवा त्या प्रदात्याची विनामूल्य श्रेणी वापरा"
+    "typeLegend": "साइन-अप नाही = शून्य सेटअप · OAuth लॉगिन = तुमच्या स्वतःच्या खात्याने साइन इन करा · API की = तुमची स्वतःची की आणा किंवा त्या प्रदात्याची विनामूल्य श्रेणी वापरा",
+    "colReliability": "__MISSING__:Reliability",
+    "colReliabilityHelp": "__MISSING__:Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "__MISSING__:{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "__MISSING__:Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "__MISSING__:No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "प्रदाता शोध",

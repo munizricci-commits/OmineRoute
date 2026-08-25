@@ -12487,7 +12487,12 @@
     "typeApikey": "API Key",
     "sortTypeFirst": "Easiest first",
     "sortTypeFirstHelp": "Group by signup effort (No Signup → OAuth Login → API Key), keeping quality order within each group",
-    "typeLegend": "No Signup = zero setup · OAuth Login = sign in with your own account · API Key = bring your own key or that provider's free tier"
+    "typeLegend": "No Signup = zero setup · OAuth Login = sign in with your own account · API Key = bring your own key or that provider's free tier",
+    "colReliability": "Reliability",
+    "colReliabilityHelp": "Share of calls this provider actually answered over the last 24 hours. A dash means it served too little traffic to state a rate.",
+    "reliabilitySample": "{successes} of {requests} calls succeeded in the last {hours}h",
+    "reliabilityTooFew": "Only {requests} calls in the last {hours}h — too few to state a rate",
+    "reliabilityNoTraffic": "No calls recorded in the last 24h"
   },
   "discovery": {
     "title": "Provider Discovery",
